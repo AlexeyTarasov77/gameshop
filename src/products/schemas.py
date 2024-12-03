@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from products.models import PRODUCT_DELIVERY_METHODS
+from products.models import Product
 from pydantic import BaseModel, FileUrl, field_validator
 
 
@@ -19,8 +19,8 @@ class CreateProductDTO(BaseModel):
     @field_validator("delivery_method")
     @classmethod
     def validate_delivery_method(cls, value):
-        if value not in PRODUCT_DELIVERY_METHODS:
+        if value not in Product.DELIVERY_METHODS:
             raise ValueError(
-                f"{value} is not available delivery method. Choices are: {PRODUCT_DELIVERY_METHODS}"
+                f"{value} is not available delivery method. Choices are: {Product.DELIVERY_METHODS}"
             )
         return value

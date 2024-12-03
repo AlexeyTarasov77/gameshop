@@ -14,6 +14,8 @@ def create_product(
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
 ):
     try:
-        products_service.create_product(dto)
-    except Exception:
+        product = products_service.create_product(dto)
+    except Exception as e:
+        print(e)
         ...
+    return product
