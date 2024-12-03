@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase
 
 
-class BaseModel(DeclarativeBase):
+class SqlAlchemyBaseModel(DeclarativeBase):
     repr_cols_num: int = 3
     repr_cols: tuple = ()
     model_schema: BaseModel | None = None

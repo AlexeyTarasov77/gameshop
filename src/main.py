@@ -3,6 +3,7 @@ import pathlib
 
 import punq
 import uvicorn
+from core.ioc import init_container
 from core.router import router
 from fastapi import FastAPI
 
@@ -10,13 +11,10 @@ from config import Config
 
 DEFAULT_CONFIG_PATH = (pathlib.Path() / "config" / "local.yaml").resolve()
 
-container = punq.Container()
-
-app = FastAPI()
+container: punq.Container
 
 
-def main() -> None:
-    app.include_router(router)
+def parse_cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config-path",
@@ -27,14 +25,25 @@ def main() -> None:
     parser.add_argument("--host", help="Server host", dest="host")
     parser.add_argument("-p", "--port", help="Server port", dest="port")
     args = parser.parse_args()
-    config = Config(yaml_file=args.config_path)
-    config.server.port = args.port or config.server.port
-    config.server.host = args.host or config.server.host
-    container.register(Config, instance=config)
+    return args
+
+
+def main() -> None:
+    app = FastAPI()
+    app.include_router(router)
+    args = parse_cli()
+
+    container = init_container(args.config_path)
+    app.state.ioc_container = container
+
+    config = container.resolve(Config)
+    s = config.server
+    s.port = args.port or s.port
+    s.host = args.host or s.host
     uvicorn.run(
         "main:app",
-        host=config.server.host,
-        port=int(config.server.port),
+        host=s.host,
+        port=int(s.port),
         reload=(config.mode == "local"),
     )
 
