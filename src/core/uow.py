@@ -2,7 +2,7 @@ import abc
 import logging
 import typing as t
 
-from core.db.repository import SqlAlchemyRepository
+from db.repository import SqlAlchemyRepository
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -46,14 +46,12 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
             if exc_type is not None:
                 logging.error("SqlAlchemyUnitOfWork.__aexit__: exc_type is not None", exc_info=exc_type)
                 await super().__aexit__(exc_type, *args)
-                # returning True to express that exception was succesfully handled
-                return True
             else:
                 logging.debug("commiting")
                 await self.commit()
         except SQLAlchemyError as e:
             logging.error("Exception during commiting/rollbacking trx", exc_info=e)
-            pass
+            raise
         finally:
             await self.session.close()
 

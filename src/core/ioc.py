@@ -1,27 +1,34 @@
 import typing as t
-from pathlib import Path
+from functools import lru_cache
 
 import punq
-from core.db.main import Database
-from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
-from fastapi import Depends, Request
+from db.main import Database
+from fastapi import Depends
+from products.domain.services import ProductsService
 from products.repositories import ProductsRepository
 
-from config import Config
+from config import Config, init_config
+from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 
 
-def init_container(cfg_path: str | Path) -> punq.Container:
+@lru_cache(1)
+def get_container() -> punq.Container:
+    return _init_container()
+
+
+def _init_container() -> punq.Container:
     container = punq.Container()
-    cfg = Config(yaml_file=cfg_path)
-    db = Database(cfg.storage_dsn, future=True, echo=(cfg.mode == "local"))
+    cfg = init_config()
+    db = Database(str(cfg.storage_dsn), future=True, echo=(cfg.mode == "local"))
     uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository])
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
+    container.register(ProductsService, ProductsService)
 
     return container
 
 
 def Inject[T](dep: t.Type[T]) -> Depends:  # noqa: N802
-    def resolver(req: Request) -> T:
-        t.cast(punq.Container, req.app.state.ioc_container).resolve(dep)
+    def resolver() -> T:
+        return t.cast(punq.Container, get_container()).resolve(dep)
     return Depends(resolver)

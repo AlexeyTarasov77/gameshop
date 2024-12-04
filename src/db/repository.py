@@ -2,9 +2,10 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
-from core.db.models import SqlAlchemyBaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import SqlAlchemyBaseModel
 
 
 class AbstractRepository[T](ABC):

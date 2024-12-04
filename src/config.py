@@ -1,4 +1,7 @@
+import argparse
+import pathlib
 import typing as t
+from functools import lru_cache
 
 from pydantic import BaseModel, Field, IPvAnyAddress, PostgresDsn
 from pydantic_settings import (
@@ -8,7 +11,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-# TODO: Разобраться, можно ли указать игнорировать unrecognized cli args
+DEFAULT_CONFIG_PATH: t.Final = (pathlib.Path() / "config" / "local.yaml").resolve()
 
 
 class _Server(BaseModel):
@@ -41,3 +44,20 @@ class Config(BaseSettings):
             dotenv_settings,
             YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file_path),
         )
+
+
+def init_config() -> Config:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config-path",
+        default=DEFAULT_CONFIG_PATH,
+        help="Path to the configuration file",
+        dest="config_path",
+    )
+    parser.add_argument("--host", help="Server host", dest="host")
+    parser.add_argument("-p", "--port", help="Server port", dest="port")
+    args = parser.parse_args()
+    cfg = Config(yaml_file=args.config_path)
+    cfg.server.host = args.host or cfg.server.host
+    cfg.server.port = args.port or cfg.server.port
+    return cfg

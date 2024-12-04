@@ -2,14 +2,17 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Final
 
+from db.column_types import created_at_t, int_pk_type, updated_at_t
+from db.models import SqlAlchemyBaseModel
 from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.core.db.column_types import created_at_t, int_pk_type, updated_at_t
-from src.core.db.models import SqlAlchemyBaseModel
+from products.schemas import ShowProduct
 
 
 class Product(SqlAlchemyBaseModel):
+    model_schema = ShowProduct
+
     DELIVERY_METHODS_CHOICES: Final[tuple[str]] = (
         "activation_key",
         "replenishment_card",
@@ -29,7 +32,7 @@ class Product(SqlAlchemyBaseModel):
     platform_name: Mapped[str] = mapped_column(ForeignKey("platform.name", ondelete="CASCADE"))
     category: Mapped["Category"] = relationship(back_populates="products")
     platform: Mapped["Platform"] = relationship(back_populates="products")
-    photo_url: Mapped[str]
+    image_url: Mapped[str]
     regular_price: Mapped[Decimal]
     delivery_method: Mapped[str]
     discount: Mapped[int] = mapped_column(default=0)
