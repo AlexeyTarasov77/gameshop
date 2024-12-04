@@ -2,17 +2,21 @@ from datetime import datetime
 from decimal import Decimal
 
 from core.schemas import BaseDTO
-from pydantic import FileUrl, field_validator
+from fastapi import UploadFile
+from pydantic import field_validator
 
 
-class CreateProductDTO(BaseDTO):
+class BaseProductDTO(BaseDTO):
     name: str
     description: str
     regular_price: Decimal
     category_name: str
     platform_name: str
-    image_url: FileUrl
     delivery_method: str
+
+
+class CreateProductDTO(BaseProductDTO):
+    image: UploadFile
     discount: int | None
     discount_valid_to: datetime | None
 
@@ -28,7 +32,10 @@ class CreateProductDTO(BaseDTO):
         return value
 
 
-class ShowProduct(CreateProductDTO):
+class ShowProduct(BaseProductDTO):
     id: int
+    image_url: str
+    discount: int
+    discount_valid_to: datetime
     created_at: datetime
     updated_at: datetime
