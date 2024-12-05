@@ -4,7 +4,7 @@ import typing as t
 
 from db.main import Database
 from db.repository import SqlAlchemyRepository
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -44,6 +44,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def __aexit__(self, exc_type, *args) -> None:
         from core.ioc import get_container
+
         try:
             if exc_type is not None:
                 logging.error("SqlAlchemyUnitOfWork.__aexit__: exc: %s", exc=exc_type, exc_info=exc_type)
@@ -53,7 +54,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
                 await self.commit()
         except SQLAlchemyError as e:
             logging.error("Exception during commiting/rollbacking trx", exc_info=e)
-            t.cast(Database, get_container().resolve(Database)).raise_mapped_exc(e)
+            db = t.cast(Database, get_container().resolve(Database))
+            db.exception_mapper.map_and_raise(getattr(e, "orig", None) or e)
         finally:
             await self.session.close()
 

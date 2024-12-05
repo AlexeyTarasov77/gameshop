@@ -1,13 +1,13 @@
-import logging
 from functools import partial
 
-from db.main import (
+from db.exceptions import (
     AlreadyExistsError,
     DatabaseError,
     NotFoundError,
     RelatedResourceNotFoundError,
 )
 
+from core.exceptions import AbstractExceptionMapper
 from core.uow import AbstractUnitOfWork
 
 
@@ -15,7 +15,7 @@ class ServiceError(Exception):
     def _generate_msg(self) -> str:
         return "unexpected service error"
 
-    def __init__(self, entity_name: str, *args, **kwargs) -> None:
+    def __init__(self, entity_name: str = "Unknown", *args, **kwargs) -> None:
         self._entity_name = entity_name
         self._params = kwargs
         self.msg = self._generate_msg()
@@ -49,21 +49,29 @@ class EntityRelatedResourceNotFoundError(ServiceError):
         return msg % (self._entity_name, params_string)
 
 
-class BaseService:
-    entity_name = None
-    EXCEPTION_MAPPING: dict[type[DatabaseError], type[ServiceError]] = {
+class ServiceExceptionMapper(AbstractExceptionMapper[DatabaseError, ServiceError]):
+    def __init__(self, entity_name: str | None = None) -> None:
+        self.entity_name = entity_name
+
+    EXCEPTION_MAPPING = {
         NotFoundError: EntityNotFoundError,
         AlreadyExistsError: EntityAlreadyExistsError,
         RelatedResourceNotFoundError: EntityRelatedResourceNotFoundError,
     }
 
+    @classmethod
+    def get_default_exc(cls) -> type[ServiceError]:
+        return ServiceError
+
+    def map_with_entity(self, exc: DatabaseError) -> partial[ServiceError]:
+        mapped_exc_class = super().map(exc)
+        factory_args = {"entity_name": self.entity_name} if self.entity_name else {}
+        return partial(mapped_exc_class, **factory_args)
+
+
+class BaseService:
+    entity_name = None
+
     def __init__(self, uow: AbstractUnitOfWork) -> None:
         self.uow = uow
-
-    @classmethod
-    def map_db_exception(cls, exc: DatabaseError) -> partial[ServiceError]:
-        mapped_exc = cls.EXCEPTION_MAPPING.get(type(exc), ServiceError)
-        if mapped_exc is ServiceError:
-            logging.warning("Not mapped exc: %s", exc)
-        factory_args = {"entity_name": cls.entity_name} if cls.entity_name else {}
-        return partial(mapped_exc, **factory_args)
+        self.exception_mapper = ServiceExceptionMapper(self.entity_name)

@@ -32,6 +32,9 @@ class CreateProductDTO(BaseProductDTO):
         return value
 
 
+class UpdateProductDTO(CreateProductDTO): ...
+
+
 class ShowProduct(BaseProductDTO):
     id: int
     image_url: str

@@ -1,8 +1,5 @@
-from core.service import ServiceError
+from core.exceptions import AbstractExceptionMapper
 
 
-class HttpExceptionsMapper:
+class HttpExceptionsMapper(AbstractExceptionMapper):
     """Maps service errors to corresponding http exception"""
-
-    @classmethod
-    def map(cls, exc: ServiceError): ...

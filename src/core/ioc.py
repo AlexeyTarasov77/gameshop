@@ -2,6 +2,7 @@ import typing as t
 from functools import lru_cache
 
 import punq
+from db.exceptions import PostgresExceptionsMapper
 from db.main import Database
 from fastapi import Depends
 from products.domain.services import ProductsService
@@ -19,7 +20,12 @@ def get_container() -> punq.Container:
 def _init_container() -> punq.Container:
     container = punq.Container()
     cfg = init_config()
-    db = Database(str(cfg.storage_dsn), future=True, echo=(cfg.mode == "local"))
+    db = Database(
+        str(cfg.storage_dsn),
+        exception_mapper=PostgresExceptionsMapper,
+        future=True,
+        echo=(cfg.mode == "local"),
+    )
     uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository])
     container.register(Database, instance=db)
     container.register(Config, instance=cfg)
@@ -32,4 +38,5 @@ def _init_container() -> punq.Container:
 def Inject[T](dep: t.Type[T]) -> Depends:  # noqa: N802
     def resolver() -> T:
         return t.cast(punq.Container, get_container()).resolve(dep)
+
     return Depends(resolver)

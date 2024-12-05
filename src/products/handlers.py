@@ -2,7 +2,7 @@ import typing as t
 from http import HTTPStatus
 
 from core.ioc import Inject
-from core.service import EntityAlreadyExistsError, EntityRelatedResourceNotFoundError, ServiceError
+from core.service import EntityAlreadyExistsError, EntityRelatedResourceNotFoundError
 from fastapi import APIRouter, Form, HTTPException
 
 from products import schemas
