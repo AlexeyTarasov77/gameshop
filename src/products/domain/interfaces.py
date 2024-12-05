@@ -1,6 +1,6 @@
 import typing as t
 
-from core.utils import FilePath
+from core.http.utils import FilePath
 from products.models import Product
 from products.schemas import CreateProductDTO
 

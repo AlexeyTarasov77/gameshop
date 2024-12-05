@@ -2,8 +2,8 @@ import typing as t
 from http import HTTPStatus
 
 from core.ioc import Inject
-from core.utils import save_upload_file
-from fastapi import APIRouter, Form
+from core.service import EntityAlreadyExistsError, EntityRelatedResourceNotFoundError, ServiceError
+from fastapi import APIRouter, Form, HTTPException
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -16,10 +16,8 @@ async def create_product(
     dto: t.Annotated[schemas.CreateProductDTO, Form()],
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
 ) -> schemas.ShowProduct:
-    uploaded_to = await save_upload_file(dto.image)
-    print("!!", uploaded_to)
     try:
-        product = await products_service.create_product(dto, uploaded_to)
-    except Exception as e:
-        raise e
+        product = await products_service.create_product(dto)
+    except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
+        raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
     return product

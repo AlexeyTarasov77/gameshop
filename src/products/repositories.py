@@ -1,4 +1,4 @@
-from core.utils import FilePath
+from core.http.utils import FilePath
 from db.repository import SqlAlchemyRepository
 
 from products.models import Product
@@ -9,13 +9,14 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
     model = Product
 
     async def create(self, dto: CreateProductDTO, image_url: FilePath) -> Product:
-        pr = await super().create(
-            image_url=str(image_url),
-            **dto.model_dump(
-                exclude={
-                    "image",
-                }
-            ),
-        )
-        print("pr", pr, pr.id, pr.image_url)
-        return pr
+        try:
+            return await super().create(
+                image_url=str(image_url),
+                **dto.model_dump(
+                    exclude={
+                        "image",
+                    }
+                ),
+            )
+        except Exception as e:
+            print("!EXC: ", type(e))

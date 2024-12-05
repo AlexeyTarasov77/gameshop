@@ -21,6 +21,7 @@ def _init_container() -> punq.Container:
     cfg = init_config()
     db = Database(str(cfg.storage_dsn), future=True, echo=(cfg.mode == "local"))
     uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository])
+    container.register(Database, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
     container.register(ProductsService, ProductsService)
