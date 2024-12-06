@@ -2,9 +2,10 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.exceptions import NotFoundError
 from db.models import SqlAlchemyBaseModel
 
 
@@ -48,8 +49,19 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         results = await self.session.execute(query)
         return results.scalars().all()
 
-    async def update(self, data: Mapping, **filter_params) -> T:
-        query = update(self.model).filter_by(**filter_params).values(**data).returning(self.model)
+    async def update(self, data: Mapping, **filter_by) -> T:
+        query = (
+            update(self.model)
+            .filter_by(**filter_by)
+            .values(**data)
+            .returning(self.model)
+        )
         updated_object = await self.session.execute(query)
         if updated_object:
             return updated_object.scalars().first()
+
+    async def delete(self, **filter_by) -> int:
+        query = delete(self.model).filter_by(**filter_by)
+        res = await self.session.execute(query)
+        if res.rowcount < 1:
+            raise NotFoundError()

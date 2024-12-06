@@ -18,7 +18,9 @@ class SqlAlchemyBaseModel(DeclarativeBase):
         return f"<{self.__class__.__name__}({', '.join(cols)})>"
 
     def to_read_model(self):
-        readable_model = {col: getattr(self, col) for col in self.__table__.columns.keys()}
+        readable_model = {
+            col: getattr(self, col) for col in self.__table__.columns.keys()
+        }
         if self.model_schema:
             readable_model = self.model_schema.model_validate(self).model_dump()
         return readable_model

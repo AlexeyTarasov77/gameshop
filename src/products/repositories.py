@@ -33,3 +33,6 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
             data,
             **filter_params,
         )
+
+    async def delete(self, product_id: int) -> None:
+        await super().delete(id=product_id)

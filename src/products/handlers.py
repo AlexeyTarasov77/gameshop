@@ -2,7 +2,11 @@ import typing as t
 from http import HTTPStatus
 
 from core.ioc import Inject
-from core.service import EntityAlreadyExistsError, EntityRelatedResourceNotFoundError
+from core.service import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    EntityRelatedResourceNotFoundError,
+)
 from fastapi import APIRouter, Form, HTTPException
 
 from products import schemas
@@ -34,3 +38,14 @@ async def update_product(
     except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
         raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
     return product
+
+
+@router.delete("/delete/{product_id}", status_code=204)
+async def delete_product(
+    product_id: int,
+    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+) -> None:
+    try:
+        await products_service.delete_product(product_id)
+    except EntityNotFoundError as e:
+        raise HTTPException(HTTPStatus.BAD_REQUEST, e.msg) from e

@@ -16,11 +16,16 @@ class AlreadyExistsError(DatabaseError): ...
 class RelatedResourceNotFoundError(DatabaseError): ...
 
 
-class AbstractDatabaseExceptionMapper[K: Exception](AbstractExceptionMapper[K, DatabaseError]): ...
+class AbstractDatabaseExceptionMapper[K: Exception](
+    AbstractExceptionMapper[K, DatabaseError]
+): ...
 
 
-class PostgresExceptionsMapper(AbstractExceptionMapper[type[pg_exc.Error], type[DatabaseError]]):
+class PostgresExceptionsMapper(
+    AbstractExceptionMapper[type[pg_exc.Error], type[DatabaseError]]
+):
     EXCEPTION_MAPPING = {
+        pg_exc.NoData: NotFoundError,
         pg_exc.UniqueViolation: AlreadyExistsError,
         pg_exc.ForeignKeyViolation: RelatedResourceNotFoundError,
     }

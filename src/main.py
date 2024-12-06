@@ -1,4 +1,3 @@
-
 import uvicorn
 from core.ioc import get_container
 from core.router import router

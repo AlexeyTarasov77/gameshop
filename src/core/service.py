@@ -27,7 +27,9 @@ class EntityNotFoundError(ServiceError):
         msg = "%s %s not found"
         params_string = ""
         if self._params:
-            params_string = "with " + ", ".join(f"{key}={value}" for key, value in self._params.items())
+            params_string = "with " + ", ".join(
+                f"{key}={value}" for key, value in self._params.items()
+            )
         return msg % (self._entity_name, params_string)
 
 
@@ -36,7 +38,9 @@ class EntityAlreadyExistsError(ServiceError):
         msg = "%s %s already exists"
         params_string = ""
         if self._params:
-            params_string += "with " + ", ".join(f"{key}={value}" for key, value in self._params.items())
+            params_string += "with " + ", ".join(
+                f"{key}={value}" for key, value in self._params.items()
+            )
         return msg % (self._entity_name, params_string)
 
 
@@ -45,7 +49,9 @@ class EntityRelatedResourceNotFoundError(ServiceError):
         msg = "%s's related resources doesn't exist%s"
         params_string = ""
         if self.kwargs:
-            params_string += ": " + ", ".join(f"{key}={value}" for key, value in self._params.items())
+            params_string += ": " + ", ".join(
+                f"{key}={value}" for key, value in self._params.items()
+            )
         return msg % (self._entity_name, params_string)
 
 

@@ -4,7 +4,7 @@ import typing as t
 
 from db.main import Database
 from db.repository import SqlAlchemyRepository
-from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -27,7 +27,9 @@ class AbstractUnitOfWork(abc.ABC):
 
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(
-        self, session_factory: sessionmaker, repos_list: list[type[SqlAlchemyRepository]]
+        self,
+        session_factory: sessionmaker,
+        repos_list: list[type[SqlAlchemyRepository]],
     ) -> None:
         self.session_factory: sessionmaker = session_factory
         self.session: AsyncSession | None = None
@@ -47,7 +49,11 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
         try:
             if exc_type is not None:
-                logging.error("SqlAlchemyUnitOfWork.__aexit__: exc: %s", exc_type, exc_info=exc_type)
+                logging.error(
+                    "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
+                    exc_type,
+                    exc_info=exc_type,
+                )
                 await super().__aexit__(exc_type, *args)
             else:
                 logging.debug("commiting")
