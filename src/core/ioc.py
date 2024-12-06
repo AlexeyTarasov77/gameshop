@@ -2,9 +2,9 @@ import typing as t
 from functools import lru_cache
 
 import punq
-from db.exceptions import PostgresExceptionsMapper
-from db.main import Database
 from fastapi import Depends
+from gateways.db.exceptions import PostgresExceptionsMapper
+from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
 from products.repositories import ProductsRepository
 
@@ -20,14 +20,14 @@ def get_container() -> punq.Container:
 def _init_container() -> punq.Container:
     container = punq.Container()
     cfg = init_config()
-    db = Database(
+    db = SqlAlchemyDatabase(
         str(cfg.storage_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
         echo=(cfg.mode == "local"),
     )
     uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository])
-    container.register(Database, instance=db)
+    container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
     container.register(ProductsService, ProductsService)

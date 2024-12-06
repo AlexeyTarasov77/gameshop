@@ -2,11 +2,10 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
+from gateways.db.exceptions import NotFoundError
+from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from db.exceptions import NotFoundError
-from db.models import SqlAlchemyBaseModel
 
 
 class AbstractRepository[T](ABC):
@@ -50,12 +49,7 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         return results.scalars().all()
 
     async def update(self, data: Mapping, **filter_by) -> T:
-        query = (
-            update(self.model)
-            .filter_by(**filter_by)
-            .values(**data)
-            .returning(self.model)
-        )
+        query = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
         updated_object = await self.session.execute(query)
         if updated_object:
             return updated_object.scalars().first()

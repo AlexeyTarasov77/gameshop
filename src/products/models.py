@@ -2,8 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Final
 
-from db.column_types import created_at_t, int_pk_type, updated_at_t
-from db.models import SqlAlchemyBaseModel
+from gateways.db.column_types import created_at_t, int_pk_type, updated_at_t
+from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,9 +20,7 @@ class Product(SqlAlchemyBaseModel):
     )
     __table_args__ = (
         CheckConstraint(
-            text(
-                f"delivery_method = ANY (ARRAY[{','.join(DELIVERY_METHODS_CHOICES)}]::text[])"
-            )
+            text(f"delivery_method = ANY (ARRAY[{','.join(DELIVERY_METHODS_CHOICES)}]::text[])")
         ),
         UniqueConstraint("name", "category_name", "platform_name"),
     )
@@ -30,12 +28,8 @@ class Product(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str]
-    category_name: Mapped[str] = mapped_column(
-        ForeignKey("category.name", ondelete="CASCADE")
-    )
-    platform_name: Mapped[str] = mapped_column(
-        ForeignKey("platform.name", ondelete="CASCADE")
-    )
+    category_name: Mapped[str] = mapped_column(ForeignKey("category.name", ondelete="CASCADE"))
+    platform_name: Mapped[str] = mapped_column(ForeignKey("platform.name", ondelete="CASCADE"))
     category: Mapped["Category"] = relationship(back_populates="products")
     platform: Mapped["Platform"] = relationship(back_populates="products")
     image_url: Mapped[str]

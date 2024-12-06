@@ -2,8 +2,8 @@ import abc
 import logging
 import typing as t
 
-from db.main import Database
-from db.repository import SqlAlchemyRepository
+from gateways.db.main import SqlAlchemyDatabase
+from gateways.db.repository import SqlAlchemyRepository
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -60,7 +60,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
                 await self.commit()
         except SQLAlchemyError as e:
             logging.error("Exception during commiting/rollbacking trx", exc_info=e)
-            db = t.cast(Database, get_container().resolve(Database))
+            db = t.cast(SqlAlchemyDatabase, get_container().resolve(SqlAlchemyDatabase))
             db.exception_mapper.map_and_raise(getattr(e, "orig", None) or e)
         finally:
             await self.session.close()

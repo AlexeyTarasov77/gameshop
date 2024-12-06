@@ -1,26 +1,14 @@
 import typing as t
 
 from core.http.utils import save_upload_file
-from core.service import BaseService, EntityRelatedResourceNotFoundError
-from core.uow import AbstractUnitOfWork
-from db.exceptions import DatabaseError, RelatedResourceNotFoundError
+from core.service import BaseService
+from gateways.db.exceptions import DatabaseError
 from products.domain.interfaces import ProductsRepositoryI
 from products.schemas import CreateProductDTO, ShowProduct, UpdateProductDTO
 
 
-class ProductRelatedResourceNotFoundError(EntityRelatedResourceNotFoundError):
-    def _generate_msg(self) -> str:
-        return "Category or platform with specified name doesn't exist"
-
-
 class ProductsService(BaseService):
     entity_name = "Product"
-
-    def __init__(self, uow: AbstractUnitOfWork):
-        super().__init__(uow)
-        self.exception_mapper.EXCEPTION_MAPPING[RelatedResourceNotFoundError] = (
-            ProductRelatedResourceNotFoundError
-        )
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         try:
@@ -34,9 +22,7 @@ class ProductsService(BaseService):
             ) from e
         return product.to_read_model()
 
-    async def update_product(
-        self, product_id: int, dto: UpdateProductDTO
-    ) -> ShowProduct:
+    async def update_product(self, product_id: int, dto: UpdateProductDTO) -> ShowProduct:
         uploaded_to = None
         try:
             async with self.uow as uow:

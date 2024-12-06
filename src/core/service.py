@@ -1,14 +1,14 @@
 from functools import partial
 
-from db.exceptions import (
+from gateways.db.exceptions import (
     AlreadyExistsError,
     DatabaseError,
     NotFoundError,
     RelatedResourceNotFoundError,
 )
 
-from core.utils import AbstractExceptionMapper
 from core.uow import AbstractUnitOfWork
+from core.utils import AbstractExceptionMapper
 
 
 class ServiceError(Exception):
@@ -27,9 +27,7 @@ class EntityNotFoundError(ServiceError):
         msg = "%s %s not found"
         params_string = ""
         if self._params:
-            params_string = "with " + ", ".join(
-                f"{key}={value}" for key, value in self._params.items()
-            )
+            params_string = "with " + ", ".join(f"{key}={value}" for key, value in self._params.items())
         return msg % (self._entity_name, params_string)
 
 
@@ -38,9 +36,7 @@ class EntityAlreadyExistsError(ServiceError):
         msg = "%s %s already exists"
         params_string = ""
         if self._params:
-            params_string += "with " + ", ".join(
-                f"{key}={value}" for key, value in self._params.items()
-            )
+            params_string += "with " + ", ".join(f"{key}={value}" for key, value in self._params.items())
         return msg % (self._entity_name, params_string)
 
 
@@ -48,10 +44,8 @@ class EntityRelatedResourceNotFoundError(ServiceError):
     def _generate_msg(self) -> str:
         msg = "%s's related resources doesn't exist%s"
         params_string = ""
-        if self.kwargs:
-            params_string += ": " + ", ".join(
-                f"{key}={value}" for key, value in self._params.items()
-            )
+        if self._params:
+            params_string += ": " + ", ".join(f"{key}={value}" for key, value in self._params.items())
         return msg % (self._entity_name, params_string)
 
 

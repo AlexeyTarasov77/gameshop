@@ -1,5 +1,5 @@
 from core.http.utils import FilePath
-from db.repository import SqlAlchemyRepository
+from gateways.db.repository import SqlAlchemyRepository
 
 from products.models import Product
 from products.schemas import CreateProductDTO, UpdateProductDTO

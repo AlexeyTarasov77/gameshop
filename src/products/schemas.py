@@ -27,7 +27,8 @@ class CreateProductDTO(BaseProductDTO):
 
         if value not in Product.DELIVERY_METHODS_CHOICES:
             raise ValueError(
-                f"{value} is not available delivery method. Choices are: {Product.DELIVERY_METHODS_CHOICES}"
+                f"""{value} is not available delivery method.
+                Choices are: {Product.DELIVERY_METHODS_CHOICES}"""
             )
         return value
 

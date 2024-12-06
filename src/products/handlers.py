@@ -1,13 +1,12 @@
 import typing as t
 from http import HTTPStatus
 
+from core.http.exceptions import HttpExceptionsMapper
 from core.ioc import Inject
 from core.service import (
-    EntityAlreadyExistsError,
-    EntityNotFoundError,
-    EntityRelatedResourceNotFoundError,
+    ServiceError,
 )
-from fastapi import APIRouter, Form, HTTPException
+from fastapi import APIRouter, Form
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -22,8 +21,8 @@ async def create_product(
 ) -> schemas.ShowProduct:
     try:
         product = await products_service.create_product(dto)
-    except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
-        raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
     return product
 
 
@@ -35,8 +34,8 @@ async def update_product(
 ) -> schemas.ShowProduct:
     try:
         product = await products_service.update_product(product_id, dto)
-    except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
-        raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
     return product
 
 
@@ -47,5 +46,5 @@ async def delete_product(
 ) -> None:
     try:
         await products_service.delete_product(product_id)
-    except EntityNotFoundError as e:
-        raise HTTPException(HTTPStatus.BAD_REQUEST, e.msg) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
