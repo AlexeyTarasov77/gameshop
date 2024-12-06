@@ -2,3 +2,6 @@ __pycache__/
 .DS_Store
 .env
 venv/
+poetry.lock
+.ruff_cache
+media/
