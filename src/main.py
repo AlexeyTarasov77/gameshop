@@ -2,12 +2,20 @@ import uvicorn
 from core.ioc import get_container
 from core.router import router
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import Config
 
 
 def app_factory() -> FastAPI:
     app = FastAPI()
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(router)
     return app
 
