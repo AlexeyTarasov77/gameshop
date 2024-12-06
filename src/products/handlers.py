@@ -21,3 +21,16 @@ async def create_product(
     except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
         raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
     return product
+
+
+@router.put("/update/{product_id}")
+async def update_product(
+    product_id: int,
+    dto: t.Annotated[schemas.UpdateProductDTO, Form()],
+    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+) -> schemas.ShowProduct:
+    try:
+        product = await products_service.update_product(product_id, dto)
+    except (EntityRelatedResourceNotFoundError, EntityAlreadyExistsError) as e:
+        raise HTTPException(HTTPStatus.CONFLICT, e.msg) from e
+    return product

@@ -47,7 +47,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
         try:
             if exc_type is not None:
-                logging.error("SqlAlchemyUnitOfWork.__aexit__: exc: %s", exc=exc_type, exc_info=exc_type)
+                logging.error("SqlAlchemyUnitOfWork.__aexit__: exc: %s", exc_type, exc_info=exc_type)
                 await super().__aexit__(exc_type, *args)
             else:
                 logging.debug("commiting")

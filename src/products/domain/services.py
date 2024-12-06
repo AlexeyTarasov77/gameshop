@@ -8,6 +8,7 @@ from core.service import (
 from core.uow import AbstractUnitOfWork
 from db.exceptions import DatabaseError, RelatedResourceNotFoundError
 from products.domain.interfaces import ProductsRepositoryI
+from products.models import Product
 from products.schemas import CreateProductDTO, ShowProduct, UpdateProductDTO
 
 
@@ -37,13 +38,16 @@ class ProductsService(BaseService):
             ) from e
         return product.to_read_model()
 
-    # async def update_product(self, product_id: int, dto: UpdateProductDTO) -> ShowProduct:
-    #     try:
-    #         async with self.uow as uow:
-    #             repo = t.cast(ProductsRepositoryI, uow.products_repo)
-    #             product = await repo.update(product_id, dto)
-    #     except DatabaseError as e:
-    #         raise self.exception_mapper.map_with_entity(e)(
-    #             **dto.model_dump(include=["name", "category_name", "platform_name"])
-    #         ) from e
-    #     return product.to_read_model()
+    async def update_product(self, product_id: int, dto: UpdateProductDTO) -> ShowProduct:
+        uploaded_to = None
+        try:
+            async with self.uow as uow:
+                if dto.image:
+                    uploaded_to = save_upload_file(dto.image)
+                repo = t.cast(ProductsRepositoryI, uow.products_repo)
+                product = await repo.update(dto, uploaded_to, id=product_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(
+                **dto.model_dump(include=["name", "category_name", "platform_name"])
+            ) from e
+        return product.to_read_model()

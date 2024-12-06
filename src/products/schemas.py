@@ -17,8 +17,8 @@ class BaseProductDTO(BaseDTO):
 
 class CreateProductDTO(BaseProductDTO):
     image: UploadFile
-    discount: int | None
-    discount_valid_to: datetime | None
+    discount: int = 0
+    discount_valid_to: datetime | None = None
 
     @field_validator("delivery_method")
     @classmethod
@@ -32,7 +32,16 @@ class CreateProductDTO(BaseProductDTO):
         return value
 
 
-class UpdateProductDTO(CreateProductDTO): ...
+class UpdateProductDTO(BaseDTO):
+    name: str = None
+    description: str = None
+    regular_price: Decimal = None
+    category_name: str = None
+    platform_name: str = None
+    delivery_method: str = None
+    image: UploadFile = None
+    discount: int = None
+    discount_valid_to: datetime | None = None
 
 
 class ShowProduct(BaseProductDTO):
