@@ -1,4 +1,4 @@
-from core.exceptions import AbstractExceptionMapper
+from core.utils import AbstractExceptionMapper
 
 
 class HttpExceptionsMapper(AbstractExceptionMapper):

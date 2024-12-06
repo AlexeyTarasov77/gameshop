@@ -7,7 +7,7 @@ from db.exceptions import (
     RelatedResourceNotFoundError,
 )
 
-from core.exceptions import AbstractExceptionMapper
+from core.utils import AbstractExceptionMapper
 from core.uow import AbstractUnitOfWork
 
 

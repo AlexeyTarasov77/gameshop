@@ -1,10 +1,13 @@
 from functools import partial
 
-from core.exceptions import AbstractExceptionMapper
+from core.utils import AbstractExceptionMapper
 from psycopg import errors as pg_exc
 
 
 class DatabaseError(Exception): ...
+
+
+class DBConnectionError(DatabaseError): ...
 
 
 class NotFoundError(DatabaseError): ...
@@ -16,14 +19,10 @@ class AlreadyExistsError(DatabaseError): ...
 class RelatedResourceNotFoundError(DatabaseError): ...
 
 
-class AbstractDatabaseExceptionMapper[K: Exception](
-    AbstractExceptionMapper[K, DatabaseError]
-): ...
+class AbstractDatabaseExceptionMapper[K: Exception](AbstractExceptionMapper[K, DatabaseError]): ...
 
 
-class PostgresExceptionsMapper(
-    AbstractExceptionMapper[type[pg_exc.Error], type[DatabaseError]]
-):
+class PostgresExceptionsMapper(AbstractExceptionMapper[type[pg_exc.Error], type[DatabaseError]]):
     EXCEPTION_MAPPING = {
         pg_exc.NoData: NotFoundError,
         pg_exc.UniqueViolation: AlreadyExistsError,

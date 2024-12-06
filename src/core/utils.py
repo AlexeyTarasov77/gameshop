@@ -3,6 +3,15 @@ import logging
 import typing as t
 
 
+class Singleton:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs) -> t.Self:
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
     EXCEPTION_MAPPING: dict[type[K], type[V]]
 
