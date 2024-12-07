@@ -9,6 +9,12 @@ from config import Config
 
 def app_factory() -> FastAPI:
     app = FastAPI()
+    app.include_router(router)
+
+    @app.get("/ping")
+    async def ping() -> dict[str, str | list[str]]:
+        return {"status": "available", "available_routes": [route.path for route in app.routes]}
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -16,7 +22,6 @@ def app_factory() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(router)
     return app
 
 
