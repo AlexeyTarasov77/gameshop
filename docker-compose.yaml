@@ -1,0 +1,28 @@
+volumes:
+  pg_data:
+
+services:
+  web:
+    container_name: gameshop_web
+    ports:
+      - "8000:8000"
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./:/app
+    environment:
+      - MODE=prod
+  postgres:
+    container_name: gameshop_db
+    image: postgres:17.1-alpine
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    env_file:
+      - .env
