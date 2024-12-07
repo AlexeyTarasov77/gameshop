@@ -51,19 +51,19 @@ async def delete_product(
 @router.get("/platforms")
 async def platforms_list(
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
-) -> list[str]:
+) -> dict[str, list[str]]:
     return {"platforms": await products_service.platforms_list()}
 
 
 @router.get("/categories")
 async def categories_list(
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
-) -> list[str]:
+) -> dict[str, list[str]]:
     return {"categories": await products_service.categories_list()}
 
 
 @router.get("/delivery-methods")
 async def delivery_methods_list(
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
-) -> list[str]:
+) -> dict[str, list[str]]:
     return {"delivery_methods": await products_service.delivery_methods_list()}
