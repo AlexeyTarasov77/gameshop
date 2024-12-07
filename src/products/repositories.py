@@ -1,8 +1,10 @@
+import typing as t
 from pathlib import Path
 
-from gateways.db.repository import SqlAlchemyRepository
+from sqlalchemy import select
 
-from products.models import Product
+from gateways.db.repository import SqlAlchemyRepository
+from products.models import Category, Platform, Product
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
 
@@ -35,3 +37,19 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
 
     async def delete(self, product_id: int) -> None:
         await super().delete(id=product_id)
+
+
+class PlatformsRepository(SqlAlchemyRepository[Platform]):
+    model = Platform
+
+    async def list_names(self) -> list[str]:
+        res = await super().list(self.model.name)
+        return t.cast(list[str], res)
+
+
+class CategoriesRepository(SqlAlchemyRepository[Category]):
+    model = Category
+
+    async def list_names(self) -> list[str]:
+        res = await super().list(self.model.name)
+        return t.cast(list[str], res)

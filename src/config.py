@@ -1,5 +1,4 @@
 import argparse
-import pathlib
 import typing as t
 
 from pydantic import BaseModel, Field, IPvAnyAddress, PostgresDsn
@@ -9,8 +8,6 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
-
-DEFAULT_CONFIG_PATH: t.Final = (pathlib.Path() / "config" / "local.yaml").resolve()
 
 
 class _Server(BaseModel):
@@ -49,7 +46,6 @@ def init_config() -> Config:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config-path",
-        default=DEFAULT_CONFIG_PATH,
         help="Path to the configuration file",
         dest="config_path",
     )

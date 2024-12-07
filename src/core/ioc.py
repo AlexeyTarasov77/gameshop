@@ -6,7 +6,7 @@ from fastapi import Depends
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
-from products.repositories import ProductsRepository
+from products.repositories import PlatformsRepository, ProductsRepository
 
 from config import Config, init_config
 from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
@@ -26,7 +26,7 @@ def _init_container() -> punq.Container:
         future=True,
         echo=(cfg.mode == "local"),
     )
-    uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository])
+    uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository, PlatformsRepository])
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)

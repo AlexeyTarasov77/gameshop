@@ -1,3 +1,4 @@
+from typing import cast
 import uvicorn
 from core.ioc import get_container
 from core.router import router
@@ -26,7 +27,8 @@ def app_factory() -> FastAPI:
 
 
 def main() -> None:
-    cfg = get_container().resolve(Config)
+    cfg = cast(Config, get_container().resolve(Config))
+    print(f"Running in {cfg.mode} mode")
     uvicorn.run(
         app="main:app_factory",
         factory=True,

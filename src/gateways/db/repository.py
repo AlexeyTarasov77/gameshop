@@ -43,8 +43,8 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         self.session.add(instance)
         return instance
 
-    async def list(self, **filter_by) -> list[T]:
-        query = select(self.model).filter_by(**filter_by)
+    async def list(self, *fields, **filter_by) -> list[T]:
+        query = select(*fields or self.model).filter_by(**filter_by)
         results = await self.session.execute(query)
         return results.scalars().all()
 
