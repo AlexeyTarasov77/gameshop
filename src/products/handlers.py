@@ -1,13 +1,11 @@
 import typing as t
 from http import HTTPStatus
 
-from core.http.exceptions import HttpExceptionsMapper
-from core.ioc import Inject
-from core.service import (
-    ServiceError,
-)
 from fastapi import APIRouter, Form
 
+from core.http.exceptions import HttpExceptionsMapper
+from core.ioc import Inject
+from core.service import ServiceError
 from products import schemas
 from products.domain.services import ProductsService
 
@@ -48,3 +46,24 @@ async def delete_product(
         await products_service.delete_product(product_id)
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
+
+
+@router.get("/platforms")
+async def platforms_list(
+    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+) -> list[str]:
+    return {"platforms": await products_service.platforms_list()}
+
+
+@router.get("/categories")
+async def categories_list(
+    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+) -> list[str]:
+    return {"categories": await products_service.categories_list()}
+
+
+@router.get("/delivery-methods")
+async def delivery_methods_list(
+    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+) -> list[str]:
+    return {"delivery_methods": await products_service.delivery_methods_list()}

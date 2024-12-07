@@ -3,8 +3,8 @@ import logging
 
 from core.utils import Singleton
 from gateways.db.exceptions import AbstractDatabaseExceptionMapper, DBConnectionError
-from psycopg import OperationalError
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
