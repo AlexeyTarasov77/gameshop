@@ -6,13 +6,14 @@ from core.http.utils import save_upload_file
 from core.service import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
+
 from users.domain.interfaces import (
     HasherI,
     MailProviderI,
     TokenProviderI,
     UsersRepositoryI,
 )
-from users.schemas import CreateUserDTO
+from users.schemas import CreateUserDTO, ShowUser
 
 
 class UsersService(BaseService):
@@ -34,8 +35,9 @@ class UsersService(BaseService):
         self.activation_link = activation_link
         self.activation_token_ttl = activation_token_ttl
 
-    async def signup(self, dto: CreateUserDTO) -> str:
+    async def signup(self, dto: CreateUserDTO) -> ShowUser:
         password_hash = self.hasher.hash(dto.password)
+        uploaded_to = None
         try:
             async with self.uow as uow:
                 if dto.photo:
@@ -52,5 +54,7 @@ class UsersService(BaseService):
             И введите данный токен в поле ввода:
                 {activation_token}
         """
-        asyncio.to_thread(self.mail_provider.send_mail, "Аккаунт успешно создан", email_body, user.email)
-        return activation_token
+        asyncio.create_task(
+            self.mail_provider.send_mail("Аккаунт успешно создан", email_body, user.email)
+        )
+        return user.to_read_model()

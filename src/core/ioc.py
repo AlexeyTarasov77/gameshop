@@ -7,7 +7,11 @@ from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
 from products.repositories import PlatformsRepository, ProductsRepository
+from users.domain.services import UsersService
+from users.hashing import BcryptHasher
+from users.mailing import AsyncMailer
 from users.repositories import UsersRepository
+from users.tokens import JwtTokenProvider
 
 from config import Config, init_config
 from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
@@ -30,10 +34,22 @@ def _init_container() -> punq.Container:
     uow = SqlAlchemyUnitOfWork(
         db.session_factory, [ProductsRepository, PlatformsRepository, UsersRepository]
     )
+    hasher = BcryptHasher()
+    mail_provider = AsyncMailer(**cfg.smtp.model_dump())
+    token_provider = JwtTokenProvider(secret_key=cfg.jwt.secret, signing_alg=cfg.jwt.alg)
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
     container.register(ProductsService, ProductsService)
+    container.register(
+        UsersService,
+        UsersService,
+        hasher=hasher,
+        mail_provider=mail_provider,
+        token_provider=token_provider,
+        activation_token_ttl=cfg.jwt.activation_token_ttl,
+        activation_link="http://localhost:8000/ping"
+    )
 
     return container
 

@@ -1,7 +1,10 @@
 import argparse
+from email.policy import default
+import re
 import typing as t
+from datetime import timedelta
 
-from pydantic import BaseModel, Field, IPvAnyAddress, PostgresDsn
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field, IPvAnyAddress, PostgresDsn
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -9,10 +12,38 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
+PORT = t.Annotated[int, Field(default="8000", gt=0, lte=65535)]
+
+
+def _parse_timedelta(delta: str) -> timedelta:
+    """Transforms string like 1d / 1h / 60m ... etc TO timedelta object"""
+    units_mapping = {"d": "days", "m": "minutes", "h": "hours"}
+    match = re.match(r"(\d+\.?\d*)([a-zA-Z])", delta)
+    number, unit = match.groups()
+    assert unit in units_mapping.keys(), "Unknown unit: %s" % unit
+    return timedelta(**{units_mapping[unit]: float(number)})
+
+
+ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
+
 
 class _Server(BaseModel):
     host: IPvAnyAddress = Field(default="0.0.0.0")
-    port: int = Field(default="8000", gt=0, lte=65535)
+    port: PORT
+
+
+class _SMTP(BaseModel):
+    host: str
+    port: PORT
+    username: str
+    password: str
+    default_sender: EmailStr | None = None
+
+
+class _JWT(BaseModel):
+    secret: str
+    alg: t.Literal["HS256", "RS256", "SHA256"] = "HS256"
+    activation_token_ttl: ParsableTimedelta
 
 
 class Config(BaseSettings):
@@ -20,6 +51,8 @@ class Config(BaseSettings):
 
     mode: t.Literal["local", "prod"]
     server: _Server = Field(default_factory=_Server)
+    smtp: _SMTP
+    jwt: _JWT
     storage_dsn: PostgresDsn
 
     @classmethod

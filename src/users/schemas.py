@@ -20,7 +20,7 @@ class CreateUserDTO(BaseDTO):
 class ShowUser(BaseDTO):
     id: int
     email: EmailStr
-    photo_url: str
+    photo_url: str | None
     is_active: bool
     created_at: datetime
     updated_at: datetime
