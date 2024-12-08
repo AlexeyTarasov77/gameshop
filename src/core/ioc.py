@@ -3,13 +3,14 @@ from functools import lru_cache
 
 import punq
 from fastapi import Depends
+
+from config import Config, init_config
+from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
 from products.repositories import PlatformsRepository, ProductsRepository
-
-from config import Config, init_config
-from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
+from users.repositories import UsersRepository
 
 
 @lru_cache(1)
@@ -26,7 +27,9 @@ def _init_container() -> punq.Container:
         future=True,
         echo=(cfg.mode == "local"),
     )
-    uow = SqlAlchemyUnitOfWork(db.session_factory, [ProductsRepository, PlatformsRepository])
+    uow = SqlAlchemyUnitOfWork(
+        db.session_factory, [ProductsRepository, PlatformsRepository, UsersRepository]
+    )
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)

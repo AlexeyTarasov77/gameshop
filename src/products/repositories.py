@@ -1,9 +1,8 @@
 import typing as t
 from pathlib import Path
 
-from sqlalchemy import select
-
 from gateways.db.repository import SqlAlchemyRepository
+
 from products.models import Category, Platform, Product
 from products.schemas import CreateProductDTO, UpdateProductDTO
 

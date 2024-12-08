@@ -1,11 +1,11 @@
 import typing as t
 from http import HTTPStatus
 
-from fastapi import APIRouter, Form
-
 from core.http.exceptions import HttpExceptionsMapper
 from core.ioc import Inject
 from core.service import ServiceError
+from fastapi import APIRouter, Form
+
 from products import schemas
 from products.domain.services import ProductsService
 
