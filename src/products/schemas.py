@@ -1,9 +1,17 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Annotated
 
-from core.schemas import BaseDTO
-from fastapi import UploadFile
-from pydantic import field_validator
+from core.schemas import BaseDTO, Image
+from pydantic import AfterValidator, field_validator
+
+
+def _check_datetime[T: datetime](value: T) -> T:
+    assert value > datetime.now(), "Value should be greater than current datetime"
+    return value
+
+
+DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
 
 
 class BaseProductDTO(BaseDTO):
@@ -16,9 +24,9 @@ class BaseProductDTO(BaseDTO):
 
 
 class CreateProductDTO(BaseProductDTO):
-    image: UploadFile
+    image: Image
     discount: int = 0
-    discount_valid_to: datetime | None = None
+    discount_valid_to: DateTimeAfterNow | None = None
 
     @field_validator("delivery_method")
     @classmethod
@@ -40,9 +48,9 @@ class UpdateProductDTO(BaseDTO):
     category_name: str = None
     platform_name: str = None
     delivery_method: str = None
-    image: UploadFile = None
+    image: Image = None
     discount: int = None
-    discount_valid_to: datetime | None = None
+    discount_valid_to: DateTimeAfterNow | None = None
 
 
 class ShowProduct(BaseProductDTO):

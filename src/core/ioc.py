@@ -3,14 +3,14 @@ from functools import lru_cache
 
 import punq
 from fastapi import Depends
-
-from config import Config, init_config
-from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
 from products.repositories import PlatformsRepository, ProductsRepository
 from users.repositories import UsersRepository
+
+from config import Config, init_config
+from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 
 
 @lru_cache(1)

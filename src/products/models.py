@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Final
 
-from gateways.db.column_types import created_at_t, int_pk_type, updated_at_t
+from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -37,8 +37,8 @@ class Product(SqlAlchemyBaseModel):
     delivery_method: Mapped[str]
     discount: Mapped[int] = mapped_column(default=0)
     discount_valid_to: Mapped[datetime | None]
-    created_at: Mapped[created_at_t]
-    updated_at: Mapped[updated_at_t]
+    created_at: Mapped[created_at_type]
+    updated_at: Mapped[updated_at_type]
 
 
 class Category(SqlAlchemyBaseModel):
