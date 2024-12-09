@@ -1,4 +1,5 @@
 from typing import cast
+
 import uvicorn
 from core.ioc import get_container
 from core.router import router
@@ -39,4 +40,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    main()
     main()
