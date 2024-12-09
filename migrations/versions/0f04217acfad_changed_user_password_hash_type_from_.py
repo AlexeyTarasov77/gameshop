@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.alter_column('user', 'password_hash',
                existing_type=sa.VARCHAR(),
                type_=postgresql.BYTEA(),
-               existing_nullable=False)
+               existing_nullable=False, postgresql_using='password_hash::bytea')
     # ### end Alembic commands ###
 
 
@@ -32,5 +32,5 @@ def downgrade() -> None:
     op.alter_column('user', 'password_hash',
                existing_type=postgresql.BYTEA(),
                type_=sa.VARCHAR(),
-               existing_nullable=False)
+               existing_nullable=False, postgresql_using='password_hash::text')
     # ### end Alembic commands ###

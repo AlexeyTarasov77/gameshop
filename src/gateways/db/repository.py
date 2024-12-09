@@ -44,15 +44,18 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         return instance
 
     async def list(self, *fields, **filter_by) -> list[T]:
-        query = select(*fields or self.model).filter_by(**filter_by)
-        results = await self.session.execute(query)
-        return results.scalars().all()
+        query = select(fields or self.model).filter_by(**filter_by)
+        res = await self.session.execute(query)
+        return res.scalars().all()
 
     async def update(self, data: Mapping, **filter_by) -> T:
         query = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
-        updated_object = await self.session.execute(query)
-        if updated_object:
-            return updated_object.scalars().first()
+        res = await self.session.execute(query)
+        obj = res.scalars().one_or_none()
+        if not obj:
+            raise NotFoundError()
+        print("UPD", obj)
+        return obj
 
     async def delete(self, **filter_by) -> int:
         query = delete(self.model).filter_by(**filter_by)

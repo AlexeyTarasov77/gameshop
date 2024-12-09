@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from core.schemas import BaseDTO, Image
-from pydantic import EmailStr, field_validator
+from core.schemas import BaseDTO
+from pydantic import AnyUrl, EmailStr, field_validator
 
 
 class CreateUserDTO(BaseDTO):
     email: EmailStr
     password: str
-    photo: Image | None = None
+    photo_url: AnyUrl | None = None
 
     @field_validator("password")
     @classmethod

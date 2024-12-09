@@ -7,7 +7,7 @@ from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from products.schemas import ShowProduct
+from products.schemas import CategoryDTO, PlatformDTO, ShowProduct
 
 
 class Product(SqlAlchemyBaseModel):
@@ -22,16 +22,16 @@ class Product(SqlAlchemyBaseModel):
         CheckConstraint(
             text(f"delivery_method = ANY (ARRAY[{','.join(DELIVERY_METHODS_CHOICES)}]::text[])")
         ),
-        UniqueConstraint("name", "category_name", "platform_name"),
+        UniqueConstraint("name", "category_id", "platform_id"),
     )
 
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str]
-    category_name: Mapped[str] = mapped_column(ForeignKey("category.name", ondelete="CASCADE"))
-    platform_name: Mapped[str] = mapped_column(ForeignKey("platform.name", ondelete="CASCADE"))
-    category: Mapped["Category"] = relationship(back_populates="products")
-    platform: Mapped["Platform"] = relationship(back_populates="products")
+    category_id: Mapped[str] = mapped_column(ForeignKey("category.id", ondelete="CASCADE"))
+    platform_id: Mapped[str] = mapped_column(ForeignKey("platform.id", ondelete="CASCADE"))
+    category: Mapped["Category"] = relationship(back_populates="products", lazy="joined")
+    platform: Mapped["Platform"] = relationship(back_populates="products", lazy="joined")
     image_url: Mapped[str]
     regular_price: Mapped[Decimal]
     delivery_method: Mapped[str]
@@ -42,10 +42,16 @@ class Product(SqlAlchemyBaseModel):
 
 
 class Category(SqlAlchemyBaseModel):
-    name: Mapped[str] = mapped_column(primary_key=True)
+    model_schema = CategoryDTO
+
+    id: Mapped[int_pk_type]
+    name: Mapped[str]
     products: Mapped[list[Product]] = relationship(back_populates="category")
 
 
 class Platform(SqlAlchemyBaseModel):
-    name: Mapped[str] = mapped_column(primary_key=True)
+    model_schema = PlatformDTO
+
+    id: Mapped[int_pk_type]
+    name: Mapped[str]
     products: Mapped[list[Product]] = relationship(back_populates="platform")

@@ -2,7 +2,6 @@ import asyncio
 import typing as t
 from datetime import timedelta
 
-from core.http.utils import save_upload_file
 from core.service import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
@@ -37,13 +36,10 @@ class UsersService(BaseService):
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
         password_hash = self.hasher.hash(dto.password)
-        uploaded_to = None
         try:
             async with self.uow as uow:
-                if dto.photo:
-                    uploaded_to = save_upload_file(dto.photo)
                 repo = t.cast(UsersRepositoryI, uow.users_repo)
-                user = await repo.create(dto.email, password_hash, uploaded_to)
+                user = await repo.create(dto.email, password_hash, str(dto.photo_url))
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(**dto.model_dump(include=["email"])) from e
         activation_token = self.token_provider.new_token({"uid": user.id}, self.activation_token_ttl)

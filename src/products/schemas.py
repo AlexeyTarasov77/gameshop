@@ -2,8 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import BaseDTO, Image
-from pydantic import AfterValidator, field_validator
+from core.schemas import BaseDTO
+from pydantic import AfterValidator, AnyUrl, field_validator
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -14,18 +14,26 @@ def _check_datetime[T: datetime](value: T) -> T:
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
 
 
+class CategoryDTO(BaseDTO):
+    id: int
+    name: str
+
+
+class PlatformDTO(CategoryDTO): ...
+
+
 class BaseProductDTO(BaseDTO):
     name: str
     description: str
     regular_price: Decimal
-    category_name: str
-    platform_name: str
     delivery_method: str
 
 
 class CreateProductDTO(BaseProductDTO):
-    image: Image
+    image_url: AnyUrl
     discount: int = 0
+    category: CategoryDTO
+    platform: PlatformDTO
     discount_valid_to: DateTimeAfterNow | None = None
 
     @field_validator("delivery_method")
@@ -45,10 +53,10 @@ class UpdateProductDTO(BaseDTO):
     name: str = None
     description: str = None
     regular_price: Decimal = None
-    category_name: str = None
-    platform_name: str = None
+    category: CategoryDTO = None
+    platform: PlatformDTO = None
     delivery_method: str = None
-    image: Image = None
+    image_url: AnyUrl = None
     discount: int = None
     discount_valid_to: DateTimeAfterNow | None = None
 
@@ -57,6 +65,8 @@ class ShowProduct(BaseProductDTO):
     id: int
     image_url: str
     discount: int
+    category_id: int
+    platform_id: int
     discount_valid_to: datetime
     created_at: datetime
     updated_at: datetime
