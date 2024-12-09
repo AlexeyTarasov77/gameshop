@@ -33,7 +33,7 @@ def _init_container() -> punq.Container:
         str(cfg.storage_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
-        echo=(cfg.mode == "local"),
+        echo=cfg.debug,
     )
     uow = SqlAlchemyUnitOfWork(
         db.session_factory,

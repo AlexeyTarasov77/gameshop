@@ -11,6 +11,10 @@ from products.domain.services import ProductsService
 
 router = APIRouter(prefix="/products", tags=["products"])
 
+# router.get("/")
+# async def list_products(products_service: t.Annotated[ProductsService, Inject(ProductsService)]):
+#     ...
+
 
 @router.post("/create", status_code=HTTPStatus.CREATED)
 async def create_product(

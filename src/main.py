@@ -1,3 +1,4 @@
+import sys
 from typing import cast
 
 import uvicorn
@@ -35,10 +36,9 @@ def main() -> None:
         factory=True,
         host=cfg.server.host,
         port=int(cfg.server.port),
-        reload=(cfg.mode == "local"),
+        reload=cfg.debug,
     )
 
 
 if __name__ == "__main__":
-    main()
     main()

@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from core.schemas import BaseDTO
-from pydantic import AfterValidator, AnyUrl, field_validator
+from pydantic import AfterValidator, AnyUrl, Field, field_validator
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -23,8 +23,8 @@ class PlatformDTO(CategoryDTO): ...
 
 
 class BaseProductDTO(BaseDTO):
-    name: str
-    description: str
+    name: str = Field(min_length=3)
+    description: str = Field(min_length=10)
     regular_price: Decimal
     delivery_method: str
 

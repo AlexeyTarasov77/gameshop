@@ -1,8 +1,9 @@
 import argparse
-import pathlib
+import os
 import re
 import typing as t
 from datetime import timedelta
+from pathlib import Path
 
 from pydantic import (
     BaseModel,
@@ -56,7 +57,7 @@ class _JWT(BaseModel):
 class Config(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
 
-    mode: t.Literal["local", "prod"]
+    mode: t.Literal["local", "prod", "tests"]
     server: _Server = Field(default_factory=_Server)
     smtp: _SMTP
     jwt: _JWT
@@ -81,8 +82,13 @@ class Config(BaseSettings):
             YamlConfigSettingsSource(settings_cls, yaml_file=yaml_file_path),
         )
 
+    @property
+    def debug(self):
+        return self.mode in ["local", "tests"]
 
-def init_config(parse_cli: bool = True, config_path: pathlib.Path | str | None = None) -> Config:
+
+def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -> Config:
+    cli_args = None
     if parse_cli:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -92,10 +98,19 @@ def init_config(parse_cli: bool = True, config_path: pathlib.Path | str | None =
         )
         parser.add_argument("--host", help="Server host", dest="host")
         parser.add_argument("-p", "--port", help="Server port", dest="port")
-        args = parser.parse_args()
-        cfg = Config(yaml_file=args.config_path)
-        cfg.server.host = args.host or cfg.server.host
-        cfg.server.port = args.port or cfg.server.port
-    else:
-        cfg = Config(yaml_file=config_path or (pathlib.Path() / "config" / "local.yaml").resolve())
+        cli_args = parser.parse_args()
+    final_cfg_path = (
+        config_path or cli_args.config_path or (Path() / "config" / (os.environ["MODE"] + ".yaml"))
+    )
+    if not final_cfg_path:
+        raise ValueError(
+            """Missing config_path. Provid it using a cli flag --config-path or a function arg.
+            Also you can specify MODE env variable to find config by its value"""
+        )
+    if not Path(final_cfg_path).exists():
+        raise ValueError("Config path doesn't exist: %s" % final_cfg_path)
+    cfg = Config(yaml_file=final_cfg_path)
+    if parse_cli:
+        cfg.server.host = cli_args.host or cfg.server.host
+        cfg.server.port = cli_args.port or cfg.server.port
     return cfg
