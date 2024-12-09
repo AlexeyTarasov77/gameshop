@@ -3,9 +3,6 @@ from functools import lru_cache
 
 import punq
 from fastapi import Depends
-
-from config import Config, init_config
-from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from products.domain.services import ProductsService
@@ -19,6 +16,9 @@ from users.hashing import BcryptHasher
 from users.mailing import AsyncMailer
 from users.repositories import UsersRepository
 from users.tokens import JwtTokenProvider
+
+from config import Config, init_config
+from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 
 
 @lru_cache(1)

@@ -1,10 +1,17 @@
 import argparse
-from email.policy import default
+import pathlib
 import re
 import typing as t
 from datetime import timedelta
 
-from pydantic import BaseModel, BeforeValidator, EmailStr, Field, IPvAnyAddress, PostgresDsn
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    EmailStr,
+    Field,
+    IPvAnyAddress,
+    PostgresDsn,
+)
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -75,17 +82,20 @@ class Config(BaseSettings):
         )
 
 
-def init_config() -> Config:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config-path",
-        help="Path to the configuration file",
-        dest="config_path",
-    )
-    parser.add_argument("--host", help="Server host", dest="host")
-    parser.add_argument("-p", "--port", help="Server port", dest="port")
-    args = parser.parse_args()
-    cfg = Config(yaml_file=args.config_path)
-    cfg.server.host = args.host or cfg.server.host
-    cfg.server.port = args.port or cfg.server.port
+def init_config(parse_cli: bool = True, config_path: pathlib.Path | str | None = None) -> Config:
+    if parse_cli:
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "--config-path",
+            help="Path to the configuration file",
+            dest="config_path",
+        )
+        parser.add_argument("--host", help="Server host", dest="host")
+        parser.add_argument("-p", "--port", help="Server port", dest="port")
+        args = parser.parse_args()
+        cfg = Config(yaml_file=args.config_path)
+        cfg.server.host = args.host or cfg.server.host
+        cfg.server.port = args.port or cfg.server.port
+    else:
+        cfg = Config(yaml_file=config_path or (pathlib.Path() / "config" / "local.yaml").resolve())
     return cfg
