@@ -13,7 +13,7 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
             image_url=str(dto.image_url),
             category_id=dto.category.id,
             platform_id=dto.platform.id,
-            **dto.model_dump(exclude={"image_url", "category", "platform"}),
+            **dto.model_dump(exclude={"image_url", "category", "platform"}, exclude_none=True),
         )
         return product
 

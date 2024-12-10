@@ -1,12 +1,14 @@
 import abc
 import logging
 import typing as t
+from re import S
 
-from gateways.db.main import SqlAlchemyDatabase
-from gateways.db.repository import SqlAlchemyRepository
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
+
+from gateways.db.main import SqlAlchemyDatabase
+from gateways.db.repository import SqlAlchemyRepository
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -35,6 +37,12 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.session: AsyncSession | None = None
         self.repos_list = repos_list
 
+    def _handle_exc(self, exc: Exception) -> t.NoReturn:
+        from core.ioc import get_container
+
+        db = t.cast(SqlAlchemyDatabase, get_container().resolve(SqlAlchemyDatabase))
+        db.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
+
     async def __aenter__(self) -> t.Self:
         self.session = self.session_factory()
 
@@ -45,23 +53,21 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         return await super().__aenter__()
 
     async def __aexit__(self, exc_type, *args) -> None:
-        from core.ioc import get_container
-
         try:
             if exc_type is not None:
                 logging.error(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
-                    exc_type,
+                    args[0],
                     exc_info=exc_type,
                 )
                 await super().__aexit__(exc_type, *args)
-            else:
-                logging.debug("commiting")
-                await self.commit()
+                self._handle_exc(args[0])
+
+            logging.debug("commiting")
+            await self.commit()
         except SQLAlchemyError as e:
             logging.error("Exception during commiting/rollbacking trx", exc_info=e)
-            db = t.cast(SqlAlchemyDatabase, get_container().resolve(SqlAlchemyDatabase))
-            db.exception_mapper.map_and_raise(getattr(e, "orig", None) or e)
+            self._handle_exc(e)
         finally:
             await self.session.close()
 

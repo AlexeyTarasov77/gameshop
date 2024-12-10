@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from core.schemas import BaseDTO
-from pydantic import AfterValidator, AnyUrl, Field, field_validator
+from pydantic import AfterValidator, AnyUrl, Field
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -11,11 +11,27 @@ def _check_datetime[T: datetime](value: T) -> T:
     return value
 
 
+def _check_delivery_method[T: str | None](value: T) -> T:
+    if value:
+        from products.models import Product
+
+        assert value in Product.DELIVERY_METHODS_CHOICES, f"""{value} is not available delivery method.
+                Choices are: {Product.DELIVERY_METHODS_CHOICES}"""
+    return value
+
+
+def _check_discount[T: int](value: T) -> T:
+    assert 0 <= value <= 100, "Discount should be between 0 and 100"
+    return value
+
+
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
+ProductDeliveryMethod = Annotated[str, AfterValidator(_check_delivery_method)]
+ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 
 class CategoryDTO(BaseDTO):
-    id: int
+    id: int = Field(gt=0)
     name: str
 
 
@@ -25,46 +41,31 @@ class PlatformDTO(CategoryDTO): ...
 class BaseProductDTO(BaseDTO):
     name: str = Field(min_length=3)
     description: str = Field(min_length=10)
-    regular_price: Decimal
-    delivery_method: str
+    regular_price: Decimal = Field(ge=0)
+    delivery_method: ProductDeliveryMethod
+    discount: ProductDiscount = None
+    image_url: AnyUrl
 
 
 class CreateProductDTO(BaseProductDTO):
-    image_url: AnyUrl
-    discount: int = 0
     category: CategoryDTO
     platform: PlatformDTO
     discount_valid_to: DateTimeAfterNow | None = None
 
-    @field_validator("delivery_method")
-    @classmethod
-    def validate_delivery_method(cls, value):
-        from products.models import Product
-
-        if value not in Product.DELIVERY_METHODS_CHOICES:
-            raise ValueError(
-                f"""{value} is not available delivery method.
-                Choices are: {Product.DELIVERY_METHODS_CHOICES}"""
-            )
-        return value
-
 
 class UpdateProductDTO(BaseDTO):
-    name: str = None
-    description: str = None
-    regular_price: Decimal = None
+    name: str = Field(min_length=3, default=None)
+    description: str = Field(min_length=10, default=None)
+    regular_price: Decimal = Field(ge=0, default=None)
     category: CategoryDTO = None
     platform: PlatformDTO = None
-    delivery_method: str = None
+    delivery_method: ProductDeliveryMethod = None
     image_url: AnyUrl = None
-    discount: int = None
     discount_valid_to: DateTimeAfterNow | None = None
 
 
 class ShowProduct(BaseProductDTO):
     id: int
-    image_url: str
-    discount: int
     category_id: int
     platform_id: int
     discount_valid_to: datetime

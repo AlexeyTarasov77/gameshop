@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from gateways.db.exceptions import NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -39,26 +39,28 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         self.session = session
 
     async def create(self, **values) -> T:
-        instance = self.model(**values)
-        self.session.add(instance)
-        return instance
+        stmt = insert(self.model).values(**values).returning(self.model)
+        res = await self.session.execute(stmt)
+        return res.scalars().one()
 
-    async def list(self, *fields, **filter_by) -> list[T]:
-        query = select(fields or self.model).filter_by(**filter_by)
-        res = await self.session.execute(query)
+    async def list(self, *columns, **filter_by) -> list[T]:
+        stmt = select(self.model)
+        if columns:
+            stmt = select(*[getattr(self.model.columns, col) for col in columns])
+        stmt = stmt.filter_by(**filter_by)
+        res = await self.session.execute(stmt)
         return res.scalars().all()
 
     async def update(self, data: Mapping, **filter_by) -> T:
-        query = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
-        res = await self.session.execute(query)
+        stmt = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
+        res = await self.session.execute(stmt)
         obj = res.scalars().one_or_none()
         if not obj:
             raise NotFoundError()
-        print("UPD", obj)
         return obj
 
     async def delete(self, **filter_by) -> int:
-        query = delete(self.model).filter_by(**filter_by)
-        res = await self.session.execute(query)
+        stmt = delete(self.model).filter_by(**filter_by)
+        res = await self.session.execute(stmt)
         if res.rowcount < 1:
             raise NotFoundError()
