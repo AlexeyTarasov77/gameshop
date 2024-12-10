@@ -2,7 +2,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 
-from gateways.db.exceptions import NotFoundError
+from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +39,8 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         self.session = session
 
     async def create(self, **values) -> T:
+        if not values:
+            raise DatabaseError("No data to insert")
         stmt = insert(self.model).values(**values).returning(self.model)
         res = await self.session.execute(stmt)
         return res.scalars().one()
@@ -52,6 +54,8 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         return res.scalars().all()
 
     async def update(self, data: Mapping, **filter_by) -> T:
+        if not data:
+            raise DatabaseError("No data to update. Provided data is empty")
         stmt = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
         res = await self.session.execute(stmt)
         obj = res.scalars().one_or_none()

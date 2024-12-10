@@ -1,13 +1,17 @@
+import asyncio
 import random
 import typing as t
 from datetime import datetime, timedelta
 from decimal import Decimal
+from itertools import zip_longest
 
 import pytest
+from gateways.db.main import SqlAlchemyDatabase
+from gateways.db.repository import SqlAlchemyRepository
 from products.handlers import router
 from products.models import Product
 
-from handlers.conftest import client, faker
+from handlers.conftest import client, container, faker
 
 
 def _gen_create_product_data():
@@ -18,10 +22,29 @@ def _gen_create_product_data():
         "image_url": faker.image_url(),
         "delivery_method": random.choice(Product.DELIVERY_METHODS_CHOICES),
         "discount": random.randint(0, 100),
-        "discount_valid_to": str(faker.date_time_between(datetime.now(), timedelta(days=30))),
+        "discount_valid_to": faker.date_time_between(datetime.now(), timedelta(days=30)).isoformat(),
         "category": {"id": random.randint(1, 3), "name": faker.company()},
         "platform": {"id": random.randint(1, 3), "name": faker.street_name()},
     }
+
+
+@pytest.fixture()
+def new_product():
+    db = t.cast(SqlAlchemyDatabase, container.resolve(SqlAlchemyDatabase))
+    try:
+        session = db.session_factory()
+        repo = SqlAlchemyRepository(session)
+        repo.model = Product
+        data = _gen_create_product_data()
+        data["category_id"], data["platform_id"] = data["category"]["id"], data["platform"]["id"]
+        data.pop("category")
+        data.pop("platform")
+        product: Product = asyncio.run(repo.create(**data))
+        asyncio.run(session.commit())
+        yield product
+        asyncio.run(repo.delete(id=product.id))
+    finally:
+        asyncio.run(session.close())
 
 
 create_product_data = _gen_create_product_data()
@@ -88,3 +111,39 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         assert resp_data["discount"] == data["discount"]
         assert resp_data["category_id"] == data["category"]["id"]
         assert resp_data["platform_id"] == data["platform"]["id"]
+
+
+@pytest.mark.parametrize(
+    ["data", "expected_status", "product_id"],
+    [
+        ({"name": faker.name()}, 200, None),
+        ({"name": faker.name()}, 404, 999),
+        ({}, 400, None),
+        ({"category": {"id": 999, "name": faker.name()}}, 400, None),
+        ({"discount": -100}, 422, None),
+        ({"discount_valid_to": None}, 200, None),
+        ({"name": None}, 422, None)
+    ],
+)
+def test_update_product(
+    data: dict[str, t.Any], new_product: Product, expected_status: int, product_id: int
+):
+    product_id = product_id or new_product.id
+    resp = client.put(f"{router.prefix}/update/{product_id}", json=data)
+    resp_data = resp.json()
+    assert resp.status_code == expected_status
+    if expected_status == 200:
+        for resp_key, data_key in zip_longest(resp_data, data):
+            if data_key is None:
+                if resp_key in data:
+                    continue
+                product_val = getattr(new_product, resp_key)
+                resp_val = resp_data[resp_key]
+                if type(product_val) is datetime:
+                    product_val = product_val.isoformat()
+                else:
+                    t = type(resp_val)
+                    product_val = t(product_val)
+                assert resp_val == product_val
+            else:
+                assert resp_data[data_key] == data[data_key]

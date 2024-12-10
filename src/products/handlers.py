@@ -4,7 +4,7 @@ from http import HTTPStatus
 from core.http.exceptions import HttpExceptionsMapper
 from core.ioc import Inject
 from core.service import ServiceError
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -34,6 +34,9 @@ async def update_product(
     dto: schemas.UpdateProductDTO,
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
 ) -> schemas.ShowProduct:
+    print("dto", dto, dto.model_dump(exclude_unset=True))
+    if not dto.model_dump(exclude_unset=True):
+        raise HTTPException(400, "Nothing to update. No data provided")
     try:
         product = await products_service.update_product(product_id, dto)
     except ServiceError as e:

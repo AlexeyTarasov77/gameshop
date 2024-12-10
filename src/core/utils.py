@@ -22,6 +22,8 @@ class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
     @classmethod
     def map(cls, exc: K) -> type[V]:
         exc_class = type(exc)
+        if exc_class in cls.EXCEPTION_MAPPING.values():
+            return exc_class
         mapped_exc_class = cls.EXCEPTION_MAPPING.get(exc_class)
         if not mapped_exc_class:
             logging.warning("Not mapped exception: %s", exc_class)
@@ -30,4 +32,5 @@ class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
 
     @classmethod
     def map_and_raise(cls, exc: K) -> t.NoReturn:
-        raise cls.map(exc)()
+        mapped = cls.map(exc)
+        raise mapped()

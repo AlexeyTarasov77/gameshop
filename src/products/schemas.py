@@ -61,6 +61,7 @@ class UpdateProductDTO(BaseDTO):
     platform: PlatformDTO = None
     delivery_method: ProductDeliveryMethod = None
     image_url: AnyUrl = None
+    discount: ProductDiscount = None
     discount_valid_to: DateTimeAfterNow | None = None
 
 
@@ -68,6 +69,6 @@ class ShowProduct(BaseProductDTO):
     id: int
     category_id: int
     platform_id: int
-    discount_valid_to: datetime
+    discount_valid_to: datetime | None
     created_at: datetime
     updated_at: datetime
