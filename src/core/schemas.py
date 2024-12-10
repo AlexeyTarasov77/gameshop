@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import UploadFile
 from pydantic import AfterValidator, BaseModel
 
-from core.http.utils import filename_split
+from core.utils import filename_split
 
 
 class BaseDTO(BaseModel):

@@ -2,6 +2,7 @@ import typing as t
 from http import HTTPStatus
 
 from core.http.exceptions import HttpExceptionsMapper
+from core.http.utils import EntityIDParam
 from core.ioc import Inject
 from core.service import ServiceError
 from fastapi import APIRouter, HTTPException
@@ -30,11 +31,10 @@ async def create_product(
 
 @router.put("/update/{product_id}")
 async def update_product(
-    product_id: int,
+    product_id: EntityIDParam,
     dto: schemas.UpdateProductDTO,
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
 ) -> schemas.ShowProduct:
-    print("dto", dto, dto.model_dump(exclude_unset=True))
     if not dto.model_dump(exclude_unset=True):
         raise HTTPException(400, "Nothing to update. No data provided")
     try:
@@ -46,7 +46,7 @@ async def update_product(
 
 @router.delete("/delete/{product_id}", status_code=204)
 async def delete_product(
-    product_id: int,
+    product_id: EntityIDParam,
     products_service: t.Annotated[ProductsService, Inject(ProductsService)],
 ) -> None:
     try:

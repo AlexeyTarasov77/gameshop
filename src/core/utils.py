@@ -3,6 +3,17 @@ import logging
 import typing as t
 
 
+def filename_split(orig_filename: str) -> tuple[str, list[str]]:
+    """Splits filename to name and extensions"""
+    filename_splitted = orig_filename.split(".")
+    filename_i = 1 if orig_filename.startswith(".") else 0
+    filename = filename_splitted[filename_i]
+    if orig_filename.startswith("."):
+        filename = "." + filename
+    extensions = filename_splitted[filename_i + 1 :]
+    return filename, extensions
+
+
 class Singleton:
     _instance = None
 

@@ -1,22 +1,16 @@
 import random
 from pathlib import Path
-from typing import Final
+from typing import Annotated, Final
 
 import aiofiles
+from fastapi import Path as UrlParam
 from fastapi import UploadFile
 
+from core.utils import filename_split
+
+type EntityIDParam = Annotated[int, UrlParam(gt=0)]
+
 DEFAULT_UPLOAD_DIR: Final[Path] = Path() / "media"
-
-
-def filename_split(orig_filename: str) -> tuple[str, list[str]]:
-    """Splits filename to name and extensions"""
-    filename_splitted = orig_filename.split(".")
-    filename_i = 1 if orig_filename.startswith(".") else 0
-    filename = filename_splitted[filename_i]
-    if orig_filename.startswith("."):
-        filename = "." + filename
-    extensions = filename_splitted[filename_i + 1 :]
-    return filename, extensions
 
 
 async def save_upload_file(upload_file: UploadFile, dest_path: Path | None = None) -> Path:
@@ -34,4 +28,5 @@ async def save_upload_file(upload_file: UploadFile, dest_path: Path | None = Non
                 await buffer.write(content)
     finally:
         await upload_file.close()
+    return dest_path
     return dest_path

@@ -1,17 +1,19 @@
 import asyncio
 import random
 import typing as t
+from contextlib import suppress
 from datetime import datetime, timedelta
 from decimal import Decimal
 from itertools import zip_longest
 
 import pytest
-from gateways.db.main import SqlAlchemyDatabase
+from handlers.conftest import client, db, faker
+from sqlalchemy import select
+
+from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from products.handlers import router
 from products.models import Product
-
-from handlers.conftest import client, container, faker
 
 
 def _gen_create_product_data():
@@ -30,21 +32,22 @@ def _gen_create_product_data():
 
 @pytest.fixture()
 def new_product():
-    db = t.cast(SqlAlchemyDatabase, container.resolve(SqlAlchemyDatabase))
-    try:
-        session = db.session_factory()
-        repo = SqlAlchemyRepository(session)
-        repo.model = Product
-        data = _gen_create_product_data()
-        data["category_id"], data["platform_id"] = data["category"]["id"], data["platform"]["id"]
-        data.pop("category")
-        data.pop("platform")
-        product: Product = asyncio.run(repo.create(**data))
-        asyncio.run(session.commit())
-        yield product
-        asyncio.run(repo.delete(id=product.id))
-    finally:
-        asyncio.run(session.close())
+    data = _gen_create_product_data()
+    data["category_id"], data["platform_id"] = data["category"]["id"], data["platform"]["id"]
+    data.pop("category")
+    data.pop("platform")
+    with asyncio.Runner() as runner:
+        try:
+            session = db.session_factory()
+            repo = SqlAlchemyRepository(session)
+            repo.model = Product
+            product: Product = runner.run(repo.create(**data))
+            runner.run(session.commit())
+            yield product
+            with suppress(NotFoundError):
+                runner.run(repo.delete(id=product.id))
+        finally:
+            runner.run(session.close())
 
 
 create_product_data = _gen_create_product_data()
@@ -107,7 +110,6 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         assert resp_data["name"] == data["name"]
         assert resp_data["description"] == data["description"]
         assert resp_data["regular_price"] == data["regular_price"]
-        assert resp_data["regular_price"] == data["regular_price"]
         assert resp_data["discount"] == data["discount"]
         assert resp_data["category_id"] == data["category"]["id"]
         assert resp_data["platform_id"] == data["platform"]["id"]
@@ -122,11 +124,12 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         ({"category": {"id": 999, "name": faker.name()}}, 400, None),
         ({"discount": -100}, 422, None),
         ({"discount_valid_to": None}, 200, None),
-        ({"name": None}, 422, None)
+        ({"name": None}, 422, None),
+        ({"name": faker.name()}, 422, -1),
     ],
 )
 def test_update_product(
-    data: dict[str, t.Any], new_product: Product, expected_status: int, product_id: int
+    data: dict[str, t.Any], new_product: Product, expected_status: int, product_id: int | None
 ):
     product_id = product_id or new_product.id
     resp = client.put(f"{router.prefix}/update/{product_id}", json=data)
@@ -147,3 +150,19 @@ def test_update_product(
                 assert resp_val == product_val
             else:
                 assert resp_data[data_key] == data[data_key]
+
+
+@pytest.mark.parametrize(["expected_status", "product_id"], [(204, None), (404, 999), (422, -1)])
+def test_delete_product(new_product: Product, expected_status: int, product_id: int | None):
+    product_id = product_id or new_product.id
+    resp = client.delete(f"{router.prefix}/delete/{product_id}")
+    assert resp.status_code == expected_status
+    if expected_status == 204:
+        with asyncio.Runner() as runner:
+            try:
+                session = db.session_factory()
+                stmt = select(Product.id).filter_by(id=new_product.id)
+                res = runner.run(session.execute(stmt))
+                assert len(res.scalars().all()) == 0
+            finally:
+                runner.run(session.close())
