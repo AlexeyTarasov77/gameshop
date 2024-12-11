@@ -107,7 +107,7 @@ def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -
         final_cfg_path = final_cfg_path or (Path() / "config" / (env_mode + ".yaml"))
     if not final_cfg_path:
         raise ValueError(
-            """Missing config_path. Provid it using a cli flag --config-path or a function arg.
+            """Missing config_path. Provide it using a cli flag --config-path or a function arg.
             Also you can specify MODE env variable to find config by its value"""
         )
     if not Path(final_cfg_path).exists():

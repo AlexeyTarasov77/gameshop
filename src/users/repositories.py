@@ -8,3 +8,6 @@ class UsersRepository(SqlAlchemyRepository[User]):
 
     async def create(self, email: str, password_hash: bytes, photo_url: str | None) -> User:
         return await super().create(email=email, password_hash=password_hash, photo_url=photo_url)
+
+    async def update(self, user_id: int, **data) -> User:
+        return await super().update(data, id=user_id)

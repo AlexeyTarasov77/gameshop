@@ -7,6 +7,8 @@ from users.models import User
 class UsersRepositoryI(t.Protocol):
     async def create(self, email: str, password_hash: bytes, photo_url: str | None) -> User: ...
 
+    async def update(self, user_id: int, **data) -> User: ...
+
 
 class HasherI(t.Protocol):
     def hash(self, password: str) -> bytes: ...
@@ -16,6 +18,8 @@ class HasherI(t.Protocol):
 
 class TokenProviderI(t.Protocol):
     def new_token(self, payload: dict[str, t.Any], expires_in: timedelta) -> str: ...
+
+    def extract_payload(self, token: str) -> dict[str, t.Any]: ...
 
 
 class MailProviderI(t.Protocol):

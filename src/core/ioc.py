@@ -11,6 +11,7 @@ from products.repositories import (
     PlatformsRepository,
     ProductsRepository,
 )
+from users.domain.interfaces import HasherI, MailProviderI, TokenProviderI
 from users.domain.services import UsersService
 from users.hashing import BcryptHasher
 from users.mailing import AsyncMailer
@@ -39,9 +40,11 @@ def _init_container() -> punq.Container:
         db.session_factory,
         [ProductsRepository, PlatformsRepository, CategoriesRepository, UsersRepository],
     )
-    hasher = BcryptHasher()
-    mail_provider = AsyncMailer(**cfg.smtp.model_dump())
-    token_provider = JwtTokenProvider(secret_key=cfg.jwt.secret, signing_alg=cfg.jwt.alg)
+    container.register(HasherI, BcryptHasher)
+    container.register(
+        TokenProviderI, JwtTokenProvider, secret_key=cfg.jwt.secret, signing_alg=cfg.jwt.alg
+    )
+    container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
@@ -49,9 +52,6 @@ def _init_container() -> punq.Container:
     container.register(
         UsersService,
         UsersService,
-        hasher=hasher,
-        mail_provider=mail_provider,
-        token_provider=token_provider,
         activation_token_ttl=cfg.jwt.activation_token_ttl,
         activation_link="http://localhost:8000/ping",
     )

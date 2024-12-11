@@ -7,32 +7,32 @@ from decimal import Decimal
 from itertools import zip_longest
 
 import pytest
-from handlers.conftest import client, db, faker
-from sqlalchemy import select
-
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from products.handlers import router
 from products.models import Product
+from sqlalchemy import select
+
+from handlers.conftest import client, db, fake
 
 
-def _gen_create_product_data():
+def _gen_product_data():
     return {
-        "name": faker.name(),
-        "description": faker.sentence(),
-        "regular_price": str(Decimal(faker.random_number(4))),
-        "image_url": faker.image_url(),
+        "name": fake.name(),
+        "description": fake.sentence(),
+        "regular_price": str(Decimal(fake.random_number(4))),
+        "image_url": fake.image_url(),
         "delivery_method": random.choice(Product.DELIVERY_METHODS_CHOICES),
         "discount": random.randint(0, 100),
-        "discount_valid_to": faker.date_time_between(datetime.now(), timedelta(days=30)).isoformat(),
-        "category": {"id": random.randint(1, 3), "name": faker.company()},
-        "platform": {"id": random.randint(1, 3), "name": faker.street_name()},
+        "discount_valid_to": fake.date_time_between(datetime.now(), timedelta(days=30)).isoformat(),
+        "category": {"id": random.randint(1, 3), "name": fake.company()},
+        "platform": {"id": random.randint(1, 3), "name": fake.street_name()},
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def new_product():
-    data = _gen_create_product_data()
+    data = _gen_product_data()
     data["category_id"], data["platform_id"] = data["category"]["id"], data["platform"]["id"]
     data.pop("category")
     data.pop("platform")
@@ -50,7 +50,7 @@ def new_product():
             runner.run(session.close())
 
 
-create_product_data = _gen_create_product_data()
+create_product_data = _gen_product_data()
 
 
 @pytest.mark.parametrize(
@@ -60,42 +60,42 @@ create_product_data = _gen_create_product_data()
         (create_product_data, 409),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "discount_valid_to": str(datetime.now()),
             },
             422,
         ),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "name": "",
             },
             422,
         ),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "delivery_method": "unknown",
             },
             422,
         ),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "regular_price": -100,
             },
             422,
         ),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "discount": -100,
             },
             422,
         ),
         (
             {
-                **_gen_create_product_data(),
+                **_gen_product_data(),
                 "image_url": "invalid",
             },
             422,
@@ -118,14 +118,14 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
 @pytest.mark.parametrize(
     ["data", "expected_status", "product_id"],
     [
-        ({"name": faker.name()}, 200, None),
-        ({"name": faker.name()}, 404, 999),
+        ({"name": fake.name()}, 200, None),
+        ({"name": fake.name()}, 404, 999),
         ({}, 400, None),
-        ({"category": {"id": 999, "name": faker.name()}}, 400, None),
+        ({"category": {"id": 999, "name": fake.name()}}, 400, None),
         ({"discount": -100}, 422, None),
         ({"discount_valid_to": None}, 200, None),
         ({"name": None}, 422, None),
-        ({"name": faker.name()}, 422, -1),
+        ({"name": fake.name()}, 422, -1),
     ],
 )
 def test_update_product(
