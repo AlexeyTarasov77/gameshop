@@ -100,8 +100,11 @@ def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -
         parser.add_argument("-p", "--port", help="Server port", dest="port")
         cli_args = parser.parse_args()
     final_cfg_path = (
-        config_path or cli_args.config_path or (Path() / "config" / (os.environ["MODE"] + ".yaml"))
+        config_path
+        or getattr(cli_args, "config_path", None)
     )
+    if env_mode := os.environ.get("MODE"):
+        final_cfg_path = final_cfg_path or (Path() / "config" / (env_mode + ".yaml"))
     if not final_cfg_path:
         raise ValueError(
             """Missing config_path. Provid it using a cli flag --config-path or a function arg.
