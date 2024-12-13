@@ -30,8 +30,19 @@ async def list_products(
         "total_on_page": len(products),
         "first_page": 1,
         "last_page": math.ceil(total_records / pagination_params.page_size),
-        **pagination_params._asdict()
+        **pagination_params._asdict(),
     }
+
+
+@router.get("/{product_id}")
+async def get_product(
+    product_id: EntityIDParam, products_service: ProductsServiceDep
+) -> dict[str, schemas.ShowProductWithRelations]:
+    try:
+        product = await products_service.get_product(product_id)
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+    return {"product": product}
 
 
 @router.post("/create", status_code=HTTPStatus.CREATED)

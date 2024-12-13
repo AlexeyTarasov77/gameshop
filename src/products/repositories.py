@@ -1,3 +1,4 @@
+from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from sqlalchemy import select, text
 
@@ -48,6 +49,12 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
         stmt = text(f"SELECT COUNT(id) FROM {self.model.__tablename__}")
         res = await self.session.execute(stmt)
         return res.scalar()
+
+    async def get_by_id(self, product_id: int) -> Product:
+        res = await super().list(id=product_id)
+        if not res:
+            raise NotFoundError()
+        return res[0]
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):

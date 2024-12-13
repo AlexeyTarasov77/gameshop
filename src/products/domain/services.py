@@ -46,6 +46,15 @@ class ProductsService(BaseService):
             raise self.exception_mapper.map_with_entity(e)() from e
         return [ShowProductWithRelations.model_validate(product) for product in products], total_records
 
+    async def get_product(self, product_id: int) -> ShowProductWithRelations:
+        try:
+            async with self.uow as uow:
+                repo = t.cast(ProductsRepositoryI, uow.products_repo)
+                product = await repo.get_by_id(product_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return ShowProductWithRelations.model_validate(product)
+
     async def platforms_list(self) -> list[PlatformDTO]:
         async with self.uow as uow:
             repo = t.cast(PlatformsRepositoryI, uow.platforms_repo)

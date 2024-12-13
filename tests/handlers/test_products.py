@@ -150,8 +150,7 @@ def test_update_product(
                 if type(product_val) is datetime:
                     product_val = product_val.isoformat()
                 else:
-                    t = type(resp_val)
-                    product_val = t(product_val)
+                    product_val = type(resp_val)(product_val)
                 assert resp_val == product_val
             else:
                 assert resp_data[data_key] == data[data_key]
@@ -191,10 +190,7 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
         assert "page_size" in resp_data
         assert "page_num" in resp_data
         assert "total_records" in resp_data
-        assert (
-            "total_on_page" in resp_data
-            and resp_data["total_on_page"] <= resp_data["page_size"]
-        )
+        assert "total_on_page" in resp_data and resp_data["total_on_page"] <= resp_data["page_size"]
         assert "first_page" in resp_data and resp_data["first_page"] == 1
         assert "last_page" in resp_data and resp_data["last_page"] == math.ceil(
             resp_data["total_records"] / resp_data["page_size"]
@@ -206,3 +202,20 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
                 assert resp_data["page_size"] == params["page_size"]
             if params.get("page_num"):
                 assert resp_data["page_num"] == params["page_num"]
+
+
+@pytest.mark.parametrize(["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)])
+def test_get_product(new_product: Product, expected_status: int, product_id: int | None):
+    product_id = product_id or new_product.id
+    resp = client.get(f"{router.prefix}/{product_id}")
+    assert resp.status_code == expected_status
+    if expected_status == 200:
+        resp_data = resp.json()
+        assert "product" in resp_data
+        resp_product = resp_data["product"]
+        assert resp_product["name"] == new_product.name
+        assert resp_product["description"] == new_product.description
+        assert resp_product["regular_price"] == str(new_product.regular_price)
+        assert resp_product["discount"] == new_product.discount
+        assert resp_product["category"]["id"] == new_product.category_id
+        assert resp_product["platform"]["id"] == new_product.platform_id
