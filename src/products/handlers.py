@@ -34,7 +34,7 @@ async def list_products(
     }
 
 
-@router.get("/{product_id}")
+@router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
 ) -> dict[str, schemas.ShowProductWithRelations]:

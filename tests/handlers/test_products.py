@@ -206,7 +206,7 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
 @pytest.mark.parametrize(["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)])
 def test_get_product(new_product: Product, expected_status: int, product_id: int | None):
     product_id = product_id or new_product.id
-    resp = client.get(f"{router.prefix}/{product_id}")
+    resp = client.get(f"{router.prefix}/detail/{product_id}")
     assert resp.status_code == expected_status
     if expected_status == 200:
         resp_data = resp.json()
