@@ -10,7 +10,6 @@ from itertools import zip_longest
 import pytest
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
-from httpx._types import QueryParamTypes
 from products.handlers import router
 from products.models import Product
 from sqlalchemy import select

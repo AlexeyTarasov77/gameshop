@@ -63,3 +63,26 @@ def test_activate_user(new_user: User, token_generator: t.Callable[[int], str], 
             if type(user_value) is datetime:
                 user_value = user_value.isoformat()
             assert resp_value == user_value
+
+
+user_data = _gen_user_data()
+
+
+@pytest.mark.parametrize(
+    ["data", "expected_status"],
+    [
+        (user_data, 201),
+        (user_data, 409),
+        ({**_gen_user_data(), "email": "invalid"}, 422),
+        ({**_gen_user_data(), "password": "short"}, 422),
+        ({**_gen_user_data(), "photo_url": "invalid"}, 422),
+    ],
+)
+def test_signup(data: dict[str, str], expected_status: int):
+    resp = client.post(f"{router.prefix}/signup", json=data)
+    assert resp.status_code == expected_status
+    if expected_status == 201:
+        resp_data = resp.json()
+        assert data["email"] == resp_data["email"]
+        assert data["photo_url"] == resp_data["photo_url"]
+        assert resp_data["is_active"] is False
