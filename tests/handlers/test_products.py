@@ -1,4 +1,5 @@
 import asyncio
+import math
 import random
 import typing as t
 from contextlib import suppress
@@ -9,6 +10,7 @@ from itertools import zip_longest
 import pytest
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
+from httpx._types import QueryParamTypes
 from products.handlers import router
 from products.models import Product
 from sqlalchemy import select
@@ -41,11 +43,14 @@ def new_product():
             session = db.session_factory()
             repo = SqlAlchemyRepository(session)
             repo.model = Product
+            print("CREATING PRODUCT")
             product: Product = runner.run(repo.create(**data))
             runner.run(session.commit())
             yield product
             with suppress(NotFoundError):
+                print("DELETING PRODUCT")
                 runner.run(repo.delete(id=product.id))
+                runner.run(session.commit())
         finally:
             runner.run(session.close())
 
@@ -166,3 +171,38 @@ def test_delete_product(new_product: Product, expected_status: int, product_id: 
                 assert len(res.scalars().all()) == 0
             finally:
                 runner.run(session.close())
+
+
+@pytest.mark.parametrize(
+    ["expected_status", "params"],
+    [
+        (200, None),
+        (200, {"page_size": 5, "page_num": 1}),
+        (422, {"page_size": 0}),
+        (422, {"page_num": 0}),
+    ],
+)
+def test_list_products(expected_status: int, params: dict[str, int] | None):
+    resp = client.get(f"{router.prefix}/", params=params)
+    assert resp.status_code == expected_status
+    resp_data = resp.json()
+    if expected_status == 200:
+        assert "products" in resp_data
+        assert "page_size" in resp_data
+        assert "page_num" in resp_data
+        assert "total_records" in resp_data
+        assert (
+            "total_on_page" in resp_data
+            and resp_data["total_on_page"] <= resp_data["page_size"]
+        )
+        assert "first_page" in resp_data and resp_data["first_page"] == 1
+        assert "last_page" in resp_data and resp_data["last_page"] == math.ceil(
+            resp_data["total_records"] / resp_data["page_size"]
+        )
+        products = resp_data["products"]
+        assert len(products) == resp_data["total_on_page"]
+        if params:
+            if params.get("page_size"):
+                assert resp_data["page_size"] == params["page_size"]
+            if params.get("page_num"):
+                assert resp_data["page_num"] == params["page_num"]

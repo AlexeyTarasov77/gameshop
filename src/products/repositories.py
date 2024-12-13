@@ -1,5 +1,5 @@
-
 from gateways.db.repository import SqlAlchemyRepository
+from sqlalchemy import select, text
 
 from products.models import Category, Platform, Product
 from products.schemas import CreateProductDTO, UpdateProductDTO
@@ -38,6 +38,16 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
 
     async def delete(self, product_id: int) -> None:
         await super().delete(id=product_id)
+
+    async def paginated_list(self, limit: int, offset: int) -> list[Product]:
+        stmt = select(self.model).offset(offset).limit(limit)
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
+    async def get_records_count(self) -> int:
+        stmt = text(f"SELECT COUNT(id) FROM {self.model.__tablename__}")
+        res = await self.session.execute(stmt)
+        return res.scalar()
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):

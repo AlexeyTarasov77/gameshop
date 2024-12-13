@@ -11,11 +11,13 @@ from users.schemas import CreateUserDTO, ShowUser
 
 router = APIRouter(prefix="/users", tags=["users", "auth"])
 
+UsersServiceDep = t.Annotated[UsersService, Inject(UsersService)]
+
 
 @router.post("/signup", status_code=HTTPStatus.CREATED)
 async def signup(
     dto: CreateUserDTO,
-    users_service: t.Annotated[UsersService, Inject(UsersService)],
+    users_service: UsersServiceDep,
 ) -> ShowUser:
     try:
         return await users_service.signup(dto)
@@ -26,7 +28,7 @@ async def signup(
 @router.patch("/activate")
 async def activate_user(
     token: t.Annotated[str, Body(min_length=50, embed=True)],
-    users_service: t.Annotated[UsersService, Inject(UsersService)],
+    users_service: UsersServiceDep,
 ) -> dict[str, bool | ShowUser]:
     try:
         user = await users_service.activate_user(token)

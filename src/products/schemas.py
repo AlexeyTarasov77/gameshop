@@ -65,10 +65,18 @@ class UpdateProductDTO(BaseDTO):
     discount_valid_to: DateTimeAfterNow | None = None
 
 
-class ShowProduct(BaseProductDTO):
+class BaseShowProductDTO(BaseProductDTO):
     id: int
-    category_id: int
-    platform_id: int
     discount_valid_to: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class ShowProduct(BaseShowProductDTO):
+    category_id: int
+    platform_id: int
+
+
+class ShowProductWithRelations(BaseShowProductDTO):
+    category: CategoryDTO
+    platform: PlatformDTO

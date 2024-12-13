@@ -1,8 +1,9 @@
+import math
 import typing as t
 from http import HTTPStatus
 
 from core.http.exceptions import HttpExceptionsMapper
-from core.http.utils import EntityIDParam
+from core.http.utils import EntityIDParam, PaginationDep
 from core.ioc import Inject
 from core.service import ServiceError
 from fastapi import APIRouter, HTTPException
@@ -12,15 +13,31 @@ from products.domain.services import ProductsService
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-# router.get("/")
-# async def list_products(products_service: t.Annotated[ProductsService, Inject(ProductsService)]):
-#     ...
+ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
+
+
+@router.get("/")
+async def list_products(
+    pagination_params: PaginationDep, products_service: ProductsServiceDep
+) -> dict[str, list[schemas.ShowProductWithRelations] | str | int]:
+    try:
+        products, total_records = await products_service.list_products(pagination_params)
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+    return {
+        "products": products,
+        "total_records": total_records,
+        "total_on_page": len(products),
+        "first_page": 1,
+        "last_page": math.ceil(total_records / pagination_params.page_size),
+        **pagination_params._asdict()
+    }
 
 
 @router.post("/create", status_code=HTTPStatus.CREATED)
 async def create_product(
     dto: schemas.CreateProductDTO,
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     try:
         product = await products_service.create_product(dto)
@@ -33,7 +50,7 @@ async def create_product(
 async def update_product(
     product_id: EntityIDParam,
     dto: schemas.UpdateProductDTO,
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):
         raise HTTPException(400, "Nothing to update. No data provided")
@@ -47,7 +64,7 @@ async def update_product(
 @router.delete("/delete/{product_id}", status_code=204)
 async def delete_product(
     product_id: EntityIDParam,
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> None:
     try:
         await products_service.delete_product(product_id)
@@ -57,20 +74,20 @@ async def delete_product(
 
 @router.get("/platforms")
 async def platforms_list(
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> dict[str, list[schemas.PlatformDTO]]:
     return {"platforms": await products_service.platforms_list()}
 
 
 @router.get("/categories")
 async def categories_list(
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> dict[str, list[schemas.CategoryDTO]]:
     return {"categories": await products_service.categories_list()}
 
 
 @router.get("/delivery-methods")
 async def delivery_methods_list(
-    products_service: t.Annotated[ProductsService, Inject(ProductsService)],
+    products_service: ProductsServiceDep,
 ) -> dict[str, list[str]]:
     return {"delivery_methods": await products_service.delivery_methods_list()}

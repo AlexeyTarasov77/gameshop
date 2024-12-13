@@ -1,10 +1,22 @@
 import typing as t
 
+from core.http.utils import PaginationParams
 from core.service import BaseService
 from gateways.db.exceptions import DatabaseError
-from products.domain.interfaces import CategoriesRepositoryI, PlatformsRepositoryI, ProductsRepositoryI
+from products.domain.interfaces import (
+    CategoriesRepositoryI,
+    PlatformsRepositoryI,
+    ProductsRepositoryI,
+)
 from products.models import Product
-from products.schemas import CategoryDTO, CreateProductDTO, PlatformDTO, ShowProduct, UpdateProductDTO
+from products.schemas import (
+    CategoryDTO,
+    CreateProductDTO,
+    PlatformDTO,
+    ShowProduct,
+    ShowProductWithRelations,
+    UpdateProductDTO,
+)
 
 
 class ProductsService(BaseService):
@@ -20,6 +32,19 @@ class ProductsService(BaseService):
                 **dto.model_dump(include=["name", "category_name", "platform_name"])
             ) from e
         return product.to_read_model()
+
+    async def list_products(self, pagination_params: PaginationParams) -> tuple[list[ShowProduct], int]:
+        try:
+            async with self.uow as uow:
+                repo = t.cast(ProductsRepositoryI, uow.products_repo)
+                products = await repo.paginated_list(
+                    limit=pagination_params.page_size,
+                    offset=pagination_params.page_size * (pagination_params.page_num - 1),
+                )
+                total_records = await repo.get_records_count()
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return [ShowProductWithRelations.model_validate(product) for product in products], total_records
 
     async def platforms_list(self) -> list[PlatformDTO]:
         async with self.uow as uow:

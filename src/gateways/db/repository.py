@@ -33,7 +33,7 @@ class AbstractRepository[T](ABC):
 
 
 class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
-    model: T
+    model: type[T]
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
