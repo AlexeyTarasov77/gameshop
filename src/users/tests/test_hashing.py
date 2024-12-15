@@ -1,5 +1,4 @@
 import pytest
-
 from users.domain.interfaces import HasherI
 from users.hashing import BcryptHasher
 
