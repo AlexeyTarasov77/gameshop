@@ -17,6 +17,11 @@ class CreateUserDTO(BaseDTO):
         return value
 
 
+class UserSignInDTO(BaseDTO):
+    email: EmailStr
+    password: str
+
+
 class ShowUser(BaseDTO):
     id: int
     email: EmailStr

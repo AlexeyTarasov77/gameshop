@@ -3,11 +3,11 @@ from http import HTTPStatus
 
 from core.http.exceptions import HttpExceptionsMapper
 from core.ioc import Inject
-from core.service import ServiceError
+from core.service import EntityNotFoundError, ServiceError
 from fastapi import APIRouter, Body, HTTPException
 
-from users.domain.services import InvalidTokenServiceError, UsersService
-from users.schemas import CreateUserDTO, ShowUser
+from users import schemas
+from users.domain.services import InvalidTokenServiceError, UsersService, PasswordDoesNotMatchError
 
 router = APIRouter(prefix="/users", tags=["users", "auth"])
 
@@ -16,20 +16,29 @@ UsersServiceDep = t.Annotated[UsersService, Inject(UsersService)]
 
 @router.post("/signup", status_code=HTTPStatus.CREATED)
 async def signup(
-    dto: CreateUserDTO,
+    dto: schemas.CreateUserDTO,
     users_service: UsersServiceDep,
-) -> ShowUser:
+) -> schemas.ShowUser:
     try:
         return await users_service.signup(dto)
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
 
 
+@router.post("/signin")
+async def signin(dto: schemas.UserSignInDTO, users_service: UsersServiceDep) -> dict[str, str]:
+    try:
+        token = await users_service.signin(dto)
+    except (EntityNotFoundError, PasswordDoesNotMatchError) as e:
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Invalid email or password") from e
+    return {"token": token}
+
+
 @router.patch("/activate")
 async def activate_user(
     token: t.Annotated[str, Body(min_length=50, embed=True)],
     users_service: UsersServiceDep,
-) -> dict[str, bool | ShowUser]:
+) -> dict[str, bool | schemas.ShowUser]:
     try:
         user = await users_service.activate_user(token)
     except InvalidTokenServiceError as e:
