@@ -1,4 +1,3 @@
-from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from sqlalchemy import select, text
 
@@ -14,7 +13,10 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
             image_url=str(dto.image_url),
             category_id=dto.category.id,
             platform_id=dto.platform.id,
-            **dto.model_dump(exclude={"image_url", "category", "platform"}, exclude_none=True),
+            delivery_method_id=dto.delivery_method.id,
+            **dto.model_dump(
+                exclude={"image_url", "category", "platform", "delivery_method"}, exclude_none=True
+            ),
         )
         return product
 
@@ -25,12 +27,15 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
                 exclude_unset=True,
             ),
         }
+
         if dto.image_url:
             data["image_url"] = str(dto.image_url)
         if dto.platform:
             data["platform_id"] = dto.platform.id
         if dto.category:
             data["category_id"] = dto.category.id
+        if dto.delivery_method:
+            data["delivery_method_id"] = dto.delivery_method.id
         product = await super().update(
             data,
             **filter_params,
@@ -51,10 +56,7 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
         return res.scalar()
 
     async def get_by_id(self, product_id: int) -> Product:
-        res = await super().list(id=product_id)
-        if not res:
-            raise NotFoundError()
-        return res[0]
+        return await super().get_one(id=product_id)
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):

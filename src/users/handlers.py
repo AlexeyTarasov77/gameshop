@@ -7,7 +7,11 @@ from core.service import EntityNotFoundError, ServiceError
 from fastapi import APIRouter, Body, HTTPException
 
 from users import schemas
-from users.domain.services import InvalidTokenServiceError, UsersService, PasswordDoesNotMatchError
+from users.domain.services import (
+    InvalidTokenServiceError,
+    PasswordDoesNotMatchError,
+    UsersService,
+)
 
 router = APIRouter(prefix="/users", tags=["users", "auth"])
 

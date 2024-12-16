@@ -53,6 +53,12 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
+    async def get_one(self, *columns, **filter_by) -> T:
+        res = await self.list(*columns, **filter_by)
+        if not res:
+            raise NotFoundError()
+        return res[0]
+
     async def update(self, data: Mapping, **filter_by) -> T:
         if not data:
             raise DatabaseError("No data to update. Provided data is empty")

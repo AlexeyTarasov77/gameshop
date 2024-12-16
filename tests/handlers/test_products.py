@@ -12,42 +12,56 @@ from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from products.handlers import router
 from products.models import Product
-from sqlalchemy import select
+from sqlalchemy import Result, select, text
 
 from handlers.conftest import client, db, fake
 
 
-def _gen_product_data():
+def _gen_product_data() -> dict[str, str | int | dict]:
+    session = db.session_factory()
+    with asyncio.Runner() as runner:
+        try:
+            res: Result = runner.run(
+                session.execute(
+                    text("SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm")
+                )
+            )
+            category_id, platform_id, delivery_method_id = random.choice(res.unique().all())
+        finally:
+            runner.run(session.close())
     return {
         "name": fake.name(),
         "description": fake.sentence(),
         "regular_price": str(Decimal(fake.random_number(4))),
         "image_url": fake.image_url(),
-        "delivery_method": random.choice(Product.DELIVERY_METHODS_CHOICES),
         "discount": random.randint(0, 100),
         "discount_valid_to": fake.date_time_between(datetime.now(), timedelta(days=30)).isoformat(),
-        "category": {"id": random.randint(1, 3), "name": fake.company()},
-        "platform": {"id": random.randint(1, 3), "name": fake.street_name()},
+        "category": {"id": category_id, "name": fake.company(), "url": fake.url()},
+        "platform": {"id": platform_id, "name": fake.street_name(), "url": fake.url()},
+        "delivery_method": {"id": delivery_method_id, "name": fake.street_name(), "url": fake.url()},
     }
 
 
 @pytest.fixture
 def new_product():
     data = _gen_product_data()
-    data["category_id"], data["platform_id"] = data["category"]["id"], data["platform"]["id"]
+    data["category_id"], data["platform_id"], data["delivery_method_id"] = (
+        data["category"]["id"],
+        data["platform"]["id"],
+        data["delivery_method"]["id"],
+    )
     data.pop("category")
     data.pop("platform")
+    data.pop("delivery_method")
     with asyncio.Runner() as runner:
         try:
             session = db.session_factory()
             repo = SqlAlchemyRepository(session)
             repo.model = Product
-            print("CREATING PRODUCT")
             product: Product = runner.run(repo.create(**data))
             runner.run(session.commit())
             yield product
             with suppress(NotFoundError):
-                print("DELETING PRODUCT")
                 runner.run(repo.delete(id=product.id))
                 runner.run(session.commit())
         finally:
@@ -79,7 +93,7 @@ create_product_data = _gen_product_data()
         (
             {
                 **_gen_product_data(),
-                "delivery_method": "unknown",
+                "category": {"id": 0},
             },
             422,
         ),
@@ -117,6 +131,7 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         assert resp_data["discount"] == data["discount"]
         assert resp_data["category_id"] == data["category"]["id"]
         assert resp_data["platform_id"] == data["platform"]["id"]
+        assert resp_data["delivery_method_id"] == data["delivery_method"]["id"]
 
 
 @pytest.mark.parametrize(
@@ -125,7 +140,7 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         ({"name": fake.name()}, 200, None),
         ({"name": fake.name()}, 404, 999),
         ({}, 400, None),
-        ({"category": {"id": 999, "name": fake.name()}}, 400, None),
+        ({"category": {"id": 999, "name": fake.name(), "url": fake.url()}}, 400, None),
         ({"discount": -100}, 422, None),
         ({"discount_valid_to": None}, 200, None),
         ({"name": None}, 422, None),
@@ -218,3 +233,4 @@ def test_get_product(new_product: Product, expected_status: int, product_id: int
         assert resp_product["discount"] == new_product.discount
         assert resp_product["category"]["id"] == new_product.category_id
         assert resp_product["platform"]["id"] == new_product.platform_id
+        assert resp_product["delivery_method"]["id"] == new_product.delivery_method_id

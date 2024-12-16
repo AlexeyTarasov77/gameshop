@@ -1,57 +1,55 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Final
 
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import CheckConstraint, ForeignKey, UniqueConstraint, text
+from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from products.schemas import CategoryDTO, PlatformDTO, ShowProduct
+from products import schemas
 
 
 class Product(SqlAlchemyBaseModel):
-    model_schema = ShowProduct
+    model_schema = schemas.ShowProduct
 
-    DELIVERY_METHODS_CHOICES: Final[tuple[str]] = (
-        "activation_key",
-        "replenishment_card",
-        "account_purchase",
-    )
-    __table_args__ = (
-        CheckConstraint(
-            text(f"delivery_method = ANY (ARRAY[{','.join(DELIVERY_METHODS_CHOICES)}]::text[])")
-        ),
-        UniqueConstraint("name", "category_id", "platform_id"),
-    )
+    __table_args__ = (UniqueConstraint("name", "category_id", "platform_id"),)
 
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str]
-    category_id: Mapped[str] = mapped_column(ForeignKey("category.id", ondelete="CASCADE"))
-    platform_id: Mapped[str] = mapped_column(ForeignKey("platform.id", ondelete="CASCADE"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("category.id", ondelete="CASCADE"))
+    platform_id: Mapped[int] = mapped_column(ForeignKey("platform.id", ondelete="CASCADE"))
+    delivery_method_id: Mapped[int] = mapped_column(ForeignKey("delivery_method.id", ondelete="CASCADE"))
     category: Mapped["Category"] = relationship(back_populates="products", lazy="joined")
     platform: Mapped["Platform"] = relationship(back_populates="products", lazy="joined")
+    delivery_method: Mapped["DeliveryMethod"] = relationship(back_populates="products", lazy="joined")
     image_url: Mapped[str]
     regular_price: Mapped[Decimal]
-    delivery_method: Mapped[str]
     discount: Mapped[int] = mapped_column(default=0)
     discount_valid_to: Mapped[datetime | None]
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
 
 
-class Category(SqlAlchemyBaseModel):
-    model_schema = CategoryDTO
-
+class BaseRefModel(SqlAlchemyBaseModel):
+    __abstract__ = True
     id: Mapped[int_pk_type]
     name: Mapped[str]
-    products: Mapped[list[Product]] = relationship(back_populates="category")
+    url: Mapped[str] = mapped_column(unique=True)
+
+    @declared_attr
+    def products(self):
+        return relationship(Product, back_populates=self.__tablename__)
 
 
-class Platform(SqlAlchemyBaseModel):
-    model_schema = PlatformDTO
+class Category(BaseRefModel):
+    model_schema = schemas.CategoryDTO
 
-    id: Mapped[int_pk_type]
-    name: Mapped[str]
-    products: Mapped[list[Product]] = relationship(back_populates="platform")
+
+class Platform(BaseRefModel):
+    model_schema = schemas.PlatformDTO
+
+
+class DeliveryMethod(BaseRefModel):
+    model_schema = schemas.DeliveryMethodDTO
