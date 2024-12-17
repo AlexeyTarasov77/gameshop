@@ -1,7 +1,8 @@
+import base64
 from typing import Annotated
 
 from fastapi import UploadFile
-from pydantic import AfterValidator, BaseModel
+from pydantic import AfterValidator, BaseModel, BeforeValidator, PlainSerializer
 
 from core.utils import filename_split
 
@@ -22,4 +23,16 @@ def _check_image[T: UploadFile](file: T) -> T:
     return file
 
 
+def _parse_int(s: str | int) -> int:
+    try:
+        return int(s)
+    except ValueError:
+        return int(base64.b64decode(s))
+
+
 Image = Annotated[UploadFile, AfterValidator(_check_image)]
+Base64Int = Annotated[
+    str | int,
+    BeforeValidator(_parse_int, json_schema_input_type=str),
+    PlainSerializer(lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str),
+]

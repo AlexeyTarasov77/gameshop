@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import BaseDTO
+from core.schemas import Base64Int, BaseDTO
 from pydantic import AfterValidator, AnyUrl, Field
 
 
@@ -21,9 +21,9 @@ ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 
 class CategoryDTO(BaseDTO):
-    id: int = Field(gt=0)
-    name: str
-    url: str
+    id: Base64Int = Field(gt=0)
+    name: str = None
+    url: str = None
 
 
 class PlatformDTO(CategoryDTO): ...
@@ -60,16 +60,16 @@ class UpdateProductDTO(BaseDTO):
 
 
 class BaseShowProductDTO(BaseProductDTO):
-    id: int
+    id: Base64Int
     discount_valid_to: datetime | None
     created_at: datetime
     updated_at: datetime
 
 
 class ShowProduct(BaseShowProductDTO):
-    category_id: int
-    platform_id: int
-    delivery_method_id: int
+    category_id: Base64Int
+    platform_id: Base64Int
+    delivery_method_id: Base64Int
 
 
 class ShowProductWithRelations(BaseShowProductDTO):

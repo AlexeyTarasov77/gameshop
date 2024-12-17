@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import math
 import random
 import typing as t
@@ -10,6 +11,7 @@ from itertools import zip_longest
 import pytest
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
+from helpers import is_base64
 from products.handlers import router
 from products.models import Product
 from sqlalchemy import Result, select, text
@@ -17,7 +19,7 @@ from sqlalchemy import Result, select, text
 from handlers.conftest import client, db, fake
 
 
-def _gen_product_data() -> dict[str, str | int | dict]:
+def _gen_product_data(encode_ids: bool = True) -> dict[str, str | int | dict]:
     session = db.session_factory()
     with asyncio.Runner() as runner:
         try:
@@ -26,7 +28,10 @@ def _gen_product_data() -> dict[str, str | int | dict]:
                     text("SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm")
                 )
             )
-            category_id, platform_id, delivery_method_id = random.choice(res.unique().all())
+            relation_ids = random.choice(res.unique().all())
+            if encode_ids:
+                relation_ids = [base64.b64encode(str(n).encode()).decode() for n in relation_ids]
+            category_id, platform_id, delivery_method_id = relation_ids
         finally:
             runner.run(session.close())
     return {
@@ -44,7 +49,7 @@ def _gen_product_data() -> dict[str, str | int | dict]:
 
 @pytest.fixture
 def new_product():
-    data = _gen_product_data()
+    data = _gen_product_data(encode_ids=False)
     data["category_id"], data["platform_id"], data["delivery_method_id"] = (
         data["category"]["id"],
         data["platform"]["id"],
@@ -75,6 +80,7 @@ create_product_data = _gen_product_data()
     ["data", "expected_status"],
     [
         (create_product_data, 201),
+        (_gen_product_data(False), 201),
         (create_product_data, 409),
         (
             {
@@ -129,18 +135,18 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
         assert resp_data["description"] == data["description"]
         assert resp_data["regular_price"] == data["regular_price"]
         assert resp_data["discount"] == data["discount"]
-        assert resp_data["category_id"] == data["category"]["id"]
-        assert resp_data["platform_id"] == data["platform"]["id"]
-        assert resp_data["delivery_method_id"] == data["delivery_method"]["id"]
+        assert is_base64(resp_data["category_id"])
+        assert is_base64(resp_data["delivery_method_id"])
+        assert is_base64(resp_data["platform_id"])
 
 
 @pytest.mark.parametrize(
     ["data", "expected_status", "product_id"],
     [
         ({"name": fake.name()}, 200, None),
-        ({"name": fake.name()}, 404, 999),
+        ({"name": fake.name()}, 404, 999999),
         ({}, 400, None),
-        ({"category": {"id": 999, "name": fake.name(), "url": fake.url()}}, 400, None),
+        ({"category": {"id": 999999}}, 400, None),
         ({"discount": -100}, 422, None),
         ({"discount_valid_to": None}, 200, None),
         ({"name": None}, 422, None),
@@ -155,6 +161,9 @@ def test_update_product(
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 200:
+        assert is_base64(resp_data.pop("id"))
+        assert is_base64(resp_data.pop("category_id"))
+        assert is_base64(resp_data.pop("platform_id"))
         for resp_key, data_key in zip_longest(resp_data, data):
             if data_key is None:
                 if resp_key in data:
@@ -218,6 +227,10 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
                 assert resp_data["page_num"] == params["page_num"]
 
 
+def _decode_base64(s: str) -> str:
+    return base64.b64decode(s).decode()
+
+
 @pytest.mark.parametrize(["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)])
 def test_get_product(new_product: Product, expected_status: int, product_id: int | None):
     product_id = product_id or new_product.id
@@ -231,6 +244,9 @@ def test_get_product(new_product: Product, expected_status: int, product_id: int
         assert resp_product["description"] == new_product.description
         assert resp_product["regular_price"] == str(new_product.regular_price)
         assert resp_product["discount"] == new_product.discount
-        assert resp_product["category"]["id"] == new_product.category_id
-        assert resp_product["platform"]["id"] == new_product.platform_id
-        assert resp_product["delivery_method"]["id"] == new_product.delivery_method_id
+        assert int(base64.b64decode(resp_product["category"]["id"]).decode()) == new_product.category_id
+        assert int(base64.b64decode(resp_product["platform"]["id"]).decode()) == new_product.platform_id
+        assert (
+            int(base64.b64decode(resp_product["delivery_method"]["id"]).decode())
+            == new_product.delivery_method_id
+        )

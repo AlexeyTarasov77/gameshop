@@ -1,6 +1,6 @@
 .PHONY: api/run
 api/run:
-	poetry run python src/main.py --config-path=config/local.yaml
+	MODE="local" poetry run python src/main.py 
 
 .PHONE: api/run/prod
 api/run/prod:

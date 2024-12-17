@@ -6,6 +6,7 @@ import aiofiles
 from fastapi import Depends, Query, UploadFile
 from fastapi import Path as PathParam
 
+from core.schemas import Base64Int
 from core.utils import filename_split
 
 
@@ -15,15 +16,14 @@ class PaginationParams(t.NamedTuple):
 
 
 async def get_pagination_params(
-    page_size: int = Query(default=10, gt=0, lt=100),
-    page_num: int = Query(default=1, gt=0)
+    page_size: int = Query(default=10, gt=0, lt=100), page_num: int = Query(default=1, gt=0)
 ) -> PaginationParams:
     return PaginationParams(page_size, page_num)
 
 
 PaginationDep = t.Annotated[PaginationParams, Depends(get_pagination_params)]
 
-type EntityIDParam = t.Annotated[int, PathParam(gt=0)]
+type EntityIDParam = t.Annotated[Base64Int, PathParam(gt=0)]
 
 DEFAULT_UPLOAD_DIR: t.Final[Path] = Path() / "media"
 

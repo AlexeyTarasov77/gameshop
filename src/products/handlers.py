@@ -5,8 +5,9 @@ from http import HTTPStatus
 from core.http.exceptions import HttpExceptionsMapper
 from core.http.utils import EntityIDParam, PaginationDep
 from core.ioc import Inject
+from core.schemas import Base64Int
 from core.service import ServiceError
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
 
 from products import schemas
 from products.domain.services import ProductsService
