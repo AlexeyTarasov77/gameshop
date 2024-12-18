@@ -25,12 +25,16 @@ def _gen_product_data(encode_ids: bool = True) -> dict[str, str | int | dict]:
         try:
             res: Result = runner.run(
                 session.execute(
-                    text("SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm")
+                    text(
+                        "SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm"
+                    )
                 )
             )
             relation_ids = random.choice(res.unique().all())
             if encode_ids:
-                relation_ids = [base64.b64encode(str(n).encode()).decode() for n in relation_ids]
+                relation_ids = [
+                    base64.b64encode(str(n).encode()).decode() for n in relation_ids
+                ]
             category_id, platform_id, delivery_method_id = relation_ids
         finally:
             runner.run(session.close())
@@ -40,11 +44,21 @@ def _gen_product_data(encode_ids: bool = True) -> dict[str, str | int | dict]:
         "regular_price": str(Decimal(fake.random_number(4))),
         "image_url": fake.image_url(),
         "discount": random.randint(0, 100),
-        "discount_valid_to": fake.date_time_between(datetime.now(), timedelta(days=30)).isoformat(),
+        "discount_valid_to": fake.date_time_between(
+            datetime.now(), timedelta(days=30)
+        ).isoformat(),
         "category": {"id": category_id, "name": fake.company(), "url": fake.url()},
         "platform": {"id": platform_id, "name": fake.street_name(), "url": fake.url()},
-        "delivery_method": {"id": delivery_method_id, "name": fake.street_name(), "url": fake.url()},
+        "delivery_method": {
+            "id": delivery_method_id,
+            "name": fake.street_name(),
+            "url": fake.url(),
+        },
     }
+
+
+def _decode_base64(s: str) -> str:
+    return base64.b64decode(s).decode()
 
 
 @pytest.fixture
@@ -154,16 +168,28 @@ def test_create_product(data: dict[str, t.Any], expected_status: int):
     ],
 )
 def test_update_product(
-    data: dict[str, t.Any], new_product: Product, expected_status: int, product_id: int | None
+    data: dict[str, t.Any],
+    new_product: Product,
+    expected_status: int,
+    product_id: int | None,
 ):
     product_id = product_id or new_product.id
     resp = client.put(f"{router.prefix}/update/{product_id}", json=data)
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 200:
-        assert is_base64(resp_data.pop("id"))
-        assert is_base64(resp_data.pop("category_id"))
-        assert is_base64(resp_data.pop("platform_id"))
+        assert is_base64(resp_data["id"])
+        assert is_base64(resp_data["category_id"])
+        assert is_base64(resp_data["platform_id"])
+        assert is_base64(resp_data["delivery_method_id"])
+
+        resp_data["id"] = int(_decode_base64(resp_data["id"]))
+        resp_data["category_id"] = int(_decode_base64(resp_data["category_id"]))
+        resp_data["platform_id"] = int(_decode_base64(resp_data["platform_id"]))
+        resp_data["delivery_method_id"] = int(
+            _decode_base64(resp_data["delivery_method_id"])
+        )
+
         for resp_key, data_key in zip_longest(resp_data, data):
             if data_key is None:
                 if resp_key in data:
@@ -179,8 +205,12 @@ def test_update_product(
                 assert resp_data[data_key] == data[data_key]
 
 
-@pytest.mark.parametrize(["expected_status", "product_id"], [(204, None), (404, 999), (422, -1)])
-def test_delete_product(new_product: Product, expected_status: int, product_id: int | None):
+@pytest.mark.parametrize(
+    ["expected_status", "product_id"], [(204, None), (404, 999), (422, -1)]
+)
+def test_delete_product(
+    new_product: Product, expected_status: int, product_id: int | None
+):
     product_id = product_id or new_product.id
     resp = client.delete(f"{router.prefix}/delete/{product_id}")
     assert resp.status_code == expected_status
@@ -213,7 +243,10 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
         assert "page_size" in resp_data
         assert "page_num" in resp_data
         assert "total_records" in resp_data
-        assert "total_on_page" in resp_data and resp_data["total_on_page"] <= resp_data["page_size"]
+        assert (
+            "total_on_page" in resp_data
+            and resp_data["total_on_page"] <= resp_data["page_size"]
+        )
         assert "first_page" in resp_data and resp_data["first_page"] == 1
         assert "last_page" in resp_data and resp_data["last_page"] == math.ceil(
             resp_data["total_records"] / resp_data["page_size"]
@@ -227,12 +260,12 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
                 assert resp_data["page_num"] == params["page_num"]
 
 
-def _decode_base64(s: str) -> str:
-    return base64.b64decode(s).decode()
-
-
-@pytest.mark.parametrize(["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)])
-def test_get_product(new_product: Product, expected_status: int, product_id: int | None):
+@pytest.mark.parametrize(
+    ["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)]
+)
+def test_get_product(
+    new_product: Product, expected_status: int, product_id: int | None
+):
     product_id = product_id or new_product.id
     resp = client.get(f"{router.prefix}/detail/{product_id}")
     assert resp.status_code == expected_status
@@ -244,8 +277,14 @@ def test_get_product(new_product: Product, expected_status: int, product_id: int
         assert resp_product["description"] == new_product.description
         assert resp_product["regular_price"] == str(new_product.regular_price)
         assert resp_product["discount"] == new_product.discount
-        assert int(base64.b64decode(resp_product["category"]["id"]).decode()) == new_product.category_id
-        assert int(base64.b64decode(resp_product["platform"]["id"]).decode()) == new_product.platform_id
+        assert (
+            int(base64.b64decode(resp_product["category"]["id"]).decode())
+            == new_product.category_id
+        )
+        assert (
+            int(base64.b64decode(resp_product["platform"]["id"]).decode())
+            == new_product.platform_id
+        )
         assert (
             int(base64.b64decode(resp_product["delivery_method"]["id"]).decode())
             == new_product.delivery_method_id
