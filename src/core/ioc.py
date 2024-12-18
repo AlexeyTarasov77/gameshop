@@ -9,6 +9,7 @@ from products.domain.services import ProductsService
 from products.repositories import (
     CategoriesRepository,
     PlatformsRepository,
+    DeliveryMethodsRepository,
     ProductsRepository,
 )
 from users.domain.interfaces import HasherI, MailProviderI, TokenProviderI
@@ -38,11 +39,20 @@ def _init_container() -> punq.Container:
     )
     uow = SqlAlchemyUnitOfWork(
         db.session_factory,
-        [ProductsRepository, PlatformsRepository, CategoriesRepository, UsersRepository],
+        [
+            ProductsRepository,
+            DeliveryMethodsRepository,
+            PlatformsRepository,
+            CategoriesRepository,
+            UsersRepository,
+        ],
     )
     container.register(HasherI, BcryptHasher)
     container.register(
-        TokenProviderI, JwtTokenProvider, secret_key=cfg.jwt.secret, signing_alg=cfg.jwt.alg
+        TokenProviderI,
+        JwtTokenProvider,
+        secret_key=cfg.jwt.secret,
+        signing_alg=cfg.jwt.alg,
     )
     container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
     container.register(SqlAlchemyDatabase, instance=db)

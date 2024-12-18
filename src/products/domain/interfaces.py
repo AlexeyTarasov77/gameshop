@@ -1,6 +1,6 @@
 import typing as t
 
-from products.models import Category, Platform, Product
+from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
 
@@ -24,3 +24,7 @@ class PlatformsRepositoryI(t.Protocol):
 
 class CategoriesRepositoryI(t.Protocol):
     async def list(self) -> list[Category]: ...
+
+
+class DeliveryMethodsRepositoryI(t.Protocol):
+    async def list(self) -> list[DeliveryMethod]: ...

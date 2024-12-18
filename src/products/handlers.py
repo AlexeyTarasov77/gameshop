@@ -5,9 +5,8 @@ from http import HTTPStatus
 from core.http.exceptions import HttpExceptionsMapper
 from core.http.utils import EntityIDParam, PaginationDep
 from core.ioc import Inject
-from core.schemas import Base64Int
 from core.service import ServiceError
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -22,7 +21,9 @@ async def list_products(
     pagination_params: PaginationDep, products_service: ProductsServiceDep
 ) -> dict[str, list[schemas.ShowProductWithRelations] | str | int]:
     try:
-        products, total_records = await products_service.list_products(pagination_params)
+        products, total_records = await products_service.list_products(
+            pagination_params
+        )
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
     return {
@@ -101,5 +102,5 @@ async def categories_list(
 @router.get("/delivery-methods")
 async def delivery_methods_list(
     products_service: ProductsServiceDep,
-) -> dict[str, list[str]]:
+) -> dict[str, list[schemas.DeliveryMethodDTO]]:
     return {"delivery_methods": await products_service.delivery_methods_list()}

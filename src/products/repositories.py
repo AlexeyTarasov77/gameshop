@@ -1,7 +1,7 @@
 from gateways.db.repository import SqlAlchemyRepository
 from sqlalchemy import select, text
 
-from products.models import Category, Platform, Product
+from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
 
@@ -15,7 +15,8 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
             platform_id=dto.platform.id,
             delivery_method_id=dto.delivery_method.id,
             **dto.model_dump(
-                exclude={"image_url", "category", "platform", "delivery_method"}, exclude_none=True
+                exclude={"image_url", "category", "platform", "delivery_method"},
+                exclude_none=True,
             ),
         )
         return product
@@ -65,3 +66,7 @@ class PlatformsRepository(SqlAlchemyRepository[Platform]):
 
 class CategoriesRepository(SqlAlchemyRepository[Category]):
     model = Category
+
+
+class DeliveryMethodsRepository(SqlAlchemyRepository[DeliveryMethod]):
+    model = DeliveryMethod

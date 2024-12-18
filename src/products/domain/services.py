@@ -7,10 +7,11 @@ from products.domain.interfaces import (
     CategoriesRepositoryI,
     PlatformsRepositoryI,
     ProductsRepositoryI,
+    DeliveryMethodsRepositoryI,
 )
-from products.models import Product
 from products.schemas import (
     CategoryDTO,
+    DeliveryMethodDTO,
     CreateProductDTO,
     PlatformDTO,
     ShowProduct,
@@ -33,18 +34,23 @@ class ProductsService(BaseService):
             ) from e
         return product.to_read_model()
 
-    async def list_products(self, pagination_params: PaginationParams) -> tuple[list[ShowProduct], int]:
+    async def list_products(
+        self, pagination_params: PaginationParams
+    ) -> tuple[list[ShowProduct], int]:
         try:
             async with self.uow as uow:
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
                 products = await repo.paginated_list(
                     limit=pagination_params.page_size,
-                    offset=pagination_params.page_size * (pagination_params.page_num - 1),
+                    offset=pagination_params.page_size
+                    * (pagination_params.page_num - 1),
                 )
                 total_records = await repo.get_records_count()
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
-        return [ShowProductWithRelations.model_validate(product) for product in products], total_records
+        return [
+            ShowProductWithRelations.model_validate(product) for product in products
+        ], total_records
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:
@@ -67,17 +73,23 @@ class ProductsService(BaseService):
             categories = await repo.list()
         return [category.to_read_model() for category in categories]
 
-    async def delivery_methods_list(self) -> list[str]:
-        return list(Product.DELIVERY_METHODS_CHOICES)
+    async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
+        async with self.uow as uow:
+            repo = t.cast(DeliveryMethodsRepositoryI, uow.categories_repo)
+            delivery_methods = await repo.list()
+        return [method.to_read_model() for method in delivery_methods]
 
-    async def update_product(self, product_id: int, dto: UpdateProductDTO) -> ShowProduct:
+    async def update_product(
+        self, product_id: int, dto: UpdateProductDTO
+    ) -> ShowProduct:
         try:
             async with self.uow as uow:
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
                 product = await repo.update(dto, id=product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
-                **dto.model_dump(include=["name", "category_name", "platform_name"]), id=product_id
+                **dto.model_dump(include=["name", "category_name", "platform_name"]),
+                id=product_id,
             ) from e
         return product.to_read_model()
 
