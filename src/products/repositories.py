@@ -22,13 +22,10 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
         return product
 
     async def update(self, dto: UpdateProductDTO, **filter_params) -> Product:
-        data = {
-            **dto.model_dump(
-                exclude={"image_url", "category", "platform"},
-                exclude_unset=True,
-            ),
-        }
-
+        data = dto.model_dump(
+            exclude={"image_url", "category", "platform", "delivery_method"},
+            exclude_unset=True,
+        )
         if dto.image_url:
             data["image_url"] = str(dto.image_url)
         if dto.platform:

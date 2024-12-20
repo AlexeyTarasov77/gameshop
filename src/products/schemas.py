@@ -7,7 +7,9 @@ from pydantic import AfterValidator, AnyUrl, Field
 
 
 def _check_datetime[T: datetime](value: T) -> T:
-    assert value > datetime.now(), "Value should be greater than current datetime"
+    assert value > datetime.now(
+        value.tzinfo
+    ), "Value should be greater than current datetime"
     return value
 
 
