@@ -32,7 +32,7 @@ class AbstractRepository[T](ABC):
         return short_name
 
 
-class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
+class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
     model: type[T]
 
     def __init__(self, session: AsyncSession) -> None:
@@ -62,7 +62,12 @@ class SqlAlchemyRepository[T: type[SqlAlchemyBaseModel]](AbstractRepository[T]):
     async def update(self, data: Mapping, **filter_by) -> T:
         if not data:
             raise DatabaseError("No data to update. Provided data is empty")
-        stmt = update(self.model).filter_by(**filter_by).values(**data).returning(self.model)
+        stmt = (
+            update(self.model)
+            .filter_by(**filter_by)
+            .values(**data)
+            .returning(self.model)
+        )
         res = await self.session.execute(stmt)
         obj = res.scalars().one_or_none()
         if not obj:

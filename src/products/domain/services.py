@@ -65,7 +65,7 @@ class ProductsService(BaseService):
         async with self.uow as uow:
             repo = t.cast(PlatformsRepositoryI, uow.platforms_repo)
             platforms = await repo.list()
-        return platforms
+        return [platform.to_read_model() for platform in platforms]
 
     async def categories_list(self) -> list[CategoryDTO]:
         async with self.uow as uow:
@@ -75,7 +75,7 @@ class ProductsService(BaseService):
 
     async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
         async with self.uow as uow:
-            repo = t.cast(DeliveryMethodsRepositoryI, uow.categories_repo)
+            repo = t.cast(DeliveryMethodsRepositoryI, uow.delivery_methods_repo)
             delivery_methods = await repo.list()
         return [method.to_read_model() for method in delivery_methods]
 
@@ -88,7 +88,7 @@ class ProductsService(BaseService):
                 product = await repo.update(dto, id=product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
-                **dto.model_dump(include=["name", "category_name", "platform_name"]),
+                **dto.model_dump(include={"name", "category_name", "platform_name"}),
                 id=product_id,
             ) from e
         return product.to_read_model()

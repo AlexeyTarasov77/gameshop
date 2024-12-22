@@ -1,29 +1,27 @@
 import re
+from typing import Any
 
 from pydantic import BaseModel
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase
 
 
-class SqlAlchemyBaseModel(DeclarativeBase):
+class SqlAlchemyBaseModel[T: BaseModel](DeclarativeBase):
     repr_cols_num: int = 3
     repr_cols: tuple = ()
-    model_schema: BaseModel | None = None
+    model_schema: T | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         cols = []
         for i, col in enumerate(self.__table__.columns.keys()):
             if i < self.repr_cols_num or col in self.repr_cols:
                 cols.append(f"{col}={getattr(self, col)!r}")
         return f"<{self.__class__.__name__}({', '.join(cols)})>"
 
-    def to_read_model(self):
-        readable_model = {
-            col: getattr(self, col) for col in self.__table__.columns.keys()
-        }
+    def to_read_model(self) -> T | dict[str, Any]:
         if self.model_schema:
-            readable_model = self.model_schema.model_validate(self).model_dump()
-        return readable_model
+            return self.model_schema.model_validate(self)
+        return {col: getattr(self, col) for col in self.__table__.columns.keys()}
 
     @declared_attr.directive
     def __tablename__(cls) -> str:  # noqa: N805

@@ -1,7 +1,6 @@
 import abc
 import logging
 import typing as t
-from re import S
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +16,7 @@ class AbstractUnitOfWork(abc.ABC):
     async def __aenter__(self) -> t.Self:
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, exc_type, *args):
         await self.rollback()
 
     @abc.abstractmethod

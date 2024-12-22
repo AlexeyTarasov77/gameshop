@@ -2,9 +2,17 @@
 api/run:
 	MODE="local" poetry run python src/main.py 
 
+.PHONY: api/run/test
+api/run/test:
+	MODE="tests" poetry run python src/main.py 
+
 .PHONY: api/run/prod
 api/run/prod:
-	poetry run python src/main.py --config-path=config/prod.yaml
+	MODE="prod" poetry run python src/main.py 
+
+.PHONY: run/tests
+run/tests:
+	MODE="tests" poetry run pytest
 
 .PHONY: api/deploy
 api/deploy:

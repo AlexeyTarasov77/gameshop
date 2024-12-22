@@ -13,13 +13,13 @@ from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from helpers import is_base64
 from products.handlers import router
-from products.models import Product
+from products.models import BaseRefModel, Category, DeliveryMethod, Product, Platform
 from sqlalchemy import Result, select, text
 
 from handlers.conftest import client, db, fake
 
 
-def _gen_product_data(encode_ids: bool = True) -> dict[str, str | int | dict]:
+def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
     session = db.session_factory()
     with asyncio.Runner() as runner:
         try:
@@ -61,6 +61,37 @@ def _decode_base64(s: str) -> str:
     return base64.b64decode(s).decode()
 
 
+def _new_ref_model_obj(obj_model: type[BaseRefModel]):
+    session = db.session_factory()
+    repo = SqlAlchemyRepository[obj_model](session)
+    repo.model = obj_model
+    with asyncio.Runner() as runner:
+        try:
+            obj = runner.run(repo.create(name=fake.name(), url=fake.url()))
+            runner.run(session.commit())
+            yield obj
+            with suppress(NotFoundError):
+                runner.run(repo.delete(id=obj.id))
+                runner.run(session.commit())
+        finally:
+            runner.run(session.close())
+
+
+@pytest.fixture
+def new_delivery_method():
+    yield from _new_ref_model_obj(DeliveryMethod)
+
+
+@pytest.fixture
+def new_platform():
+    yield from _new_ref_model_obj(Platform)
+
+
+@pytest.fixture
+def new_category():
+    yield from _new_ref_model_obj(Category)
+
+
 @pytest.fixture
 def new_product():
     data = _gen_product_data(encode_ids=False)
@@ -72,11 +103,12 @@ def new_product():
     data.pop("category")
     data.pop("platform")
     data.pop("delivery_method")
+    session = db.session_factory()
+    repo = SqlAlchemyRepository(session)
+    repo.model = Product
+
     with asyncio.Runner() as runner:
         try:
-            session = db.session_factory()
-            repo = SqlAlchemyRepository(session)
-            repo.model = Product
             product: Product = runner.run(repo.create(**data))
             runner.run(session.commit())
             yield product
@@ -289,3 +321,37 @@ def test_get_product(
             int(base64.b64decode(resp_product["delivery_method"]["id"]).decode())
             == new_product.delivery_method_id
         )
+
+
+def helper_test_objects_list(obj: Category | DeliveryMethod | Platform, url: str):
+    resp = client.get(f"{router.prefix}/{url}")
+    resp_key = url.replace("-", "_")
+    assert resp.status_code == 200
+    resp_data = resp.json()
+    assert len(resp_data[resp_key]) > 0
+    assert all((is_base64(obj["id"]) for obj in resp_data[resp_key]))
+    assert obj.id in [
+        int(_decode_base64(resp_obj["id"])) for resp_obj in resp_data[resp_key]
+    ]
+    resp_obj = next(
+        (
+            resp_obj
+            for resp_obj in resp_data[resp_key]
+            if int(_decode_base64(resp_obj["id"])) == obj.id
+        )
+    )
+    assert resp_obj
+    assert resp_obj["name"] == obj.name
+    assert resp_obj["url"] == obj.url
+
+
+def test_platforms_list(new_platform: Platform):
+    helper_test_objects_list(new_platform, "platforms")
+
+
+def test_categories_list(new_category: Category):
+    helper_test_objects_list(new_category, "categories")
+
+
+def test_delivery_methods_list(new_delivery_method: DeliveryMethod):
+    helper_test_objects_list(new_delivery_method, "delivery-methods")

@@ -30,7 +30,9 @@ async def signup(
 
 
 @router.post("/signin")
-async def signin(dto: schemas.UserSignInDTO, users_service: UsersServiceDep) -> dict[str, str]:
+async def signin(
+    dto: schemas.UserSignInDTO, users_service: UsersServiceDep
+) -> dict[str, str]:
     try:
         token = await users_service.signin(dto)
     except (EntityNotFoundError, PasswordDoesNotMatchError) as e:
@@ -40,7 +42,7 @@ async def signin(dto: schemas.UserSignInDTO, users_service: UsersServiceDep) -> 
 
 @router.patch("/activate")
 async def activate_user(
-    token: t.Annotated[str, Body(min_length=50, embed=True)],
+    token: t.Annotated[str, Body(min_length=100, embed=True)],
     users_service: UsersServiceDep,
 ) -> dict[str, bool | schemas.ShowUser]:
     try:

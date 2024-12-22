@@ -5,8 +5,7 @@ from core.utils import Singleton
 from gateways.db.exceptions import AbstractDatabaseExceptionMapper, DBConnectionError
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 
 class SqlAlchemyDatabase(Singleton):
@@ -29,7 +28,9 @@ class SqlAlchemyDatabase(Singleton):
     ) -> None:
         self._dsn = storage_dsn
         self._engine = create_async_engine(storage_dsn, **engine_params)
-        self.session_factory = sessionmaker(self._engine, class_=AsyncSession, expire_on_commit=False)
+        self.session_factory = async_sessionmaker(
+            self._engine, class_=AsyncSession, expire_on_commit=False
+        )
         self.exception_mapper = exception_mapper
         try:
             asyncio.run(self.ping())
