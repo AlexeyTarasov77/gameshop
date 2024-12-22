@@ -14,6 +14,14 @@ api/run/prod:
 run/tests:
 	MODE="tests" poetry run pytest
 
+.PHONY: migrations/new
+migrations/new:
+	MODE=$(mode) poetry run alembic revision --autogenerate -m "$(msg)"
+
+.PHONY: migrations/run
+migrations/run:
+	MODE=$(mode) poetry run alembic upgrade head 
+
 .PHONY: api/deploy
 api/deploy:
 	rsync -aPz --checksum --delete ~/Desktop/Dev/python/fastAPI/gameshop/ root@185.42.14.137:/root/projects/gameshop
