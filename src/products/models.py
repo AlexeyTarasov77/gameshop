@@ -11,19 +11,29 @@ from products import schemas
 
 
 class Product(SqlAlchemyBaseModel):
-    model_schema = schemas.ShowProduct
-
     __table_args__ = (UniqueConstraint("name", "category_id", "platform_id"),)
 
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str]
-    category_id: Mapped[int] = mapped_column(ForeignKey("category.id", ondelete="CASCADE"))
-    platform_id: Mapped[int] = mapped_column(ForeignKey("platform.id", ondelete="CASCADE"))
-    delivery_method_id: Mapped[int] = mapped_column(ForeignKey("delivery_method.id", ondelete="CASCADE"))
-    category: Mapped["Category"] = relationship(back_populates="products", lazy="joined")
-    platform: Mapped["Platform"] = relationship(back_populates="products", lazy="joined")
-    delivery_method: Mapped["DeliveryMethod"] = relationship(back_populates="products", lazy="joined")
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("category.id", ondelete="CASCADE")
+    )
+    platform_id: Mapped[int] = mapped_column(
+        ForeignKey("platform.id", ondelete="CASCADE")
+    )
+    delivery_method_id: Mapped[int] = mapped_column(
+        ForeignKey("delivery_method.id", ondelete="CASCADE")
+    )
+    category: Mapped["Category"] = relationship(
+        back_populates="products", lazy="joined"
+    )
+    platform: Mapped["Platform"] = relationship(
+        back_populates="products", lazy="joined"
+    )
+    delivery_method: Mapped["DeliveryMethod"] = relationship(
+        back_populates="products", lazy="joined"
+    )
     image_url: Mapped[str]
     regular_price: Mapped[Decimal]
     discount: Mapped[int] = mapped_column(default=0)

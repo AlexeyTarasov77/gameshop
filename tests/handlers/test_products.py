@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import math
 import random
 import typing as t
 from contextlib import suppress
@@ -9,14 +8,14 @@ from decimal import Decimal
 from itertools import zip_longest
 
 import pytest
-from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
-from helpers import is_base64
-from products.handlers import router
-from products.models import BaseRefModel, Category, DeliveryMethod, Product, Platform
+from helpers import check_paginated_response, is_base64, base64_to_int
 from sqlalchemy import Result, select, text
 
+from gateways.db.exceptions import NotFoundError
+from gateways.db.repository import SqlAlchemyRepository
 from handlers.conftest import client, db, fake
+from products.handlers import router
+from products.models import BaseRefModel, Category, DeliveryMethod, Platform, Product
 
 
 def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
@@ -55,10 +54,6 @@ def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
             "url": fake.url(),
         },
     }
-
-
-def _decode_base64(s: str) -> str:
-    return base64.b64decode(s).decode()
 
 
 def _new_ref_model_obj(obj_model: type[BaseRefModel]):
@@ -215,12 +210,10 @@ def test_update_product(
         assert is_base64(resp_data["platform_id"])
         assert is_base64(resp_data["delivery_method_id"])
 
-        resp_data["id"] = int(_decode_base64(resp_data["id"]))
-        resp_data["category_id"] = int(_decode_base64(resp_data["category_id"]))
-        resp_data["platform_id"] = int(_decode_base64(resp_data["platform_id"]))
-        resp_data["delivery_method_id"] = int(
-            _decode_base64(resp_data["delivery_method_id"])
-        )
+        resp_data["id"] = base64_to_int(resp_data["id"])
+        resp_data["category_id"] = base64_to_int(resp_data["category_id"])
+        resp_data["platform_id"] = base64_to_int(resp_data["platform_id"])
+        resp_data["delivery_method_id"] = base64_to_int(resp_data["delivery_method_id"])
 
         for resp_key, data_key in zip_longest(resp_data, data):
             if data_key is None:
@@ -247,9 +240,10 @@ def test_delete_product(
     resp = client.delete(f"{router.prefix}/delete/{product_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
+        session = db.session_factory()
+
         with asyncio.Runner() as runner:
             try:
-                session = db.session_factory()
                 stmt = select(Product.id).filter_by(id=new_product.id)
                 res = runner.run(session.execute(stmt))
                 assert len(res.scalars().all()) == 0
@@ -271,25 +265,7 @@ def test_list_products(expected_status: int, params: dict[str, int] | None):
     assert resp.status_code == expected_status
     resp_data = resp.json()
     if expected_status == 200:
-        assert "products" in resp_data
-        assert "page_size" in resp_data
-        assert "page_num" in resp_data
-        assert "total_records" in resp_data
-        assert (
-            "total_on_page" in resp_data
-            and resp_data["total_on_page"] <= resp_data["page_size"]
-        )
-        assert "first_page" in resp_data and resp_data["first_page"] == 1
-        assert "last_page" in resp_data and resp_data["last_page"] == math.ceil(
-            resp_data["total_records"] / resp_data["page_size"]
-        )
-        products = resp_data["products"]
-        assert len(products) == resp_data["total_on_page"]
-        if params:
-            if params.get("page_size"):
-                assert resp_data["page_size"] == params["page_size"]
-            if params.get("page_num"):
-                assert resp_data["page_num"] == params["page_num"]
+        check_paginated_response("products", resp_data, params)
 
 
 @pytest.mark.parametrize(
@@ -309,16 +285,10 @@ def test_get_product(
         assert resp_product["description"] == new_product.description
         assert resp_product["regular_price"] == str(new_product.regular_price)
         assert resp_product["discount"] == new_product.discount
+        assert base64_to_int(resp_product["category"]["id"]) == new_product.category_id
+        assert base64_to_int(resp_product["platform"]["id"]) == new_product.platform_id
         assert (
-            int(base64.b64decode(resp_product["category"]["id"]).decode())
-            == new_product.category_id
-        )
-        assert (
-            int(base64.b64decode(resp_product["platform"]["id"]).decode())
-            == new_product.platform_id
-        )
-        assert (
-            int(base64.b64decode(resp_product["delivery_method"]["id"]).decode())
+            base64_to_int(resp_product["delivery_method"]["id"])
             == new_product.delivery_method_id
         )
 
@@ -330,14 +300,12 @@ def helper_test_objects_list(obj: Category | DeliveryMethod | Platform, url: str
     resp_data = resp.json()
     assert len(resp_data[resp_key]) > 0
     assert all((is_base64(obj["id"]) for obj in resp_data[resp_key]))
-    assert obj.id in [
-        int(_decode_base64(resp_obj["id"])) for resp_obj in resp_data[resp_key]
-    ]
+    assert obj.id in [base64_to_int(resp_obj["id"]) for resp_obj in resp_data[resp_key]]
     resp_obj = next(
         (
             resp_obj
             for resp_obj in resp_data[resp_key]
-            if int(_decode_base64(resp_obj["id"])) == obj.id
+            if base64_to_int(resp_obj["id"]) == obj.id
         )
     )
     assert resp_obj

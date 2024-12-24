@@ -1,6 +1,6 @@
 import typing as t
 
-from core.http.utils import PaginationParams
+from core.pagination import PaginationParams
 from core.service import BaseService
 from gateways.db.exceptions import DatabaseError
 from products.domain.interfaces import (
@@ -30,13 +30,13 @@ class ProductsService(BaseService):
                 product = await repo.create(dto)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
-                **dto.model_dump(include=["name", "category_name", "platform_name"])
+                **dto.model_dump(include={"name", "category_name", "platform_name"})
             ) from e
-        return product.to_read_model()
+        return ShowProduct.model_validate(product)
 
     async def list_products(
         self, pagination_params: PaginationParams
-    ) -> tuple[list[ShowProduct], int]:
+    ) -> tuple[list[ShowProductWithRelations], int]:
         try:
             async with self.uow as uow:
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
@@ -65,19 +65,19 @@ class ProductsService(BaseService):
         async with self.uow as uow:
             repo = t.cast(PlatformsRepositoryI, uow.platforms_repo)
             platforms = await repo.list()
-        return [platform.to_read_model() for platform in platforms]
+        return [PlatformDTO.model_validate(platform) for platform in platforms]
 
     async def categories_list(self) -> list[CategoryDTO]:
         async with self.uow as uow:
             repo = t.cast(CategoriesRepositoryI, uow.categories_repo)
             categories = await repo.list()
-        return [category.to_read_model() for category in categories]
+        return [CategoryDTO.model_validate(category) for category in categories]
 
     async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
         async with self.uow as uow:
             repo = t.cast(DeliveryMethodsRepositoryI, uow.delivery_methods_repo)
             delivery_methods = await repo.list()
-        return [method.to_read_model() for method in delivery_methods]
+        return [DeliveryMethodDTO.model_validate(method) for method in delivery_methods]
 
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO
@@ -85,18 +85,18 @@ class ProductsService(BaseService):
         try:
             async with self.uow as uow:
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                product = await repo.update(dto, id=product_id)
+                product = await repo.update_by_id(dto, product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
                 **dto.model_dump(include={"name", "category_name", "platform_name"}),
                 id=product_id,
             ) from e
-        return product.to_read_model()
+        return ShowProduct.model_validate(product)
 
     async def delete_product(self, product_id: int) -> None:
         try:
             async with self.uow as uow:
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                await repo.delete(product_id)
+                await repo.delete_by_id(product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(id=product_id) from e

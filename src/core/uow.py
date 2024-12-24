@@ -3,16 +3,52 @@ import logging
 import typing as t
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from gateways.db.main import SqlAlchemyDatabase
-from gateways.db.repository import SqlAlchemyRepository
+from news.domain.interfaces import NewsRepositoryI
+from products.domain.interfaces import (
+    DeliveryMethodsRepositoryI,
+    PlatformsRepositoryI,
+    CategoriesRepositoryI,
+    ProductsRepositoryI,
+)
+from users.domain.interfaces import UsersRepositoryI
 
 logging.basicConfig(level=logging.DEBUG)
 
 
+@t.runtime_checkable
+class AcceptsSessionI(t.Protocol):
+    def __init__(self, session: AsyncSession): ...
+
+
+# class NewsRepositoryI(BaseNewsRepositoryI, BaseRepositoryI): ...
+#
+#
+# class ProductsRepositoryI(BaseProductsRepositoryI, BaseRepositoryI): ...
+#
+#
+# class DeliveryMethodsRepositoryI(BaseDeliveryMethodsRepositoryI, BaseRepositoryI): ...
+#
+#
+# class PlatformsRepositoryI(BasePlatformsRepositoryI, BaseRepositoryI): ...
+#
+#
+# class CategoriesRepositoryI(BaseCategoriesRepositoryI, BaseRepositoryI): ...
+#
+#
+# class UsersRepositoryI(BaseUsersRepositoryI, BaseRepositoryI, t.Protocol): ...
+
+
 class AbstractUnitOfWork(abc.ABC):
+    news_repo: NewsRepositoryI
+    products_repo: ProductsRepositoryI
+    delivery_methods_repo: DeliveryMethodsRepositoryI
+    platforms_repo: PlatformsRepositoryI
+    categories_repo: CategoriesRepositoryI
+    users_repo: UsersRepositoryI
+
     async def __aenter__(self) -> t.Self:
         return self
 
@@ -29,12 +65,22 @@ class AbstractUnitOfWork(abc.ABC):
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(
         self,
-        session_factory: sessionmaker,
-        repos_list: list[type[SqlAlchemyRepository]],
+        session_factory: async_sessionmaker[AsyncSession],
+        news_repo_cls: type[NewsRepositoryI],
+        products_repo_cls: type[ProductsRepositoryI],
+        delivery_methods_repo_cls: type[DeliveryMethodsRepositoryI],
+        platforms_repo_cls: type[PlatformsRepositoryI],
+        categories_repo_cls: type[CategoriesRepositoryI],
+        users_repo_cls: type[UsersRepositoryI],
     ) -> None:
-        self.session_factory: sessionmaker = session_factory
+        self.session_factory = session_factory
         self.session: AsyncSession | None = None
-        self.repos_list = repos_list
+        self._news_repo_cls = news_repo_cls
+        self._products_repo_cls = products_repo_cls
+        self._delivery_methods_repo_cls = delivery_methods_repo_cls
+        self._platforms_repo_cls = platforms_repo_cls
+        self._categories_repo_cls = categories_repo_cls
+        self._users_repo_cls = users_repo_cls
 
     def _handle_exc(self, exc: Exception) -> t.NoReturn:
         from core.ioc import get_container
@@ -46,12 +92,16 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.session = self.session_factory()
 
         # initializing repositories using created session
-        for repo in self.repos_list:
-            setattr(self, repo.get_shortname(), repo(self.session))
-
+        for annotation_key in self.__annotations__.keys():
+            if annotation_key.endswith("_repo"):
+                repo_cls: type = getattr(self, f"_{annotation_key}_cls")
+                if not issubclass(repo_cls, AcceptsSessionI):
+                    raise ValueError(f"Invalid repository: {repo_cls.__name__}")
+                setattr(self, annotation_key, repo_cls(self.session))
         return await super().__aenter__()
 
     async def __aexit__(self, exc_type, *args) -> None:
+        assert self.session is not None
         try:
             if exc_type is not None:
                 logging.error(
@@ -71,7 +121,9 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
             await self.session.close()
 
     async def commit(self) -> None:
+        assert self.session is not None
         await self.session.commit()
 
     async def rollback(self) -> None:
+        assert self.session is not None
         await self.session.rollback()

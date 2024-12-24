@@ -1,10 +1,11 @@
 import re
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
+from typing import Sequence
 
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, select, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -13,7 +14,7 @@ class AbstractRepository[T](ABC):
     async def create(self, **values) -> T: ...
 
     @abstractmethod
-    async def list(self, **filter_by) -> list[T]: ...
+    async def list(self, **filter_by) -> Sequence[T]: ...
 
     @classmethod
     def get_shortname(cls) -> str:
@@ -45,7 +46,7 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
         res = await self.session.execute(stmt)
         return res.scalars().one()
 
-    async def list(self, *columns, **filter_by) -> list[T]:
+    async def list(self, *columns, **filter_by) -> Sequence[T]:
         stmt = select(self.model)
         if columns:
             stmt = select(*[getattr(self.model.columns, col) for col in columns])
@@ -74,8 +75,23 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
             raise NotFoundError()
         return obj
 
-    async def delete(self, **filter_by) -> int:
+    async def delete(self, **filter_by) -> None:
         stmt = delete(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
         if res.rowcount < 1:
             raise NotFoundError()
+
+
+class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
+    async def paginated_list(self, limit: int, offset: int) -> Sequence[T]:
+        stmt = select(self.model).offset(offset).limit(limit)
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
+    async def get_records_count(self) -> int:
+        stmt = text(f"SELECT COUNT(id) FROM {self.model.__tablename__}")
+        res = await self.session.execute(stmt)
+        count = res.scalar()
+        if count is None:
+            raise DatabaseError()
+        return int(count)

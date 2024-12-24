@@ -1,6 +1,6 @@
 from gateways.db.column_types import int_pk_type, created_at_type, updated_at_type
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped
 from gateways.db.models import SqlAlchemyBaseModel
 from news.schemas import ShowNews
 
@@ -10,6 +10,6 @@ class News(SqlAlchemyBaseModel):
 
     id: Mapped[int_pk_type]
     description: Mapped[str]
-    photo_url: Mapped[str] = mapped_column(nullable=True)
+    photo_url: Mapped[str | None]
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]

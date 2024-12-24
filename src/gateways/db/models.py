@@ -1,12 +1,13 @@
 import re
-from typing import Any
+import typing as t
 
-from pydantic import BaseModel
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase
 
+from core.schemas import BaseDTO
 
-class SqlAlchemyBaseModel[T: BaseModel](DeclarativeBase):
+
+class SqlAlchemyBaseModel[T: BaseDTO](DeclarativeBase):
     repr_cols_num: int = 3
     repr_cols: tuple = ()
     model_schema: T | None = None
@@ -18,7 +19,7 @@ class SqlAlchemyBaseModel[T: BaseModel](DeclarativeBase):
                 cols.append(f"{col}={getattr(self, col)!r}")
         return f"<{self.__class__.__name__}({', '.join(cols)})>"
 
-    def to_read_model(self) -> T | dict[str, Any]:
+    def to_read_model(self) -> T | dict[str, t.Any]:
         if self.model_schema:
             return self.model_schema.model_validate(self)
         return {col: getattr(self, col) for col in self.__table__.columns.keys()}

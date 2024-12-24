@@ -1,11 +1,11 @@
-from gateways.db.repository import SqlAlchemyRepository
+from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 from sqlalchemy import select, text
 
 from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
 
-class ProductsRepository(SqlAlchemyRepository[Product]):
+class ProductsRepository(PaginationRepository[Product]):
     model = Product
 
     async def create(self, dto: CreateProductDTO) -> Product:
@@ -21,7 +21,7 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
         )
         return product
 
-    async def update(self, dto: UpdateProductDTO, **filter_params) -> Product:
+    async def update_by_id(self, dto: UpdateProductDTO, product_id: int) -> Product:
         data = dto.model_dump(
             exclude={"image_url", "category", "platform", "delivery_method"},
             exclude_unset=True,
@@ -36,22 +36,12 @@ class ProductsRepository(SqlAlchemyRepository[Product]):
             data["delivery_method_id"] = dto.delivery_method.id
         product = await super().update(
             data,
-            **filter_params,
+            id=product_id,
         )
         return product
 
-    async def delete(self, product_id: int) -> None:
+    async def delete_by_id(self, product_id: int) -> None:
         await super().delete(id=product_id)
-
-    async def paginated_list(self, limit: int, offset: int) -> list[Product]:
-        stmt = select(self.model).offset(offset).limit(limit)
-        res = await self.session.execute(stmt)
-        return res.scalars().all()
-
-    async def get_records_count(self) -> int:
-        stmt = text(f"SELECT COUNT(id) FROM {self.model.__tablename__}")
-        res = await self.session.execute(stmt)
-        return res.scalar()
 
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)

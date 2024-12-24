@@ -5,6 +5,8 @@ import punq
 from fastapi import Depends
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
+from news.domain.services import NewsService
+from news.repositories import NewsRepository
 from products.domain.services import ProductsService
 from products.repositories import (
     CategoriesRepository,
@@ -39,13 +41,12 @@ def _init_container() -> punq.Container:
     )
     uow = SqlAlchemyUnitOfWork(
         db.session_factory,
-        [
-            ProductsRepository,
-            DeliveryMethodsRepository,
-            PlatformsRepository,
-            CategoriesRepository,
-            UsersRepository,
-        ],
+        products_repo_cls=ProductsRepository,
+        delivery_methods_repo_cls=DeliveryMethodsRepository,
+        platforms_repo_cls=PlatformsRepository,
+        categories_repo_cls=CategoriesRepository,
+        users_repo_cls=UsersRepository,
+        news_repo_cls=NewsRepository,
     )
     container.register(HasherI, BcryptHasher)
     container.register(
@@ -59,6 +60,7 @@ def _init_container() -> punq.Container:
     container.register(Config, instance=cfg)
     container.register(AbstractUnitOfWork, instance=uow)
     container.register(ProductsService, ProductsService)
+    container.register(NewsService, NewsService)
     container.register(
         UsersService,
         UsersService,

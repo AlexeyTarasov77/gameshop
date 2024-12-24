@@ -3,7 +3,8 @@ import typing as t
 from http import HTTPStatus
 
 from core.http.exceptions import HttpExceptionsMapper
-from core.http.utils import EntityIDParam, PaginationDep
+from core.http.utils import EntityIDParam
+from core.pagination import PaginatedResponse, PaginationDep
 from core.ioc import Inject
 from core.service import ServiceError
 from fastapi import APIRouter, HTTPException
@@ -16,24 +17,28 @@ router = APIRouter(prefix="/products", tags=["products"])
 ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 
 
+class ProductsPaginatedResponse(PaginatedResponse):
+    products: list[schemas.ShowProductWithRelations]
+
+
 @router.get("/")
 async def list_products(
     pagination_params: PaginationDep, products_service: ProductsServiceDep
-) -> dict[str, list[schemas.ShowProductWithRelations] | str | int]:
+) -> ProductsPaginatedResponse:
     try:
         products, total_records = await products_service.list_products(
             pagination_params
         )
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
-    return {
-        "products": products,
-        "total_records": total_records,
-        "total_on_page": len(products),
-        "first_page": 1,
-        "last_page": math.ceil(total_records / pagination_params.page_size),
-        **pagination_params._asdict(),
-    }
+    return ProductsPaginatedResponse(
+        products=products,
+        total_records=total_records,
+        total_on_page=len(products),
+        first_page=1,
+        last_page=math.ceil(total_records / pagination_params.page_size),
+        **pagination_params.model_dump(),
+    )
 
 
 @router.get("/detail/{product_id}")
@@ -41,7 +46,7 @@ async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
 ) -> dict[str, schemas.ShowProductWithRelations]:
     try:
-        product = await products_service.get_product(product_id)
+        product = await products_service.get_product(int(product_id))
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
     return {"product": product}
@@ -68,7 +73,7 @@ async def update_product(
     if not dto.model_dump(exclude_unset=True):
         raise HTTPException(400, "Nothing to update. No data provided")
     try:
-        product = await products_service.update_product(product_id, dto)
+        product = await products_service.update_product(int(product_id), dto)
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
     return product
@@ -80,7 +85,7 @@ async def delete_product(
     products_service: ProductsServiceDep,
 ) -> None:
     try:
-        await products_service.delete_product(product_id)
+        await products_service.delete_product(int(product_id))
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
 

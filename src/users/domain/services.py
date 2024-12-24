@@ -47,10 +47,16 @@ class UsersService(BaseService):
         try:
             async with self.uow as uow:
                 repo = t.cast(UsersRepositoryI, uow.users_repo)
-                user = await repo.create(dto.email, password_hash, str(dto.photo_url))
+                user = await repo.create(
+                    email=dto.email,
+                    password_hash=password_hash,
+                    photo_url=str(dto.photo_url),
+                )
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(email=dto.email) from e
-        activation_token = self.token_provider.new_token({"uid": user.id}, self.activation_token_ttl)
+        activation_token = self.token_provider.new_token(
+            {"uid": user.id}, self.activation_token_ttl
+        )
         email_body = f"""
             Здравствуйте, ваш аккаунт был успешно создан.
             Для активации аккаунта перейдите по ссылке ниже:
@@ -59,9 +65,11 @@ class UsersService(BaseService):
                 {activation_token}
         """
         asyncio.create_task(
-            self.mail_provider.send_mail("Аккаунт успешно создан", email_body, user.email)
+            self.mail_provider.send_mail(
+                "Аккаунт успешно создан", email_body, user.email
+            )
         )
-        return user.to_read_model()
+        return ShowUser.model_validate(user)
 
     async def signin(self, dto: UserSignInDTO) -> str:
         try:
@@ -88,7 +96,7 @@ class UsersService(BaseService):
         try:
             async with self.uow as uow:
                 repo = t.cast(UsersRepositoryI, uow.users_repo)
-                user = await repo.update(user_id, is_active=True)
+                user = await repo.update_by_id(user_id, is_active=True)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(user_id=user_id) from e
-        return user.to_read_model()
+        return ShowUser.model_validate(user)
