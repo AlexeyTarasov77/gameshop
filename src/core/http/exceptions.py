@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from functools import partial
 from http import HTTPStatus
 
@@ -15,10 +16,14 @@ from core.utils import AbstractExceptionMapper
 class HttpExceptionsMapper(AbstractExceptionMapper[ServiceError, HTTPException]):
     """Maps service errors to corresponding http status code"""
 
-    EXCEPTION_MAPPING = {
+    EXCEPTION_MAPPING: Mapping[type[ServiceError], partial[HTTPException]] = {
         EntityNotFoundError: partial(HTTPException, status_code=HTTPStatus.NOT_FOUND),
-        EntityAlreadyExistsError: partial(HTTPException, status_code=HTTPStatus.CONFLICT),
-        EntityRelatedResourceNotFoundError: partial(HTTPException, status_code=HTTPStatus.BAD_REQUEST),
+        EntityAlreadyExistsError: partial(
+            HTTPException, status_code=HTTPStatus.CONFLICT
+        ),
+        EntityRelatedResourceNotFoundError: partial(
+            HTTPException, status_code=HTTPStatus.BAD_REQUEST
+        ),
     }
 
     @classmethod

@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+import sys
 import typing as t
 from datetime import timedelta
 from pathlib import Path
@@ -20,7 +21,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-PORT = t.Annotated[int, Field(default="8000", gt=0, lte=65535)]
+PORT = t.Annotated[int, Field(gt=0, lte=65535)]
 
 
 def _parse_timedelta(delta: str) -> timedelta:
@@ -37,7 +38,7 @@ ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 
 class _Server(BaseModel):
     host: IPvAnyAddress = Field(default="0.0.0.0")
-    port: PORT
+    port: PORT = Field(default=8000)
 
 
 class _SMTP(BaseModel):
@@ -88,7 +89,9 @@ class Config(BaseSettings):
         return self.mode in ["local", "tests"]
 
 
-def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -> Config:
+def init_config(
+    parse_cli: bool = True, config_path: Path | str | None = None
+) -> Config:
     cli_args = None
     if parse_cli:
         parser = argparse.ArgumentParser()
@@ -99,11 +102,8 @@ def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -
         )
         parser.add_argument("--host", help="Server host", dest="host")
         parser.add_argument("-p", "--port", help="Server port", dest="port")
-        cli_args = parser.parse_args()
-    final_cfg_path = (
-        config_path
-        or getattr(cli_args, "config_path", None)
-    )
+        cli_args, _ = parser.parse_known_args(sys.argv)
+    final_cfg_path = config_path or getattr(cli_args, "config_path", None)
     if env_mode := os.environ.get("MODE"):
         final_cfg_path = final_cfg_path or (Path() / "config" / (env_mode + ".yaml"))
     if not final_cfg_path:
@@ -114,7 +114,7 @@ def init_config(parse_cli: bool = True, config_path: Path | str | None = None) -
     if not Path(final_cfg_path).exists():
         raise ValueError("Config path doesn't exist: %s" % final_cfg_path)
     cfg = Config(yaml_file=final_cfg_path)
-    if parse_cli:
+    if cli_args:
         cfg.server.host = cli_args.host or cfg.server.host
         cfg.server.port = cli_args.port or cfg.server.port
     return cfg

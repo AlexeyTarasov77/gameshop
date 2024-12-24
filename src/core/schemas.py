@@ -2,7 +2,13 @@ import base64
 from typing import Annotated
 
 from fastapi import UploadFile
-from pydantic import AfterValidator, BaseModel, BeforeValidator, PlainSerializer
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    PlainSerializer,
+    AnyHttpUrl,
+)
 
 from core.utils import filename_split
 
@@ -29,6 +35,8 @@ def _parse_int(s: str | int) -> int:
     except ValueError:
         return int(base64.b64decode(str(s)))
 
+
+type UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 
 Image = Annotated[UploadFile, AfterValidator(_check_image)]
 Base64Int = Annotated[

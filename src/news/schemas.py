@@ -1,20 +1,24 @@
 from datetime import datetime
-from core.schemas import Base64Int, BaseModel
+
+from core.schemas import Base64Int, BaseDTO, UrlStr
 
 
-class ShowNews(BaseModel):
+class ShowNews(BaseDTO):
     id: Base64Int
+    title: str
     description: str
-    photo_url: str | None
+    photo_url: UrlStr | None
     created_at: datetime
     updated_at: datetime
 
 
-class CreateNewsDTO(BaseModel):
+class CreateNewsDTO(BaseDTO):
+    title: str
     description: str
-    photo_url: str | None
+    photo_url: UrlStr | None = None
 
 
-class UpdateNewsDTO(BaseModel):
-    description: str | None
-    photo_url: str | None
+class UpdateNewsDTO(BaseDTO):
+    title: str = None
+    description: str = None
+    photo_url: UrlStr | None = None

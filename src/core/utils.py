@@ -1,4 +1,6 @@
 import abc
+from collections.abc import Mapping
+from functools import partial
 import logging
 import typing as t
 
@@ -24,18 +26,18 @@ class Singleton:
 
 
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
-    EXCEPTION_MAPPING: dict[type[K], type[V]]
+    EXCEPTION_MAPPING: Mapping[type[K], type[V]]
 
     @classmethod
     @abc.abstractmethod
-    def get_default_exc(cls) -> type[Exception]: ...
+    def get_default_exc(cls) -> type[V]: ...
 
     @classmethod
-    def map(cls, exc: K) -> type[V]:
+    def map(cls, exc: K | V) -> type[V] | partial[V]:
         exc_class = type(exc)
         if exc_class in cls.EXCEPTION_MAPPING.values():
-            return exc_class
-        mapped_exc_class = cls.EXCEPTION_MAPPING.get(exc_class)
+            return t.cast(type[V], exc_class)
+        mapped_exc_class = cls.EXCEPTION_MAPPING.get(t.cast(type[K], exc_class))
         if not mapped_exc_class:
             logging.warning("Not mapped exception: %s", exc_class)
             return cls.get_default_exc()

@@ -35,4 +35,3 @@ async def save_upload_file(
     finally:
         await upload_file.close()
     return dest_path
-    return dest_path

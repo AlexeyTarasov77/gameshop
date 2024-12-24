@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from functools import partial
 
 from gateways.db.exceptions import (
@@ -59,7 +60,7 @@ class ServiceExceptionMapper(AbstractExceptionMapper[DatabaseError, ServiceError
     def __init__(self, entity_name: str | None = None) -> None:
         self.entity_name = entity_name
 
-    EXCEPTION_MAPPING = {
+    EXCEPTION_MAPPING: Mapping[type[DatabaseError], type[ServiceError]] = {
         NotFoundError: EntityNotFoundError,
         AlreadyExistsError: EntityAlreadyExistsError,
         RelatedResourceNotFoundError: EntityRelatedResourceNotFoundError,

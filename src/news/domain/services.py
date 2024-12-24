@@ -1,8 +1,6 @@
 from core.pagination import PaginationParams
 from core.service import BaseService
-import typing as t
-from news.schemas import ShowNews
-from news.domain.interfaces import NewsRepositoryI
+from news.schemas import CreateNewsDTO, ShowNews
 from gateways.db.exceptions import DatabaseError
 
 
@@ -12,7 +10,7 @@ class NewsService(BaseService):
     ) -> tuple[list[ShowNews], int]:
         try:
             async with self.uow as uow:
-                repo = t.cast(NewsRepositoryI, uow.news_repo)
+                repo = uow.news_repo
                 news = await repo.paginated_list(
                     limit=pagination_params.page_size,
                     offset=pagination_params.page_size
@@ -22,3 +20,12 @@ class NewsService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return [ShowNews.model_validate(el) for el in news], total_records
+
+    async def create_news(self, dto: CreateNewsDTO) -> ShowNews:
+        try:
+            async with self.uow as uow:
+                news = await uow.news_repo.create(dto)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        print("model validate", news)
+        return ShowNews.model_validate(news)

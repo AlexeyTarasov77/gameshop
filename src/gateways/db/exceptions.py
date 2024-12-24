@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from functools import partial
 
 from core.utils import AbstractExceptionMapper
@@ -19,11 +20,13 @@ class AlreadyExistsError(DatabaseError): ...
 class RelatedResourceNotFoundError(DatabaseError): ...
 
 
-class AbstractDatabaseExceptionMapper[K: Exception](AbstractExceptionMapper[K, DatabaseError]): ...
+class AbstractDatabaseExceptionMapper[K: Exception](
+    AbstractExceptionMapper[K, DatabaseError]
+): ...
 
 
-class PostgresExceptionsMapper(AbstractExceptionMapper[type[pg_exc.Error], type[DatabaseError]]):
-    EXCEPTION_MAPPING = {
+class PostgresExceptionsMapper(AbstractExceptionMapper[pg_exc.Error, DatabaseError]):
+    EXCEPTION_MAPPING: Mapping[type[pg_exc.Error], type[DatabaseError]] = {
         pg_exc.NoData: NotFoundError,
         pg_exc.UniqueViolation: AlreadyExistsError,
         pg_exc.ForeignKeyViolation: RelatedResourceNotFoundError,
@@ -34,5 +37,5 @@ class PostgresExceptionsMapper(AbstractExceptionMapper[type[pg_exc.Error], type[
         return DatabaseError
 
     @classmethod
-    def map(cls, exc) -> partial[type[DatabaseError]]:
+    def map(cls, exc) -> partial[DatabaseError]:
         return partial(super().map(exc), str(exc))

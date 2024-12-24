@@ -16,4 +16,4 @@ class NewsRepository(PaginationRepository[News]):
         return await super().get_one(id=news_id)
 
     async def create(self, dto: CreateNewsDTO):
-        return await super().create(dto.model_dump())
+        return await super().create(**dto.model_dump())

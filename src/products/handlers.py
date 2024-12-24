@@ -36,7 +36,6 @@ async def list_products(
         total_records=total_records,
         total_on_page=len(products),
         first_page=1,
-        last_page=math.ceil(total_records / pagination_params.page_size),
         **pagination_params.model_dump(),
     )
 
