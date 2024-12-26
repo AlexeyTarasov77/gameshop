@@ -1,6 +1,6 @@
 from core.pagination import PaginationParams
 from core.service import BaseService
-from news.schemas import CreateNewsDTO, ShowNews
+from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
 from gateways.db.exceptions import DatabaseError
 
 
@@ -27,5 +27,20 @@ class NewsService(BaseService):
                 news = await uow.news_repo.create(dto)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
-        print("model validate", news)
+        return ShowNews.model_validate(news)
+
+    async def get_news(self, news_id: int) -> ShowNews:
+        try:
+            async with self.uow as uow:
+                news = await uow.news_repo.get_by_id(news_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return ShowNews.model_validate(news)
+
+    async def update_news(self, dto: UpdateNewsDTO, news_id: int) -> ShowNews:
+        try:
+            async with self.uow as uow:
+                news = await uow.news_repo.update_by_id(dto, news_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
         return ShowNews.model_validate(news)

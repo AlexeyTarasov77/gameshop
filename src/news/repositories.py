@@ -7,7 +7,7 @@ class NewsRepository(PaginationRepository[News]):
     model = News
 
     async def update_by_id(self, dto: UpdateNewsDTO, news_id: int) -> News:
-        return await super().update(dto.model_dump(), id=news_id)
+        return await super().update(dto.model_dump(exclude_unset=True), id=news_id)
 
     async def delete_by_id(self, news_id: int) -> None:
         await super().delete(id=news_id)
