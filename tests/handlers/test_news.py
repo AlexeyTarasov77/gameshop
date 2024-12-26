@@ -1,17 +1,18 @@
 import asyncio
-from datetime import datetime
-from itertools import zip_longest
 import typing as t
 from contextlib import suppress
+from datetime import datetime
+from itertools import zip_longest
 
 import pytest
-from handlers.conftest import client, db, fake
+from helpers import base64_to_int, check_paginated_response, is_base64
+from sqlalchemy import select
 
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
+from handlers.conftest import client, db, fake
 from news.handlers import router
 from news.models import News
-from helpers import base64_to_int, check_paginated_response, is_base64
 
 
 def _gen_news_data() -> dict[str, str]:
@@ -134,3 +135,22 @@ def test_update_news(
                 assert resp_val == news_val
             else:
                 assert resp_data[data_key] == data[data_key]
+
+
+@pytest.mark.parametrize(
+    ["expected_status", "news_id"], [(204, None), (404, 999999), (422, -1)]
+)
+def test_delete_news(new_news: News, expected_status: int, news_id: int):
+    news_id = news_id or new_news.id
+    resp = client.delete(f"{router.prefix}/delete/{news_id}")
+    assert resp.status_code == expected_status
+    if expected_status == 204:
+        session = db.session_factory()
+
+        with asyncio.Runner() as runner:
+            try:
+                stmt = select(News.id).filter_by(id=new_news.id)
+                res = runner.run(session.execute(stmt))
+                assert len(res.scalars().all()) == 0
+            finally:
+                runner.run(session.close())

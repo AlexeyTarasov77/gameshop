@@ -231,7 +231,7 @@ def test_update_product(
 
 
 @pytest.mark.parametrize(
-    ["expected_status", "product_id"], [(204, None), (404, 999), (422, -1)]
+    ["expected_status", "product_id"], [(204, None), (404, 999999), (422, -1)]
 )
 def test_delete_product(
     new_product: Product, expected_status: int, product_id: int | None

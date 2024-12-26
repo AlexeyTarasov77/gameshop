@@ -68,3 +68,11 @@ async def update_news(
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
     return news
+
+
+@router.delete("/delete/{news_id}", status_code=HTTPStatus.NO_CONTENT)
+async def delete_news(news_id: EntityIDParam, news_service: NewsServiceDep):
+    try:
+        await news_service.delete_news(int(news_id))
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)

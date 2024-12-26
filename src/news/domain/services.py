@@ -44,3 +44,10 @@ class NewsService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return ShowNews.model_validate(news)
+
+    async def delete_news(self, news_id: int) -> None:
+        try:
+            async with self.uow as uow:
+                await uow.news_repo.delete_by_id(news_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
