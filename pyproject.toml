@@ -26,6 +26,10 @@ pytest = "^8.3.4"
 faker = "^33.1.0"
 
 
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.391"
+ruff = "^0.8.5"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -8,11 +8,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml poetry.lock /app/
+COPY pyproject.toml poetry.lock .
 
 RUN pip install poetry
 
-RUN poetry config virtualenvs.create false && poetry install --no-root --no-dev
+RUN poetry config virtualenvs.create false && poetry install --no-root --without=dev
 
 RUN apt update && apt install -y libpq-dev build-essential
 
@@ -28,4 +28,4 @@ USER gameshop
 
 ENTRYPOINT [ "poetry", "run" ]
 
-CMD ["/bin/sh", "entrypoint.sh"]
+CMD ["entrypoint.sh"]

@@ -14,6 +14,10 @@ api/run/prod:
 run/tests:
 	MODE="tests" poetry run pytest
 
+.PHONY: run/tests/docker
+run/tests/docker:
+	MODE="tests" docker exec gameshop_web "sh poetry run pytest"
+
 .PHONY: migrations/new
 migrations/new:
 	MODE=$(mode) poetry run alembic revision --autogenerate -m "$(msg)"
