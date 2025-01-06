@@ -8,6 +8,7 @@ from gateways.db.models import SqlAlchemyBaseModel
 from products.models import *
 from users.models import *
 from news.models import *
+from orders.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

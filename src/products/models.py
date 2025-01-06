@@ -41,6 +41,13 @@ class Product(SqlAlchemyBaseModel):
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
 
+    @property
+    def total_price(self):
+        discount = self.discount
+        if self.discount_valid_to and datetime.now() > self.discount_valid_to:
+            discount = 0
+        return self.regular_price - discount // 100 * self.regular_price
+
 
 class BaseRefModel(SqlAlchemyBaseModel):
     __abstract__ = True
