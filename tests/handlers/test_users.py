@@ -25,13 +25,14 @@ def _gen_user_data() -> dict[str, str]:
 @pytest.fixture
 def new_user():
     data = _gen_user_data()
-    data["password_hash"] = data.pop("password").encode()
     session = db.session_factory()
     repo = SqlAlchemyRepository(session)
     repo.model = User
     with asyncio.Runner() as runner:
         try:
-            user: User = runner.run(repo.create(**data))
+            user: User = runner.run(
+                repo.create(password_hash=data.pop("password").encode(), **data)
+            )
             runner.run(session.commit())
             yield user
             with suppress(NotFoundError):

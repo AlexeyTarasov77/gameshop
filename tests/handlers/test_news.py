@@ -1,5 +1,4 @@
 import asyncio
-import typing as t
 from contextlib import suppress
 from datetime import datetime
 from itertools import zip_longest

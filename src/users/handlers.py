@@ -2,20 +2,17 @@ import typing as t
 from http import HTTPStatus
 
 from core.http.exceptions import HttpExceptionsMapper
-from core.ioc import Inject
 from core.service import EntityNotFoundError, ServiceError
+from users.dependencies import UsersServiceDep
 from fastapi import APIRouter, Body, HTTPException
 
 from users import schemas
 from users.domain.services import (
     InvalidTokenServiceError,
     PasswordDoesNotMatchError,
-    UsersService,
 )
 
 router = APIRouter(prefix="/users", tags=["users", "auth"])
-
-UsersServiceDep = t.Annotated[UsersService, Inject(UsersService)]
 
 
 @router.post("/signup", status_code=HTTPStatus.CREATED)

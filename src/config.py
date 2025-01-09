@@ -21,13 +21,14 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-PORT = t.Annotated[int, Field(gt=0, lte=65535)]
+PORT = t.Annotated[int, Field(gt=0, le=65535)]
 
 
 def _parse_timedelta(delta: str) -> timedelta:
     """Transforms string like 1d / 1h / 60m ... etc TO timedelta object"""
     units_mapping = {"d": "days", "m": "minutes", "h": "hours"}
     match = re.match(r"(\d+\.?\d*)([a-zA-Z])", delta)
+    assert match
     number, unit = match.groups()
     assert unit in units_mapping.keys(), "Unknown unit: %s" % unit
     return timedelta(**{units_mapping[unit]: float(number)})

@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from gateways.db.main import SqlAlchemyDatabase
 from news.domain.interfaces import NewsRepositoryI
+from orders.domain.interfaces import (
+    OrderItemsRepositoryI,
+    OrdersRepositoryI,
+)
 from products.domain.interfaces import (
     DeliveryMethodsRepositoryI,
     PlatformsRepositoryI,
@@ -23,24 +27,6 @@ class AcceptsSessionI(t.Protocol):
     def __init__(self, session: AsyncSession): ...
 
 
-# class NewsRepositoryI(BaseNewsRepositoryI, BaseRepositoryI): ...
-#
-#
-# class ProductsRepositoryI(BaseProductsRepositoryI, BaseRepositoryI): ...
-#
-#
-# class DeliveryMethodsRepositoryI(BaseDeliveryMethodsRepositoryI, BaseRepositoryI): ...
-#
-#
-# class PlatformsRepositoryI(BasePlatformsRepositoryI, BaseRepositoryI): ...
-#
-#
-# class CategoriesRepositoryI(BaseCategoriesRepositoryI, BaseRepositoryI): ...
-#
-#
-# class UsersRepositoryI(BaseUsersRepositoryI, BaseRepositoryI, t.Protocol): ...
-
-
 class AbstractUnitOfWork(abc.ABC):
     news_repo: NewsRepositoryI
     products_repo: ProductsRepositoryI
@@ -48,6 +34,8 @@ class AbstractUnitOfWork(abc.ABC):
     platforms_repo: PlatformsRepositoryI
     categories_repo: CategoriesRepositoryI
     users_repo: UsersRepositoryI
+    orders_repo: OrdersRepositoryI
+    order_items_repo: OrderItemsRepositoryI
 
     async def __aenter__(self) -> t.Self:
         return self
@@ -72,6 +60,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         platforms_repo_cls: type[PlatformsRepositoryI],
         categories_repo_cls: type[CategoriesRepositoryI],
         users_repo_cls: type[UsersRepositoryI],
+        orders_repo_cls: type[OrdersRepositoryI],
+        order_items_repo_cls: type[OrderItemsRepositoryI],
     ) -> None:
         self.session_factory = session_factory
         self.session: AsyncSession | None = None
@@ -81,6 +71,8 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self._platforms_repo_cls = platforms_repo_cls
         self._categories_repo_cls = categories_repo_cls
         self._users_repo_cls = users_repo_cls
+        self._orders_repo_cls = orders_repo_cls
+        self._order_items_repo_cls = order_items_repo_cls
 
     def _handle_exc(self, exc: Exception) -> t.NoReturn:
         from core.ioc import get_container

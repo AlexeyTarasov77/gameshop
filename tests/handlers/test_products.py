@@ -167,7 +167,13 @@ create_product_data = _gen_product_data()
         ),
     ],
 )
-def test_create_product(data: dict[str, t.Any], expected_status: int):
+def test_create_product(
+    new_category,
+    new_platform,
+    new_delivery_metho,
+    data: dict[str, t.Any],
+    expected_status: int,
+):
     resp = client.post(f"{router.prefix}/create", json=data)
     resp_data = resp.json()
     assert resp.status_code == expected_status

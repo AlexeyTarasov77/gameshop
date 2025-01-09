@@ -10,9 +10,9 @@ from users.models import User
 
 
 class OrderStatus(Enum):
-    COMPLETED = 1
-    PENDING = 2
-    CANCELLED = 3
+    COMPLETED = "COMPLETED"
+    PENDING = "PENDING"
+    CANCELLED = "CANCELLED "
 
 
 class Order(SqlAlchemyBaseModel):

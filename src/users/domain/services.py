@@ -2,6 +2,8 @@ import asyncio
 import typing as t
 from datetime import datetime, timedelta
 
+from jwt.exceptions import InvalidTokenError
+
 from core.service import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
@@ -82,17 +84,21 @@ class UsersService(BaseService):
             raise PasswordDoesNotMatchError("Passwords doesn't match")
         return self.token_provider.new_token({"uid": user.id}, self.auth_token_ttl)
 
-    async def activate_user(self, token: str) -> ShowUser:
+    async def get_user_id_from_token(self, token: str) -> int:
         try:
             token_payload = self.token_provider.extract_payload(token)
             user_id = token_payload["uid"]
             if int(user_id) < 1:
                 raise ValueError()
             token_exp = datetime.fromtimestamp(token_payload["exp"])
-        except Exception as e:
+        except (InvalidTokenError, ValueError) as e:
             raise InvalidTokenServiceError("Token is invalid") from e
         if token_exp < datetime.now():
             raise InvalidTokenServiceError("Token is expired")
+        return user_id
+
+    async def activate_user(self, token: str) -> ShowUser:
+        user_id = await self.get_user_id_from_token(token)
         try:
             async with self.uow as uow:
                 repo = t.cast(UsersRepositoryI, uow.users_repo)

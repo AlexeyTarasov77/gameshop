@@ -7,6 +7,8 @@ from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from news.domain.services import NewsService
 from news.repositories import NewsRepository
+from orders.domain.services import OrdersService
+from orders.repositories import OrdersRepository, OrderItemsRepository
 from products.domain.services import ProductsService
 from products.repositories import (
     CategoriesRepository,
@@ -47,6 +49,8 @@ def _init_container() -> punq.Container:
         categories_repo_cls=CategoriesRepository,
         users_repo_cls=UsersRepository,
         news_repo_cls=NewsRepository,
+        orders_repo_cls=OrdersRepository,
+        order_items_repo_cls=OrderItemsRepository,
     )
     container.register(HasherI, BcryptHasher)
     container.register(
@@ -61,6 +65,7 @@ def _init_container() -> punq.Container:
     container.register(AbstractUnitOfWork, instance=uow)
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
+    container.register(OrdersService, OrdersService)
     container.register(
         UsersService,
         UsersService,
@@ -72,8 +77,8 @@ def _init_container() -> punq.Container:
     return container
 
 
-def Inject[T](dep: t.Type[T]) -> Depends:  # noqa: N802
+def Inject[T](dep: t.Type[T]):  # noqa: N802
     def resolver() -> T:
-        return t.cast(punq.Container, get_container()).resolve(dep)
+        return t.cast(T, get_container().resolve(dep))
 
     return Depends(resolver)
