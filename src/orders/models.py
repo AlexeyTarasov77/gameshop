@@ -16,13 +16,17 @@ class OrderStatus(Enum):
 
 
 class Order(SqlAlchemyBaseModel):
+    __table_args__ = (CheckConstraint("email IS NOT NULL OR user_id IS NOT NULL"),)
     id: Mapped[int_pk_type]
     order_date: Mapped[created_at_type]
-    items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
-    customer_data_id: Mapped[int] = mapped_column(
-        ForeignKey("customer_data.id", ondelete="CASCADE")
+    customer_email: Mapped[str | None]
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE")
     )
-    customer_data: Mapped["CustomerData"] = relationship(back_populates="order")
+    user: Mapped[User | None] = relationship(back_populates="orders")
+    customer_phone: Mapped[str | None]
+    customer_name: Mapped[str]
+    items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
     status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.PENDING)
 
     def get_total(self):
@@ -43,16 +47,3 @@ class OrderItem(SqlAlchemyBaseModel):
     @property
     def total_price(self):
         return self.price * self.quantity
-
-
-class CustomerData(SqlAlchemyBaseModel):
-    __table_args__ = (CheckConstraint("email IS NOT NULL OR user_id IS NOT NULL"),)
-    id: Mapped[int_pk_type]
-    email: Mapped[str | None]
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE")
-    )
-    user: Mapped[User | None] = relationship()
-    orders: Mapped[list[Order]] = relationship(back_populates="customer_data")
-    phone: Mapped[str | None]
-    name: Mapped[str]
