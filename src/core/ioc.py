@@ -1,8 +1,11 @@
+from pathlib import Path
+from logging import Logger
 import typing as t
 from functools import lru_cache
 
 import punq
 from fastapi import Depends
+from core.logger import setup_logger
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from news.domain.services import NewsService
@@ -35,11 +38,14 @@ def get_container() -> punq.Container:
 def _init_container() -> punq.Container:
     container = punq.Container()
     cfg = init_config()
+    logger = setup_logger(
+        cfg.debug, (Path().parent.parent / "logs" / "errors.log").as_posix()
+    )
+    container.register(Logger, instance=logger)
     db = SqlAlchemyDatabase(
         str(cfg.storage_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
-        echo=cfg.debug,
     )
     uow = SqlAlchemyUnitOfWork(
         db.session_factory,

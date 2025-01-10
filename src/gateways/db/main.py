@@ -1,14 +1,10 @@
-import asyncio
-import logging
-
-from core.utils import Singleton
 from gateways.db.exceptions import AbstractDatabaseExceptionMapper, DBConnectionError
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 
-class SqlAlchemyDatabase(Singleton):
+class SqlAlchemyDatabase:
     async def ping(self) -> None:
         try:
             async with self._engine.begin() as conn:
@@ -32,7 +28,3 @@ class SqlAlchemyDatabase(Singleton):
             self._engine, class_=AsyncSession, expire_on_commit=False
         )
         self.exception_mapper = exception_mapper
-        try:
-            asyncio.run(self.ping())
-        except RuntimeError as e:
-            logging.error("Failed pinging database due to event loop issue", exc_info=e)

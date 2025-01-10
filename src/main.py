@@ -1,3 +1,5 @@
+import asyncio
+from logging import Logger
 from typing import cast
 
 import uvicorn
@@ -7,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import Config
+from gateways.db.main import SqlAlchemyDatabase
 
 
 def app_factory() -> FastAPI:
@@ -15,7 +18,10 @@ def app_factory() -> FastAPI:
 
     @app.get("/ping")
     async def ping() -> dict[str, str | list[str]]:
-        return {"status": "available", "available_routes": [route.path for route in app.routes]}
+        return {
+            "status": "available",
+            "available_routes": [route.path for route in app.routes],
+        }
 
     app.add_middleware(
         CORSMiddleware,
@@ -27,17 +33,23 @@ def app_factory() -> FastAPI:
     return app
 
 
-def main() -> None:
-    cfg = cast(Config, get_container().resolve(Config))
-    print(f"Running in {cfg.mode} mode")
+async def main() -> None:
+    container = get_container()
+    cfg = cast(Config, container.resolve(Config))
+    logger = cast(Logger, container.resolve(Logger))
+    db = cast(SqlAlchemyDatabase, container.resolve(SqlAlchemyDatabase))
+    logger.info("Pinging database...")
+    await asyncio.wait_for(db.ping(), 3)
+    logger.info("Database is ready!")
+    logger.info(f"Running server in {cfg.mode} mode")
     uvicorn.run(
         app="main:app_factory",
         factory=True,
-        host=cfg.server.host,
+        host=str(cfg.server.host),
         port=int(cfg.server.port),
         reload=cfg.debug,
     )
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
