@@ -4,7 +4,7 @@ from datetime import datetime
 from itertools import zip_longest
 
 import pytest
-from helpers import base64_to_int, check_paginated_response, is_base64
+from handlers.helpers import base64_to_int, check_paginated_response, is_base64
 from sqlalchemy import select
 
 from gateways.db.exceptions import NotFoundError

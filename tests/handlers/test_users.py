@@ -1,5 +1,5 @@
 import asyncio
-from helpers import base64_to_int, is_base64
+from handlers.helpers import base64_to_int, is_base64
 import typing as t
 from contextlib import suppress
 from datetime import datetime, timedelta

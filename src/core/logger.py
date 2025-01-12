@@ -54,7 +54,7 @@ def setup_logger(debug: bool, error_log_path: str) -> logging.Logger:
     stream_handler.setFormatter(colorized_formatter)
     logger.addHandler(stream_handler)
     if not debug:
-        file_handler = logging.FileHandler(error_log_path)
+        file_handler = logging.FileHandler(error_log_path, "a")
         file_handler.setLevel(logging.WARNING)
         file_handler.setFormatter(simple_formatter)
         logger.addHandler(file_handler)

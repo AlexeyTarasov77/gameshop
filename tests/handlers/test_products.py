@@ -8,7 +8,7 @@ from decimal import Decimal
 from itertools import zip_longest
 
 import pytest
-from helpers import check_paginated_response, is_base64, base64_to_int
+from handlers.helpers import check_paginated_response, is_base64, base64_to_int
 from sqlalchemy import Result, select, text
 
 from gateways.db.exceptions import NotFoundError

@@ -75,8 +75,7 @@ class ProductsService(BaseService):
 
     async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
         async with self.uow as uow:
-            repo = t.cast(DeliveryMethodsRepositoryI, uow.delivery_methods_repo)
-            delivery_methods = await repo.list()
+            delivery_methods = await uow.delivery_methods_repo.list()
         return [DeliveryMethodDTO.model_validate(method) for method in delivery_methods]
 
     async def update_product(

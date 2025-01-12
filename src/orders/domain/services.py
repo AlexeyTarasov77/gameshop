@@ -1,6 +1,6 @@
 from core.service import BaseService
 from gateways.db.exceptions import DatabaseError
-from orders.schemas import CreateOrderDTO, BaseShowOrder
+from orders.schemas import CreateOrderDTO, BaseShowOrder, UpdateOrderDTO
 
 
 class ServiceValidationError(Exception): ...
@@ -22,3 +22,22 @@ class OrdersService(BaseService):
                     **dto.model_dump()
                 ) from e
         return BaseShowOrder.model_validate(order)
+
+    async def update_order(self, dto: UpdateOrderDTO, order_id: int) -> BaseShowOrder:
+        try:
+            async with self.uow as uow:
+                order = await uow.orders_repo.update_by_id(dto, order_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(
+                id=order_id,
+            ) from e
+        return BaseShowOrder.model_validate(order)
+
+    async def delete_order(self, order_id: int) -> None:
+        try:
+            async with self.uow as uow:
+                await uow.orders_repo.delete_by_id(order_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(
+                id=order_id,
+            ) from e

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from httpx import URL
 
+
 os.environ["MODE"] = "tests"
 sys.path.insert(1, str((Path().parent / "src").absolute()))
 

@@ -1,5 +1,5 @@
 from gateways.db.exceptions import AbstractDatabaseExceptionMapper, DBConnectionError
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
@@ -24,6 +24,8 @@ class SqlAlchemyDatabase:
     ) -> None:
         self._dsn = storage_dsn
         self._engine = create_async_engine(storage_dsn, **engine_params)
+        # used in synchronous tests
+        self.sync_engine = create_engine(storage_dsn)
         self.session_factory = async_sessionmaker(
             self._engine, class_=AsyncSession, expire_on_commit=False
         )

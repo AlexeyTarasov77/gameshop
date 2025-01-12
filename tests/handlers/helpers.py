@@ -1,7 +1,10 @@
 import base64
 from typing import Any
-
+from sqlalchemy.inspection import inspect
+from handlers.conftest import db
+from gateways.db.models import SqlAlchemyBaseModel
 from core.pagination import PaginatedResponse
+from sqlalchemy import delete, insert
 
 
 def is_base64(s: str) -> bool:
@@ -29,3 +32,17 @@ def check_paginated_response(
             assert data_obj.page_size == params["page_size"]
         if params.get("page_num"):
             assert data_obj.page_num == params["page_num"]
+
+
+def create_model_obj(model: type[SqlAlchemyBaseModel], **values):
+    if not values:
+        raise Exception("Empty values")
+    pk_col_name = inspect(model).primary_key[0].name
+    with db.sync_engine.begin() as conn:
+        stmt = insert(model).values(**values).returning(model)
+        res = conn.execute(stmt)
+        obj = res.one()
+    yield obj
+    with db.sync_engine.begin() as conn:
+        stmt = delete(model).filter_by(**{pk_col_name: getattr(obj, pk_col_name)})
+        conn.execute(stmt)

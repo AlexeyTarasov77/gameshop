@@ -20,6 +20,7 @@ class Order(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     order_date: Mapped[created_at_type]
     customer_email: Mapped[str | None]
+    customer_tg: Mapped[str]  # username заказчика в telegram
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE")
     )

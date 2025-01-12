@@ -1,7 +1,7 @@
 from gateways.db.repository import SqlAlchemyRepository
 import asyncio
 from orders.models import Order, OrderItem
-from orders.schemas import CreateOrderDTO, OrderItemCreateDTO
+from orders.schemas import CreateOrderDTO, OrderItemCreateDTO, UpdateOrderDTO
 
 
 class OrdersRepository(SqlAlchemyRepository[Order]):
@@ -12,8 +12,15 @@ class OrdersRepository(SqlAlchemyRepository[Order]):
             customer_email=dto.user.email,
             customer_name=dto.user.name,
             customer_phone=dto.user.phone,
+            customer_tg=dto.user.tg_username,
             user_id=dto.user.user_id,
         )
+
+    async def update_by_id(self, dto: UpdateOrderDTO, order_id: int):
+        return await super().update(dto.model_dump(), id=order_id)
+
+    async def delete_by_id(self, order_id: int):
+        return await super().delete(id=order_id)
 
 
 class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
