@@ -1,14 +1,11 @@
-import asyncio
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
 import typing as t
 import pytest
 from sqlalchemy import select
-from handlers.test_products import new_product
-from handlers.test_users import new_user
-from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
+from handlers.test_products import new_product  # noqa
+from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
 from orders.handlers import router
 from orders.models import Order, OrderStatus
@@ -16,16 +13,15 @@ from products.models import Product
 from handlers.helpers import (
     create_model_obj,
     base64_to_int,
-    check_paginated_response,
+    get_model_obj,
     is_base64,
 )
 from users.models import User
-from users.schemas import UserSignInDTO
 
 
 def _gen_customer_data() -> dict[str, str]:
     return {
-        "name": fake.user_name(),
+        "name": fake.first_name_male(),
         "email": fake.email(),
         "phone": fake.phone_number(),
         "tg_username": fake.user_name(),
@@ -42,8 +38,8 @@ def _gen_order_data() -> dict[str, str]:
 
 
 def _gen_order_item_data() -> dict:
-    session = db.session_factory()
-    product_ids = asyncio.run(session.execute(select(Product.id))).scalars().all()
+    with db.sync_engine.begin() as conn:
+        product_ids = conn.execute(select(Product.id)).scalars().all()
     return {
         "price": str(Decimal(fake.random_int(100))),
         "quantity": fake.random_int(1, 10),
@@ -124,13 +120,10 @@ def test_create_order(
             < datetime.fromisoformat(resp_data["order_date"])
             < datetime.now()
         )
-        with db.sync_engine.begin() as conn:
-            stmt = select(Order).filter_by(id=order_id)
-            res = conn.execute(stmt)
-            order = res.one_or_none()
-            assert order is not None
-            assert order.id == order_id
-            assert order.status.value == resp_data["status"]
+        order = get_model_obj(Order, id=order_id)
+        assert order is not None
+        assert order.id == order_id
+        assert order.status.value == resp_data["status"]
 
 
 @pytest.mark.parametrize(
@@ -141,10 +134,7 @@ def test_delete_order(new_order: Order, expected_status: int, order_id: int | No
     resp = client.delete(f"{router.prefix}/delete/{order_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
-        with db.sync_engine.begin() as conn:
-            stmt = select(Order.id).filter_by(id=new_order.id)
-            res = conn.execute(stmt)
-            assert not len(res.scalars().all())
+        assert get_model_obj(Order, id=new_order.id) is None
 
 
 @pytest.mark.parametrize(

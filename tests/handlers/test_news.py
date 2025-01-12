@@ -1,15 +1,16 @@
-import asyncio
-from contextlib import suppress
 from datetime import datetime
 from itertools import zip_longest
 
 import pytest
-from handlers.helpers import base64_to_int, check_paginated_response, is_base64
-from sqlalchemy import select
+from handlers.helpers import (
+    base64_to_int,
+    check_paginated_response,
+    create_model_obj,
+    get_model_obj,
+    is_base64,
+)
 
-from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
-from handlers.conftest import client, db, fake
+from handlers.conftest import client, fake
 from news.handlers import router
 from news.models import News
 
@@ -24,19 +25,7 @@ def _gen_news_data() -> dict[str, str]:
 
 @pytest.fixture
 def new_news():
-    session = db.session_factory()
-    repo = SqlAlchemyRepository(session)
-    repo.model = News
-    with asyncio.Runner() as runner:
-        try:
-            news = runner.run(repo.create(**_gen_news_data()))
-            runner.run(session.commit())
-            yield news
-            with suppress(NotFoundError):
-                runner.run(repo.delete(id=news.id))
-                runner.run(session.commit())
-        finally:
-            runner.run(session.close())
+    yield from create_model_obj(News, **_gen_news_data())
 
 
 @pytest.mark.parametrize(
@@ -68,15 +57,8 @@ def test_create_news(expected_status: int, data: dict[str, str]):
         assert is_base64(resp_data["id"])
         for key, value in data.items():
             assert resp_data[key] == value
-        session = db.session_factory()
-        repo = SqlAlchemyRepository(session)
-        repo.model = News
-        with asyncio.Runner() as runner:
-            try:
-                created_news = runner.run(repo.get_one(**data))
-            finally:
-                runner.run(session.close())
-        assert created_news
+        created_news = get_model_obj(News, **data)
+        assert created_news is not None
         for key, value in data.items():
             assert getattr(created_news, key) == value
 
@@ -144,12 +126,4 @@ def test_delete_news(new_news: News, expected_status: int, news_id: int):
     resp = client.delete(f"{router.prefix}/delete/{news_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
-        session = db.session_factory()
-
-        with asyncio.Runner() as runner:
-            try:
-                stmt = select(News.id).filter_by(id=new_news.id)
-                res = runner.run(session.execute(stmt))
-                assert len(res.scalars().all()) == 0
-            finally:
-                runner.run(session.close())
+        assert get_model_obj(News, id=new_news.id) is None

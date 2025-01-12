@@ -87,8 +87,8 @@ class UsersService(BaseService):
     async def get_user_id_from_token(self, token: str) -> int:
         try:
             token_payload = self.token_provider.extract_payload(token)
-            user_id = token_payload["uid"]
-            if int(user_id) < 1:
+            user_id = token_payload.get("uid")
+            if user_id is None or int(user_id) < 1:
                 raise ValueError()
             token_exp = datetime.fromtimestamp(token_payload["exp"])
         except (InvalidTokenError, ValueError) as e:

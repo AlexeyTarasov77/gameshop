@@ -1,17 +1,15 @@
-import asyncio
-from handlers.helpers import base64_to_int, is_base64
+from handlers.helpers import base64_to_int, create_model_obj, is_base64
 import typing as t
-from contextlib import suppress
 from datetime import datetime, timedelta
 
 import pytest
-from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
 from users.domain.interfaces import TokenProviderI
 from users.handlers import router
 from users.models import User
 
-from handlers.conftest import client, container, db, fake
+from handlers.conftest import client, container, fake
+
+token_provider = t.cast(TokenProviderI, container.resolve(TokenProviderI))
 
 
 def _gen_user_data() -> dict[str, str]:
@@ -25,23 +23,9 @@ def _gen_user_data() -> dict[str, str]:
 @pytest.fixture
 def new_user():
     data = _gen_user_data()
-    session = db.session_factory()
-    repo = SqlAlchemyRepository(session)
-    repo.model = User
-    with asyncio.Runner() as runner:
-        try:
-            user: User = runner.run(
-                repo.create(password_hash=data.pop("password").encode(), **data)
-            )
-            runner.run(session.commit())
-            yield user
-            with suppress(NotFoundError):
-                runner.run(repo.delete(id=user.id))
-        finally:
-            runner.run(session.close())
-
-
-token_provider = t.cast(TokenProviderI, container.resolve(TokenProviderI))
+    yield from create_model_obj(
+        User, password_hash=data.pop("password").encode(), **data
+    )
 
 
 @pytest.mark.parametrize(

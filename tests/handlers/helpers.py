@@ -4,7 +4,7 @@ from sqlalchemy.inspection import inspect
 from handlers.conftest import db
 from gateways.db.models import SqlAlchemyBaseModel
 from core.pagination import PaginatedResponse
-from sqlalchemy import delete, insert
+from sqlalchemy import delete, insert, select
 
 
 def is_base64(s: str) -> bool:
@@ -46,3 +46,10 @@ def create_model_obj(model: type[SqlAlchemyBaseModel], **values):
     with db.sync_engine.begin() as conn:
         stmt = delete(model).filter_by(**{pk_col_name: getattr(obj, pk_col_name)})
         conn.execute(stmt)
+
+
+def get_model_obj(model: type[SqlAlchemyBaseModel], **filter_by):
+    with db.sync_engine.begin() as conn:
+        stmt = select(model).filter_by(**filter_by)
+        res = conn.execute(stmt)
+        return res.one_or_none()

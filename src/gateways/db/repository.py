@@ -46,19 +46,18 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
         res = await self.session.execute(stmt)
         return res.scalars().one()
 
-    async def list(self, *columns, **filter_by) -> Sequence[T]:
-        stmt = select(self.model)
-        if columns:
-            stmt = select(*[getattr(self.model.columns, col) for col in columns])
-        stmt = stmt.filter_by(**filter_by)
+    async def list(self, **filter_by) -> Sequence[T]:
+        stmt = select(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
-    async def get_one(self, *columns, **filter_by) -> T:
-        res = await self.list(*columns, **filter_by)
-        if not res:
+    async def get_one(self, **filter_by) -> T:
+        stmt = select(self.model).filter_by(**filter_by)
+        res = await self.session.execute(stmt)
+        obj = res.scalars().one_or_none()
+        if not obj:
             raise NotFoundError()
-        return res[0]
+        return obj
 
     async def update(self, data: Mapping, **filter_by) -> T:
         if not data:

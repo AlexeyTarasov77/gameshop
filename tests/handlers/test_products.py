@@ -1,42 +1,39 @@
-import asyncio
 import base64
 import random
 import typing as t
-from contextlib import suppress
 from datetime import datetime, timedelta
 from decimal import Decimal
 from itertools import zip_longest
 
 import pytest
-from handlers.helpers import check_paginated_response, is_base64, base64_to_int
-from sqlalchemy import Result, select, text
+from handlers.helpers import (
+    check_paginated_response,
+    is_base64,
+    base64_to_int,
+    create_model_obj,
+    get_model_obj,
+)
+from sqlalchemy import text
 
-from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
 from handlers.conftest import client, db, fake
 from products.handlers import router
 from products.models import BaseRefModel, Category, DeliveryMethod, Platform, Product
 
 
 def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
-    session = db.session_factory()
-    with asyncio.Runner() as runner:
-        try:
-            res: Result = runner.run(
-                session.execute(
-                    text(
-                        "SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm"
-                    )
-                )
+    with db.sync_engine.begin() as conn:
+        res = conn.execute(
+            text(
+                "SELECT c.id, p.id, dm.id FROM category c, platform p, delivery_method dm"
             )
-            relation_ids = random.choice(res.unique().all())
-            if encode_ids:
-                relation_ids = [
-                    base64.b64encode(str(n).encode()).decode() for n in relation_ids
-                ]
-            category_id, platform_id, delivery_method_id = relation_ids
-        finally:
-            runner.run(session.close())
+        )
+
+        relation_ids = random.choice(res.unique().all())
+        if encode_ids:
+            relation_ids = [
+                base64.b64encode(str(n).encode()).decode() for n in relation_ids
+            ]
+        category_id, platform_id, delivery_method_id = relation_ids
     return {
         "name": fake.name(),
         "description": fake.sentence(),
@@ -57,19 +54,7 @@ def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
 
 
 def _new_ref_model_obj(obj_model: type[BaseRefModel]):
-    session = db.session_factory()
-    repo = SqlAlchemyRepository[obj_model](session)
-    repo.model = obj_model
-    with asyncio.Runner() as runner:
-        try:
-            obj = runner.run(repo.create(name=fake.name(), url=fake.url()))
-            runner.run(session.commit())
-            yield obj
-            with suppress(NotFoundError):
-                runner.run(repo.delete(id=obj.id))
-                runner.run(session.commit())
-        finally:
-            runner.run(session.close())
+    return create_model_obj(obj_model, name=fake.name(), url=fake.url())
 
 
 @pytest.fixture
@@ -91,27 +76,11 @@ def new_category():
 def new_product():
     data = _gen_product_data(encode_ids=False)
     data["category_id"], data["platform_id"], data["delivery_method_id"] = (
-        data["category"]["id"],
-        data["platform"]["id"],
-        data["delivery_method"]["id"],
+        data.pop("category")["id"],
+        data.pop("platform")["id"],
+        data.pop("delivery_method")["id"],
     )
-    data.pop("category")
-    data.pop("platform")
-    data.pop("delivery_method")
-    session = db.session_factory()
-    repo = SqlAlchemyRepository(session)
-    repo.model = Product
-
-    with asyncio.Runner() as runner:
-        try:
-            product: Product = runner.run(repo.create(**data))
-            runner.run(session.commit())
-            yield product
-            with suppress(NotFoundError):
-                runner.run(repo.delete(id=product.id))
-                runner.run(session.commit())
-        finally:
-            runner.run(session.close())
+    yield from create_model_obj(Product, **data)
 
 
 create_product_data = _gen_product_data()
@@ -170,7 +139,7 @@ create_product_data = _gen_product_data()
 def test_create_product(
     new_category,
     new_platform,
-    new_delivery_metho,
+    new_delivery_method,
     data: dict[str, t.Any],
     expected_status: int,
 ):
@@ -246,15 +215,7 @@ def test_delete_product(
     resp = client.delete(f"{router.prefix}/delete/{product_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
-        session = db.session_factory()
-
-        with asyncio.Runner() as runner:
-            try:
-                stmt = select(Product.id).filter_by(id=new_product.id)
-                res = runner.run(session.execute(stmt))
-                assert len(res.scalars().all()) == 0
-            finally:
-                runner.run(session.close())
+        assert get_model_obj(Product, id=new_product.id) is None
 
 
 @pytest.mark.parametrize(
@@ -299,7 +260,7 @@ def test_get_product(
         )
 
 
-def helper_test_objects_list(obj: Category | DeliveryMethod | Platform, url: str):
+def _test_objects_list_helper(obj: Category | DeliveryMethod | Platform, url: str):
     resp = client.get(f"{router.prefix}/{url}")
     resp_key = url.replace("-", "_")
     assert resp.status_code == 200
@@ -320,12 +281,12 @@ def helper_test_objects_list(obj: Category | DeliveryMethod | Platform, url: str
 
 
 def test_platforms_list(new_platform: Platform):
-    helper_test_objects_list(new_platform, "platforms")
+    _test_objects_list_helper(new_platform, "platforms")
 
 
 def test_categories_list(new_category: Category):
-    helper_test_objects_list(new_category, "categories")
+    _test_objects_list_helper(new_category, "categories")
 
 
 def test_delivery_methods_list(new_delivery_method: DeliveryMethod):
-    helper_test_objects_list(new_delivery_method, "delivery-methods")
+    _test_objects_list_helper(new_delivery_method, "delivery-methods")

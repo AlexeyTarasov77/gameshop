@@ -34,7 +34,7 @@ async def update_order(
     dto: UpdateOrderDTO, order_id: EntityIDParam, orders_service: OrdersServiceDep
 ):
     if not dto.model_dump(exclude_unset=True):
-        raise HTTPException(400, "Nothing to update. No data provided")
+        raise HTTPException(422, "Nothing to update. No data provided")
     try:
         order = await orders_service.update_order(dto, int(order_id))
     except ServiceValidationError as e:
