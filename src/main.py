@@ -42,13 +42,15 @@ async def main() -> None:
     await asyncio.wait_for(db.ping(), 3)
     logger.info("Database is ready!")
     logger.info(f"Running server in {cfg.mode} mode")
-    uvicorn.run(
+    uvicorn_conf = uvicorn.Config(
         app="main:app_factory",
         factory=True,
         host=str(cfg.server.host),
         port=int(cfg.server.port),
         reload=cfg.debug,
     )
+    server = uvicorn.Server(uvicorn_conf)
+    await server.serve()
 
 
 if __name__ == "__main__":

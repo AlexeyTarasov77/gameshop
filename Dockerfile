@@ -28,4 +28,4 @@ USER gameshop
 
 ENTRYPOINT [ "poetry", "run" ]
 
-CMD ["entrypoint.sh"]
+CMD ["./entrypoint.sh"]
