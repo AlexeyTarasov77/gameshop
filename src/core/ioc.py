@@ -47,17 +47,6 @@ def _init_container() -> punq.Container:
         exception_mapper=PostgresExceptionsMapper,
         future=True,
     )
-    uow = SqlAlchemyUnitOfWork(
-        db.session_factory,
-        products_repo_cls=ProductsRepository,
-        delivery_methods_repo_cls=DeliveryMethodsRepository,
-        platforms_repo_cls=PlatformsRepository,
-        categories_repo_cls=CategoriesRepository,
-        users_repo_cls=UsersRepository,
-        news_repo_cls=NewsRepository,
-        orders_repo_cls=OrdersRepository,
-        order_items_repo_cls=OrderItemsRepository,
-    )
     container.register(HasherI, BcryptHasher)
     container.register(
         TokenProviderI,
@@ -68,7 +57,20 @@ def _init_container() -> punq.Container:
     container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
-    container.register(AbstractUnitOfWork, instance=uow)
+    container.register(
+        AbstractUnitOfWork,
+        SqlAlchemyUnitOfWork,
+        session_factory=db.session_factory,
+        logger=logger,
+        products_repo_cls=ProductsRepository,
+        delivery_methods_repo_cls=DeliveryMethodsRepository,
+        platforms_repo_cls=PlatformsRepository,
+        categories_repo_cls=CategoriesRepository,
+        users_repo_cls=UsersRepository,
+        news_repo_cls=NewsRepository,
+        orders_repo_cls=OrdersRepository,
+        order_items_repo_cls=OrderItemsRepository,
+    )
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
     container.register(OrdersService, OrdersService)

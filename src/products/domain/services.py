@@ -63,14 +63,12 @@ class ProductsService(BaseService):
 
     async def platforms_list(self) -> list[PlatformDTO]:
         async with self.uow as uow:
-            repo = t.cast(PlatformsRepositoryI, uow.platforms_repo)
-            platforms = await repo.list()
+            platforms = await uow.platforms_repo.list()
         return [PlatformDTO.model_validate(platform) for platform in platforms]
 
     async def categories_list(self) -> list[CategoryDTO]:
         async with self.uow as uow:
-            repo = t.cast(CategoriesRepositoryI, uow.categories_repo)
-            categories = await repo.list()
+            categories = await uow.categories_repo.list()
         return [CategoryDTO.model_validate(category) for category in categories]
 
     async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
@@ -83,8 +81,7 @@ class ProductsService(BaseService):
     ) -> ShowProduct:
         try:
             async with self.uow as uow:
-                repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                product = await repo.update_by_id(dto, product_id)
+                product = await uow.products_repo.update_by_id(dto, product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
                 **dto.model_dump(include={"name", "category_name", "platform_name"}),
@@ -95,7 +92,6 @@ class ProductsService(BaseService):
     async def delete_product(self, product_id: int) -> None:
         try:
             async with self.uow as uow:
-                repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                await repo.delete_by_id(product_id)
+                await uow.products_repo.delete_by_id(product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(id=product_id) from e

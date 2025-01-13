@@ -54,6 +54,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
     def __init__(
         self,
         session_factory: async_sessionmaker[AsyncSession],
+        logger: logging.Logger,
         news_repo_cls: type[NewsRepositoryI],
         products_repo_cls: type[ProductsRepositoryI],
         delivery_methods_repo_cls: type[DeliveryMethodsRepositoryI],
@@ -64,6 +65,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         order_items_repo_cls: type[OrderItemsRepositoryI],
     ) -> None:
         self.session_factory = session_factory
+        self.logger = logger
         self.session: AsyncSession | None = None
         self._news_repo_cls = news_repo_cls
         self._products_repo_cls = products_repo_cls
@@ -96,7 +98,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         assert self.session is not None
         try:
             if exc_type is not None:
-                logging.error(
+                self.logger.error(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
                     args[0],
                     exc_info=exc_type,
@@ -104,12 +106,13 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
                 await super().__aexit__(exc_type, *args)
                 self._handle_exc(args[0])
 
-            logging.debug("commiting")
+            self.logger.debug("commiting")
             await self.commit()
         except SQLAlchemyError as e:
-            logging.error("Exception during commiting/rollbacking trx", exc_info=e)
+            self.logger.error("Exception during commiting/rollbacking trx", exc_info=e)
             self._handle_exc(e)
         finally:
+            self.logger.debug("closing session")
             await self.session.close()
 
     async def commit(self) -> None:
