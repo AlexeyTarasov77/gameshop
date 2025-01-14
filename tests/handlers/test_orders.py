@@ -79,7 +79,7 @@ def _gen_order_create_data():
         (
             {
                 **_gen_order_create_data(),
-                "items": [],
+                "cart": [],
             },
             422,
             True,

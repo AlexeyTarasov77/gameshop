@@ -30,10 +30,10 @@ class OrdersRepository(PaginationRepository[Order]):
             user_id=dto.user.user_id,
         )
 
-    async def update_by_id(self, dto: UpdateOrderDTO, order_id: int):
+    async def update_by_id(self, dto: UpdateOrderDTO, order_id: int) -> Order:
         return await super().update(dto.model_dump(), id=order_id)
 
-    async def delete_by_id(self, order_id: int):
+    async def delete_by_id(self, order_id: int) -> None:
         return await super().delete(id=order_id)
 
     async def list_orders_for_user(

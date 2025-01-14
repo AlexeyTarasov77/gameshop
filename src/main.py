@@ -1,4 +1,5 @@
 import asyncio
+import signal
 from logging import Logger
 from typing import cast
 
@@ -54,4 +55,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        ...

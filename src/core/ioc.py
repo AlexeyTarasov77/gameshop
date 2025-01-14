@@ -9,21 +9,12 @@ from core.logger import setup_logger
 from gateways.db.exceptions import PostgresExceptionsMapper
 from gateways.db.main import SqlAlchemyDatabase
 from news.domain.services import NewsService
-from news.repositories import NewsRepository
 from orders.domain.services import OrdersService
-from orders.repositories import OrdersRepository, OrderItemsRepository
 from products.domain.services import ProductsService
-from products.repositories import (
-    CategoriesRepository,
-    PlatformsRepository,
-    DeliveryMethodsRepository,
-    ProductsRepository,
-)
 from users.domain.interfaces import HasherI, MailProviderI, TokenProviderI
 from users.domain.services import UsersService
 from users.hashing import BcryptHasher
 from users.mailing import AsyncMailer
-from users.repositories import UsersRepository
 from users.tokens import JwtTokenProvider
 
 from config import Config, init_config
@@ -62,14 +53,6 @@ def _init_container() -> punq.Container:
         SqlAlchemyUnitOfWork,
         session_factory=db.session_factory,
         logger=logger,
-        products_repo_cls=ProductsRepository,
-        delivery_methods_repo_cls=DeliveryMethodsRepository,
-        platforms_repo_cls=PlatformsRepository,
-        categories_repo_cls=CategoriesRepository,
-        users_repo_cls=UsersRepository,
-        news_repo_cls=NewsRepository,
-        orders_repo_cls=OrdersRepository,
-        order_items_repo_cls=OrderItemsRepository,
     )
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
