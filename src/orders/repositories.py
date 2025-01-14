@@ -52,14 +52,13 @@ class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
     model = OrderItem
 
     async def create_many(
-        self, dtos: list[OrderItemCreateDTO], order_id: int
+        self, dto_list: list[OrderItemCreateDTO], order_id: int
     ) -> list[OrderItem]:
-        coros = [
-            super().create(
+        return [
+            await super().create(
                 **dto.model_dump(exclude={"product_id"}),
                 order_id=order_id,
                 product_id=dto.product_id,
             )
-            for dto in dtos
+            for dto in dto_list
         ]
-        return await asyncio.gather(*coros)

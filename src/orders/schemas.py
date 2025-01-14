@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 import re
 from typing import Annotated
-from pydantic import AfterValidator, EmailStr, Field
+from pydantic import AfterValidator, EmailStr, Field, field_validator
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import OrderStatus
@@ -62,6 +62,12 @@ class CustomerDataDTO(BaseDTO):
 class CreateOrderDTO(BaseDTO):
     cart: list[OrderItemCreateDTO]
     user: CustomerDataDTO
+
+    @field_validator("cart")
+    @classmethod
+    def check_cart(cls, value):
+        assert len(value) > 0
+        return value
 
 
 class UpdateOrderDTO(BaseDTO):
