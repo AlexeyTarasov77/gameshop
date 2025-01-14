@@ -2,7 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 import re
 from typing import Annotated
-from pydantic import AfterValidator, EmailStr, Field, field_validator
+from pydantic import AfterValidator, EmailStr, Field
+from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import OrderStatus
 
@@ -67,11 +68,19 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class BaseShowOrder(BaseDTO):
+class BaseOrderDTO(BaseDTO):
     id: Base64Int
     order_date: datetime
     status: OrderStatus
     customer_email: EmailStr
-    customer_phone: str
+    customer_phone: str | None
     customer_tg: CustomerTg
+
+
+class BaseShowOrder(BaseOrderDTO):
     user_id: int | None
+
+
+class ShowOrderWithRelations(BaseOrderDTO):
+    user: ShowUser | None
+    items: list[OrderItemShowDTO]

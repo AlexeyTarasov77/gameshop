@@ -1,6 +1,12 @@
+from core.pagination import PaginationParams
 from core.service import BaseService
 from gateways.db.exceptions import DatabaseError
-from orders.schemas import CreateOrderDTO, BaseShowOrder, UpdateOrderDTO
+from orders.schemas import (
+    CreateOrderDTO,
+    BaseShowOrder,
+    ShowOrderWithRelations,
+    UpdateOrderDTO,
+)
 
 
 class ServiceValidationError(Exception): ...
@@ -41,3 +47,44 @@ class OrdersService(BaseService):
             raise self.exception_mapper.map_with_entity(e)(
                 id=order_id,
             ) from e
+
+    async def list_orders_for_user(
+        self, pagination_params: PaginationParams, user_id: int
+    ) -> tuple[list[ShowOrderWithRelations], int]:
+        try:
+            async with self.uow as uow:
+                orders = await uow.orders_repo.list_orders_for_user(
+                    limit=pagination_params.page_size,
+                    offset=pagination_params.calc_offset(),
+                    user_id=user_id,
+                )
+                total_records = await uow.orders_repo.get_records_count()
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return [
+            ShowOrderWithRelations.model_validate(order) for order in orders
+        ], total_records
+
+    async def list_all_orders(
+        self, pagination_params: PaginationParams
+    ) -> tuple[list[ShowOrderWithRelations], int]:
+        try:
+            async with self.uow as uow:
+                orders = await uow.orders_repo.list_all_orders(
+                    limit=pagination_params.page_size,
+                    offset=pagination_params.calc_offset(),
+                )
+                total_records = await uow.orders_repo.get_records_count()
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return [
+            ShowOrderWithRelations.model_validate(order) for order in orders
+        ], total_records
+
+    async def get_order(self, order_id: int) -> ShowOrderWithRelations:
+        try:
+            async with self.uow as uow:
+                order = await uow.orders_repo.get_by_id(order_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return ShowOrderWithRelations.model_validate(order)

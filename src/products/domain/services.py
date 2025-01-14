@@ -42,8 +42,7 @@ class ProductsService(BaseService):
                 repo = t.cast(ProductsRepositoryI, uow.products_repo)
                 products = await repo.paginated_list(
                     limit=pagination_params.page_size,
-                    offset=pagination_params.page_size
-                    * (pagination_params.page_num - 1),
+                    offset=pagination_params.calc_offset(),
                 )
                 total_records = await repo.get_records_count()
         except DatabaseError as e:

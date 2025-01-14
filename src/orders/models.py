@@ -24,10 +24,12 @@ class Order(SqlAlchemyBaseModel):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE")
     )
-    user: Mapped[User | None] = relationship(back_populates="orders")
+    user: Mapped[User | None] = relationship(back_populates="orders", lazy="joined")
     customer_phone: Mapped[str | None]
     customer_name: Mapped[str]
-    items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
+    items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order", lazy="selectin"
+    )
     status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.PENDING)
 
     def get_total(self):

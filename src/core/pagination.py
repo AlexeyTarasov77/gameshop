@@ -9,6 +9,9 @@ class PaginationParams(BaseModel):
     page_size: int = Field(default=10, gt=0, lt=100)
     page_num: int = Field(default=1, gt=0)
 
+    def calc_offset(self):
+        return self.page_size * (self.page_num - 1)
+
 
 async def get_pagination_params(
     params: t.Annotated[PaginationParams, Query()],
@@ -22,7 +25,7 @@ PaginationDep = t.Annotated[PaginationParams, Depends(get_pagination_params)]
 class PaginatedResponse(PaginationParams):
     total_records: int
     total_on_page: int
-    first_page: int
+    first_page: int = 1
 
     @computed_field
     @property

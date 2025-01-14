@@ -84,15 +84,17 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
 
     async def __aenter__(self) -> t.Self:
         self.session = self.session_factory()
+        self._init_repos(self.session)
+        return await super().__aenter__()
 
+    def _init_repos(self, session: AsyncSession):
         # initializing repositories using created session
         for annotation_key in self.__annotations__.keys():
             if annotation_key.endswith("_repo"):
                 repo_cls: type = getattr(self, f"_{annotation_key}_cls")
                 if not issubclass(repo_cls, AcceptsSessionI):
                     raise ValueError(f"Invalid repository: {repo_cls.__name__}")
-                setattr(self, annotation_key, repo_cls(self.session))
-        return await super().__aenter__()
+                setattr(self, annotation_key, repo_cls(session))
 
     async def __aexit__(self, exc_type, *args) -> None:
         assert self.session is not None

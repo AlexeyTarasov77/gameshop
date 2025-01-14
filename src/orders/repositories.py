@@ -1,11 +1,25 @@
-from gateways.db.repository import SqlAlchemyRepository
+from collections.abc import Sequence
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 import asyncio
 from orders.models import Order, OrderItem
-from orders.schemas import CreateOrderDTO, OrderItemCreateDTO, UpdateOrderDTO
+from orders.schemas import (
+    CreateOrderDTO,
+    OrderItemCreateDTO,
+    UpdateOrderDTO,
+)
 
 
-class OrdersRepository(SqlAlchemyRepository[Order]):
+class OrdersRepository(PaginationRepository[Order]):
     model = Order
+
+    def _get_select_stmt(self):
+        return (
+            select(self.model)
+            .join(self.model.user)
+            .options(selectinload(self.model.items))
+        )
 
     async def create(self, dto: CreateOrderDTO) -> Order:
         return await super().create(
@@ -21,6 +35,17 @@ class OrdersRepository(SqlAlchemyRepository[Order]):
 
     async def delete_by_id(self, order_id: int):
         return await super().delete(id=order_id)
+
+    async def list_orders_for_user(
+        self, limit: int, offset: int, user_id: int
+    ) -> Sequence[Order]:
+        return await super().paginated_list(limit, offset, user_id=user_id)
+
+    async def list_all_orders(self, limit: int, offset: int) -> Sequence[Order]:
+        return await super().paginated_list(limit, offset)
+
+    async def get_by_id(self, order_id: int) -> Order:
+        return await super().get_one(id=order_id)
 
 
 class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
