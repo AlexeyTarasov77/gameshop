@@ -4,6 +4,7 @@ from decimal import Decimal
 import typing as t
 import pytest
 from sqlalchemy import select
+from core.ioc import get_container
 from handlers.test_products import new_product  # noqa
 from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
@@ -15,7 +16,10 @@ from handlers.helpers import (
     base64_to_int,
     get_model_obj,
     is_base64,
+    check_paginated_response,
+    pagination_test_cases,
 )
+from users.domain.interfaces import TokenProviderI
 from users.models import User
 
 
@@ -68,6 +72,14 @@ def _gen_order_create_data():
             {
                 **_gen_order_create_data(),
                 "user": {**_gen_customer_data(), "email": "invalid"},
+            },
+            422,
+            True,
+        ),
+        (
+            {
+                **_gen_order_create_data(),
+                "items": [],
             },
             422,
             True,
@@ -156,3 +168,72 @@ def test_update_order(
     resp_data = resp.json()
     if expected_status == 200:
         assert resp_data["status"] == data["status"]
+
+
+@pytest.mark.parametrize(
+    ["expected_status", "order_id"], [(200, None), (422, -1), (404, 999999)]
+)
+def test_get_order(new_order: Order, expected_status: int, order_id: int | None):
+    order_id = order_id or new_order.id
+    resp = client.get(f"{router.prefix}/detail/{order_id}")
+    assert resp.status_code == expected_status
+    if expected_status == 200:
+        resp_data = resp.json()
+        assert "user" in resp_data
+        assert "items" in resp_data
+        if user := resp_data.get("user"):
+            assert base64_to_int(user["id"]) == new_order.user_id
+        resp_order_id = base64_to_int(resp_data["id"])
+        assert resp_order_id == new_order.id
+
+
+@pytest.mark.parametrize(
+    ["expected_status", "params", "with_user_id", "expired_token"],
+    [
+        (200, None, True, False),
+        (200, {"page_size": 5, "page_num": 1}, True, False),
+        (401, {"page_size": 5, "page_num": 1}, True, True),
+        (401, None, False, False),
+        (401, None, True, True),
+        (422, {"page_size": 0}, True, False),
+        (422, {"page_num": 0}, True, False),
+    ],
+)
+def test_list_orders_for_user(
+    new_order: Order,
+    new_user: User,  # noqa
+    expected_status: int,
+    params: dict[str, int] | None,
+    with_user_id: bool,
+    expired_token: bool,
+):
+    user_id = ""
+    headers = {}
+    if with_user_id:
+        token_provider = t.cast(TokenProviderI, get_container().resolve(TokenProviderI))
+        token = token_provider.new_token(
+            {"uid": new_user.id}, timedelta(days=(-1 if expired_token else 1))
+        )
+        headers["Authorization"] = f"Bearer {token}"
+    resp = client.get(f"{router.prefix}/list-for-user", params=params, headers=headers)
+    assert resp.status_code == expected_status
+    resp_data = resp.json()
+    if expected_status == 200:
+        check_paginated_response("orders", resp_data, params)
+        for order in resp_data["orders"]:
+            if user := order.get("user"):
+                assert base64_to_int(user[id]) == user_id
+
+
+@pytest.mark.parametrize(["expected_status", "params"], pagination_test_cases)
+def test_list_all_orders(
+    new_order: Order,
+    new_user: User,  # noqa
+    expected_status: int,
+    params: dict[str, int] | None,
+):
+    resp = client.get(f"{router.prefix}/list", params=params)
+    assert resp.status_code == expected_status
+    resp_data = resp.json()
+    if expected_status == 200:
+        check_paginated_response("orders", resp_data, params)

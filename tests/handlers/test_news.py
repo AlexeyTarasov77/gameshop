@@ -5,6 +5,7 @@ import pytest
 from handlers.helpers import (
     base64_to_int,
     check_paginated_response,
+    pagination_test_cases,
     create_model_obj,
     get_model_obj,
     is_base64,
@@ -30,12 +31,7 @@ def new_news():
 
 @pytest.mark.parametrize(
     ["expected_status", "params"],
-    [
-        (200, None),
-        (200, {"page_size": 5, "page_num": 1}),
-        (422, {"page_size": 0}),
-        (422, {"page_num": 0}),
-    ],
+    pagination_test_cases,
 )
 def test_list_news(expected_status: int, params: dict[str, int] | None):
     resp = client.get(f"{router.prefix}/", params=params)

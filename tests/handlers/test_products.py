@@ -8,6 +8,7 @@ from itertools import zip_longest
 import pytest
 from handlers.helpers import (
     check_paginated_response,
+    pagination_test_cases,
     is_base64,
     base64_to_int,
     create_model_obj,
@@ -218,15 +219,7 @@ def test_delete_product(
         assert get_model_obj(Product, id=new_product.id) is None
 
 
-@pytest.mark.parametrize(
-    ["expected_status", "params"],
-    [
-        (200, None),
-        (200, {"page_size": 5, "page_num": 1}),
-        (422, {"page_size": 0}),
-        (422, {"page_num": 0}),
-    ],
-)
+@pytest.mark.parametrize(["expected_status", "params"], pagination_test_cases)
 def test_list_products(expected_status: int, params: dict[str, int] | None):
     resp = client.get(f"{router.prefix}/", params=params)
     assert resp.status_code == expected_status

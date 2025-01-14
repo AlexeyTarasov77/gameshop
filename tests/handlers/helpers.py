@@ -18,6 +18,14 @@ def base64_to_int(s: str) -> int:
     return int(base64.b64decode(s).decode())
 
 
+pagination_test_cases = [
+    (200, None),
+    (200, {"page_size": 5, "page_num": 1}),
+    (422, {"page_size": 0}),
+    (422, {"page_num": 0}),
+]
+
+
 def check_paginated_response(
     objects_key: str, data: dict[str, Any], params: dict[str, int] | None
 ):
