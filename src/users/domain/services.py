@@ -84,21 +84,21 @@ class UsersService(BaseService):
             raise PasswordDoesNotMatchError("Passwords doesn't match")
         return self.token_provider.new_token({"uid": user.id}, self.auth_token_ttl)
 
-    async def get_user_id_from_token(self, token: str) -> int:
+    async def extract_user_id_from_token(self, token: str) -> int:
         try:
             token_payload = self.token_provider.extract_payload(token)
-            user_id = token_payload.get("uid")
-            if user_id is None or int(user_id) < 1:
+            user_id = token_payload["uid"]
+            if int(user_id) < 1:
                 raise ValueError()
             token_exp = datetime.fromtimestamp(token_payload["exp"])
-        except (InvalidTokenError, ValueError) as e:
+        except (InvalidTokenError, ValueError, KeyError) as e:
             raise InvalidTokenServiceError("Token is invalid") from e
         if token_exp < datetime.now():
             raise InvalidTokenServiceError("Token is expired")
         return user_id
 
     async def activate_user(self, token: str) -> ShowUser:
-        user_id = await self.get_user_id_from_token(token)
+        user_id = await self.extract_user_id_from_token(token)
         try:
             async with self.uow as uow:
                 repo = t.cast(UsersRepositoryI, uow.users_repo)

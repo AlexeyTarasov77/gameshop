@@ -82,13 +82,13 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
 
 
 class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
-    async def paginated_list(self, limit: int, offset: int) -> Sequence[T]:
-        stmt = select(self.model).offset(offset).limit(limit)
+    async def paginated_list(self, limit: int, offset: int, **filter_by) -> Sequence[T]:
+        stmt = select(self.model).offset(offset).limit(limit).filter_by(**filter_by)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
     async def get_records_count(self) -> int:
-        stmt = text(f"SELECT COUNT(id) FROM {self.model.__tablename__}")
+        stmt = text(f'SELECT COUNT(id) FROM "{self.model.__tablename__}"')
         res = await self.session.execute(stmt)
         count = res.scalar()
         if count is None:
