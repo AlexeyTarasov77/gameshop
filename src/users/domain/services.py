@@ -67,8 +67,8 @@ class UsersService(BaseService):
                 {activation_token}
         """
         asyncio.create_task(
-            self.mail_provider.send_mail(
-                "Аккаунт успешно создан", email_body, user.email
+            self.mail_provider.send_mail_with_timeout(
+                "Аккаунт успешно создан", email_body, user.email, timeout=3
             )
         )
         return ShowUser.model_validate(user)

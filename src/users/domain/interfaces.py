@@ -25,6 +25,12 @@ class TokenProviderI(t.Protocol):
 
 
 class MailProviderI(t.Protocol):
-    async def send_mail(
-        self, subject: str, body: str, to: str, from_: str | None = None
+    async def send_mail_with_timeout(
+        self,
+        subject: str,
+        body: str,
+        to: str,
+        from_: str | None = None,
+        *,
+        timeout: float | None = None,
     ) -> None: ...

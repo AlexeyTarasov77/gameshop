@@ -45,7 +45,9 @@ def _init_container() -> punq.Container:
         secret_key=cfg.jwt.secret,
         signing_alg=cfg.jwt.alg,
     )
-    container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
+    container.register(
+        MailProviderI, AsyncMailer, logger=logger, **cfg.smtp.model_dump()
+    )
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(
