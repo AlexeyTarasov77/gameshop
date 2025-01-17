@@ -23,6 +23,9 @@ class InvalidTokenServiceError(Exception): ...
 class PasswordDoesNotMatchError(Exception): ...
 
 
+class UserIsNotActivatedError(Exception): ...
+
+
 class UsersService(BaseService):
     entity_name = "User"
 
@@ -80,8 +83,10 @@ class UsersService(BaseService):
                 user = await repo.get_by_email(dto.email)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(email=dto.email) from e
+        if not user.is_active:
+            raise UserIsNotActivatedError()
         if not self.hasher.compare(dto.password, user.password_hash):
-            raise PasswordDoesNotMatchError("Passwords doesn't match")
+            raise PasswordDoesNotMatchError()
         return self.token_provider.new_token({"uid": user.id}, self.auth_token_ttl)
 
     async def extract_user_id_from_token(self, token: str) -> int:

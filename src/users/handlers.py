@@ -4,12 +4,13 @@ from http import HTTPStatus
 from core.http.exceptions import HttpExceptionsMapper
 from core.service import EntityNotFoundError, ServiceError
 from users.dependencies import UsersServiceDep
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, status
 
 from users import schemas
 from users.domain.services import (
     InvalidTokenServiceError,
     PasswordDoesNotMatchError,
+    UserIsNotActivatedError,
 )
 
 router = APIRouter(prefix="/users", tags=["users", "auth"])
@@ -34,6 +35,11 @@ async def signin(
         token = await users_service.signin(dto)
     except (EntityNotFoundError, PasswordDoesNotMatchError) as e:
         raise HTTPException(HTTPStatus.UNAUTHORIZED, "Invalid email or password") from e
+    except UserIsNotActivatedError as e:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "User isn't activated. Check your email to activate account and try to signin again!",
+        ) from e
     return {"token": token}
 
 
