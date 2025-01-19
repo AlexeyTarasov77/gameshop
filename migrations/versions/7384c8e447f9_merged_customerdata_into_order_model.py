@@ -28,6 +28,11 @@ def upgrade() -> None:
     op.add_column("order", sa.Column("user_id", sa.Integer(), nullable=True))
     op.add_column("order", sa.Column("customer_phone", sa.String(), nullable=True))
     op.add_column("order", sa.Column("customer_name", sa.String(), nullable=False))
+    op.create_check_constraint(
+        None,
+        "order",
+        "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL",
+    )
     op.create_foreign_key(
         None, "order", "user", ["user_id"], ["id"], ondelete="CASCADE"
     )
@@ -43,6 +48,7 @@ def downgrade() -> None:
         ),
     )
     op.drop_constraint(None, "order", type_="foreignkey")
+    op.drop_constraint(None, "order", type_="check")
     op.create_foreign_key(
         "order_customer_data_id_fkey",
         "order",

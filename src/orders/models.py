@@ -1,6 +1,6 @@
 from decimal import Decimal
 from enum import Enum
-from sqlalchemy import CheckConstraint, ForeignKey
+from sqlalchemy import CheckConstraint, ForeignKey, text
 from gateways.db.column_types import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, relationship, mapped_column
@@ -16,7 +16,11 @@ class OrderStatus(Enum):
 
 
 class Order(SqlAlchemyBaseModel):
-    __table_args__ = (CheckConstraint("email IS NOT NULL OR user_id IS NOT NULL"),)
+    __table_args__ = (
+        CheckConstraint(
+            "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL"
+        ),
+    )
     id: Mapped[int_pk_type]
     order_date: Mapped[created_at_type]
     customer_email: Mapped[str | None]
@@ -26,11 +30,13 @@ class Order(SqlAlchemyBaseModel):
     )
     user: Mapped[User | None] = relationship(back_populates="orders", lazy="joined")
     customer_phone: Mapped[str | None]
-    customer_name: Mapped[str]
+    customer_name: Mapped[str | None]
     items: Mapped[list["OrderItem"]] = relationship(
         back_populates="order", lazy="selectin"
     )
-    status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.PENDING)
+    status: Mapped[OrderStatus] = mapped_column(
+        server_default=text(OrderStatus.PENDING.value)
+    )
 
     def get_total(self):
         return sum(item.total_price for item in self.items)

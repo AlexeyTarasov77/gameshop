@@ -28,7 +28,6 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=True),
         sa.Column("phone", sa.String(), nullable=True),
         sa.Column("name", sa.String(), nullable=False),
-        sa.CheckConstraint("email IS NOT NULL OR user_id IS NOT NULL"),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -43,6 +42,7 @@ def upgrade() -> None:
             "status",
             sa.Enum("COMPLETED", "PENDING", "CANCELLED", name="orderstatus"),
             nullable=False,
+            server_default=sa.text("'PENDING'"),
         ),
         sa.ForeignKeyConstraint(
             ["customer_data_id"], ["customer_data.id"], ondelete="CASCADE"
@@ -55,7 +55,9 @@ def upgrade() -> None:
         sa.Column("product_id", sa.Integer(), nullable=False),
         sa.Column("order_id", sa.Integer(), nullable=False),
         sa.Column("price", sa.Numeric(), nullable=False),
-        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.Column(
+            "quantity", sa.Integer(), nullable=False, server_default=sa.text("0")
+        ),
         sa.ForeignKeyConstraint(
             ["order_id"],
             ["order.id"],

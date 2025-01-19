@@ -9,6 +9,7 @@ from users.schemas import ShowUser
 class User(SqlAlchemyBaseModel):
     model_schema = ShowUser
     id: Mapped[int_pk_type]
+    username: Mapped[str] = mapped_column(unique=True)
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     password_hash: Mapped[bytes] = mapped_column(BYTEA)
     photo_url: Mapped[str | None]

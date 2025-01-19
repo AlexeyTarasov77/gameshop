@@ -20,7 +20,7 @@ run/tests/docker:
 
 .PHONY: migrations/new
 migrations/new:
-	MODE=$(mode) poetry run alembic revision --autogenerate -m "$(msg)"
+	MODE=local poetry run alembic revision --autogenerate -m "$(msg)"
 
 .PHONY: migrations/run
 migrations/run:

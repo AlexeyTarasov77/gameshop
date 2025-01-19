@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,7 +36,7 @@ class Product(SqlAlchemyBaseModel):
     )
     image_url: Mapped[str]
     regular_price: Mapped[Decimal]
-    discount: Mapped[int] = mapped_column(default=0)
+    discount: Mapped[int] = mapped_column(server_default=text("0"))
     discount_valid_to: Mapped[datetime | None]
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]

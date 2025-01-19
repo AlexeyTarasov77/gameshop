@@ -2,10 +2,13 @@ import typing as t
 from datetime import timedelta
 
 from users.models import User
+from users.schemas import CreateUserDTO
 
 
 class UsersRepositoryI(t.Protocol):
-    async def create(self, **data) -> User: ...
+    async def create_with_hashed_password(
+        self, dto: CreateUserDTO, password_hash: bytes
+    ) -> User: ...
 
     async def update_by_id(self, user_id: int, **data) -> User: ...
 

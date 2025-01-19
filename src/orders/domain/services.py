@@ -17,8 +17,10 @@ class OrdersService(BaseService):
         self, dto: CreateOrderDTO, user_id: int | None
     ) -> BaseShowOrder:
         dto.user.user_id = user_id
-        if not any([dto.user.user_id, dto.user.email]):
-            raise ServiceValidationError("email is required for not authorized user")
+        if not (dto.user.user_id or (dto.user.email and dto.user.name)):
+            raise ServiceValidationError(
+                "email and name are required for not authorized user"
+            )
         async with self.uow as uow:
             try:
                 order = await uow.orders_repo.create(dto)

@@ -40,8 +40,6 @@ async def _create_entities[T: SqlAlchemyBaseModel](
         session.add_all(entities)
         await session.commit()
     return entities
-    # coros = [repo.create(**data_generator()) for _ in range(n)]
-    # return await asyncio.gather(*coros)
 
 
 async def _create_model_with_name_and_url[T: SqlAlchemyBaseModel](
@@ -96,6 +94,7 @@ async def create_products(
 async def create_users(n: int):
     def data_generator():
         return {
+            "username": fake.user_name(),
             "email": fake.email(),
             "password_hash": BcryptHasher().hash(fake.password(8)),
             "photo_url": _call_optional(fake.image_url),
@@ -110,6 +109,7 @@ async def create_orders(n: int, users: list[User], products: list[Product]):
         return {
             "customer_name": fake.user_name(),
             "customer_email": fake.email(),
+            "customer_tg": fake.user_name(),
             "customer_phone": fake.phone_number(),
             "status": random.choice(list(OrderStatus)),
             "user": _call_optional(lambda: random.choice(users)),

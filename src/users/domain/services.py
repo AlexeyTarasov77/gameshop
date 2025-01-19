@@ -58,13 +58,14 @@ class UsersService(BaseService):
         try:
             async with self.uow as uow:
                 repo = t.cast(UsersRepositoryI, uow.users_repo)
-                user = await repo.create(
-                    email=dto.email,
+                user = await repo.create_with_hashed_password(
+                    dto,
                     password_hash=password_hash,
-                    photo_url=str(dto.photo_url),
                 )
         except DatabaseError as e:
-            raise self.exception_mapper.map_with_entity(e)(email=dto.email) from e
+            raise self.exception_mapper.map_with_entity(e)(
+                email=dto.email, username=dto.username
+            ) from e
         activation_token = self._new_activation_token(user.id)
         email_body = f"""
             Здравствуйте, ваш аккаунт был успешно создан.

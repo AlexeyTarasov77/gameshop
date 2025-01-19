@@ -1,5 +1,5 @@
 from gateways.db.repository import SqlAlchemyRepository
-
+from users.schemas import CreateUserDTO
 from users.models import User
 
 
@@ -11,3 +11,10 @@ class UsersRepository(SqlAlchemyRepository[User]):
 
     async def get_by_email(self, email: str) -> User:
         return await super().get_one(email=email)
+
+    async def create_with_hashed_password(
+        self, dto: CreateUserDTO, password_hash: str
+    ) -> User:
+        return await super().create(
+            password_hash=password_hash, **dto.model_dump(exclude={"password"})
+        )

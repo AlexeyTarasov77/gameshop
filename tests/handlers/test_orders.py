@@ -103,8 +103,8 @@ def _gen_order_create_data():
     ],
 )
 def test_create_order(
-    new_user: User,
-    new_product: Product,
+    new_user: User,  # noqa
+    new_product: Product,  # noqa
     data: dict[str, t.Any],
     expected_status: int,
     with_auth: bool,

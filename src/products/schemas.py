@@ -2,8 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO
-from pydantic import AfterValidator, AnyUrl, Field
+from core.schemas import Base64Int, BaseDTO, UrlStr
+from pydantic import AfterValidator, Field
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -39,7 +39,7 @@ class BaseProductDTO(BaseDTO):
     description: str = Field(min_length=10)
     regular_price: Decimal = Field(ge=0)
     discount: ProductDiscount = None
-    image_url: AnyUrl
+    image_url: UrlStr
 
 
 class CreateProductDTO(BaseProductDTO):
@@ -56,7 +56,7 @@ class UpdateProductDTO(BaseDTO):
     category: CategoryDTO = None
     platform: PlatformDTO = None
     delivery_method: DeliveryMethodDTO = None
-    image_url: AnyUrl = None
+    image_url: UrlStr = None
     discount: ProductDiscount = None
     discount_valid_to: DateTimeAfterNow | None = None
 

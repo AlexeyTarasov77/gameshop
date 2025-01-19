@@ -16,6 +16,7 @@ token_provider = t.cast(TokenProviderI, container.resolve(TokenProviderI))
 
 def _gen_user_data() -> dict[str, str]:
     return {
+        "username": fake.user_name(),
         "email": fake.email(),
         "password": fake.password(length=10),
         "photo_url": fake.image_url(),
@@ -105,6 +106,7 @@ def test_signin(
                 password_hash=hashed_password,
                 is_active=is_user_active,
                 email=fake.email(),
+                username=fake.user_name(),
             )
             .returning(User)
         )
@@ -138,8 +140,9 @@ def test_signup(data: dict[str, str], expected_status: int):
     assert resp.status_code == expected_status
     if expected_status == 201:
         resp_data = resp.json()
-        assert data["email"] == resp_data["email"]
-        assert data["photo_url"] == resp_data["photo_url"]
+        for k, v in resp_data.items():
+            if k in data:
+                assert data[k] == v
         assert resp_data["is_active"] is False
 
 

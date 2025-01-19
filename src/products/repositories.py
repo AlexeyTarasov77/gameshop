@@ -10,12 +10,11 @@ class ProductsRepository(PaginationRepository[Product]):
 
     async def create(self, dto: CreateProductDTO) -> Product:
         product = await super().create(
-            image_url=str(dto.image_url),
             category_id=dto.category.id,
             platform_id=dto.platform.id,
             delivery_method_id=dto.delivery_method.id,
             **dto.model_dump(
-                exclude={"image_url", "category", "platform", "delivery_method"},
+                exclude={"category", "platform", "delivery_method"},
                 exclude_none=True,
             ),
         )
@@ -26,8 +25,6 @@ class ProductsRepository(PaginationRepository[Product]):
             exclude={"image_url", "category", "platform", "delivery_method"},
             exclude_unset=True,
         )
-        if dto.image_url:
-            data["image_url"] = str(dto.image_url)
         if dto.platform:
             data["platform_id"] = dto.platform.id
         if dto.category:

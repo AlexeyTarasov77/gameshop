@@ -10,7 +10,9 @@ from orders.models import OrderStatus
 
 def check_phone(value: str) -> str:
     assert len(value) >= 5, "Номер телефона слишком короткий!"
-    PHONE_MATCH_PATTERN = re.compile(r"^\+?\d{1,3}?([-. ])?(\d{1,4}([-. x])?){1,4}$")
+    PHONE_MATCH_PATTERN = re.compile(
+        r"^\+?\(*\d{1,3}?\)*([-. ])?(\d{1,4}([-. x])?){1,4}$"
+    )
     match = PHONE_MATCH_PATTERN.match(value)
     assert match, "Невалидный номер телефона"
     # normalize phone number
@@ -56,7 +58,7 @@ class CustomerDataDTO(BaseDTO):
     phone: PhoneNumber | None = None
     tg_username: CustomerTg
     user_id: Base64Int | None = None
-    name: CustomerName
+    name: CustomerName | None = None
 
 
 class CreateOrderDTO(BaseDTO):
@@ -78,7 +80,8 @@ class BaseOrderDTO(BaseDTO):
     id: Base64Int
     order_date: datetime
     status: OrderStatus
-    customer_email: EmailStr
+    customer_email: EmailStr | None
+    customer_name: str | None
     customer_phone: str | None
     customer_tg: CustomerTg
 
