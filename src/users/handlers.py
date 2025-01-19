@@ -1,6 +1,8 @@
 import typing as t
 from http import HTTPStatus
 
+from pydantic import EmailStr
+
 from core.http.exceptions import HttpExceptionsMapper
 from core.service import EntityNotFoundError, ServiceError
 from users.dependencies import UsersServiceDep
@@ -10,6 +12,7 @@ from users import schemas
 from users.domain.services import (
     InvalidTokenServiceError,
     PasswordDoesNotMatchError,
+    UserAlreadyActivatedError,
     UserIsNotActivatedError,
 )
 
@@ -40,6 +43,8 @@ async def signin(
             status.HTTP_403_FORBIDDEN,
             "User isn't activated. Check your email to activate account and try to signin again!",
         ) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
     return {"token": token}
 
 
@@ -51,7 +56,21 @@ async def activate_user(
     try:
         user = await users_service.activate_user(token)
     except InvalidTokenServiceError as e:
-        raise HTTPException(400, e.args[0]) from e
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, e.args[0]) from e
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
     return {"activated": True, "user": user}
+
+
+@router.post("/resend-activation-token", status_code=status.HTTP_202_ACCEPTED)
+async def resend_activation_token(
+    email: t.Annotated[EmailStr, Body(embed=True)], users_service: UsersServiceDep
+) -> None:
+    try:
+        await users_service.resend_activation_token(email)
+    except UserAlreadyActivatedError as e:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "User already activated"
+        ) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)

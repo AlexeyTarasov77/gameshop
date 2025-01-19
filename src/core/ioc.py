@@ -64,7 +64,7 @@ def _init_container() -> punq.Container:
         UsersService,
         activation_token_ttl=cfg.jwt.activation_token_ttl,
         auth_token_ttl=cfg.jwt.auth_token_ttl,
-        activation_link="http://localhost:8000/ping",
+        activation_link="http://localhost:3000/auth/activate?token=%s",
     )
 
     return container

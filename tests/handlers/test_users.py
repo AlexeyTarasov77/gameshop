@@ -141,3 +141,25 @@ def test_signup(data: dict[str, str], expected_status: int):
         assert data["email"] == resp_data["email"]
         assert data["photo_url"] == resp_data["photo_url"]
         assert resp_data["is_active"] is False
+
+
+@pytest.mark.parametrize(
+    ["email", "expected_status", "is_user_active"],
+    [
+        (None, 202, False),
+        ("invalid", 422, False),
+        ("notfound@notfound.com", 404, False),
+        (None, 400, True),
+    ],
+)
+def test_resend_activation_token(
+    new_user: User, email: str | None, expected_status: int, is_user_active: bool
+):
+    email = email or new_user.email
+    if is_user_active:
+        with db.sync_engine.begin() as conn:
+            conn.execute(update(User).filter_by(id=new_user.id).values(is_active=True))
+    resp = client.post(
+        f"{router.prefix}/resend-activation-token", json={"email": email}
+    )
+    assert resp.status_code == expected_status

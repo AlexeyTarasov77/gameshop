@@ -26,6 +26,9 @@ class PasswordDoesNotMatchError(Exception): ...
 class UserIsNotActivatedError(Exception): ...
 
 
+class UserAlreadyActivatedError(Exception): ...
+
+
 class UsersService(BaseService):
     entity_name = "User"
 
@@ -47,6 +50,9 @@ class UsersService(BaseService):
         self.activation_token_ttl = activation_token_ttl
         self.auth_token_ttl = auth_token_ttl
 
+    def _new_activation_token(self, uid: int):
+        return self.token_provider.new_token({"uid": uid}, self.activation_token_ttl)
+
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
         password_hash = self.hasher.hash(dto.password)
         try:
@@ -59,9 +65,7 @@ class UsersService(BaseService):
                 )
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(email=dto.email) from e
-        activation_token = self.token_provider.new_token(
-            {"uid": user.id}, self.activation_token_ttl
-        )
+        activation_token = self._new_activation_token(user.id)
         email_body = f"""
             Здравствуйте, ваш аккаунт был успешно создан.
             Для активации аккаунта перейдите по ссылке ниже:
@@ -111,3 +115,27 @@ class UsersService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(user_id=user_id) from e
         return ShowUser.model_validate(user)
+
+    async def resend_activation_token(self, email: str) -> None:
+        try:
+            async with self.uow as uow:
+                repo = t.cast(UsersRepositoryI, uow.users_repo)
+                user = await repo.get_by_email(email)
+            if user.is_active:
+                raise UserAlreadyActivatedError
+            token = self._new_activation_token(user.id)
+            email_body = (
+                f"Новый токен для активации аккаунта: {token}\n"
+                "Перейдите по ссылке ниже для активации аккаунта\n"
+                f"\t{self.activation_link % token}\t"
+            )
+            asyncio.create_task(
+                self.mail_provider.send_mail_with_timeout(
+                    "Новый активационный токен",
+                    email_body,
+                    to=user.email,
+                    timeout=3,
+                )
+            )
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(email=email) from e
