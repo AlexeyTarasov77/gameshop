@@ -1,10 +1,19 @@
 import bcrypt
+from hashlib import sha256
 
 
 class BcryptHasher:
-    def hash(self, password: str) -> bytes:
+    def hash(self, s: str) -> bytes:
         salt = bcrypt.gensalt()
-        return bcrypt.hashpw(password.encode(), salt)
+        return bcrypt.hashpw(s.encode(), salt)
 
-    def compare(self, password: str, hashed_password: bytes) -> bool:
-        return bcrypt.checkpw(password.encode(), hashed_password)
+    def compare(self, s: str, hash: bytes) -> bool:
+        return bcrypt.checkpw(s.encode(), hash)
+
+
+class SHA256Hasher:
+    def hash(self, s: str) -> bytes:
+        return sha256(s.encode()).digest()
+
+    def compare(self, s: str, hash: bytes) -> bool:
+        return self.hash(s) == hash

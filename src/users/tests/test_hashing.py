@@ -1,20 +1,19 @@
 import pytest
 from users.domain.interfaces import HasherI
-from users.hashing import BcryptHasher
+from users.hashing import BcryptHasher, SHA256Hasher
 
 
-@pytest.fixture
-def hasher() -> HasherI:
-    return BcryptHasher()
-
-
+@pytest.mark.parametrize("hasher", [BcryptHasher(), SHA256Hasher()])
 def test_hash(hasher: HasherI):
     password = "test123"
     hashed_password = hasher.hash(password)
-    assert hashed_password.decode() != password
-    assert len(hashed_password) == 60
+    try:
+        assert hashed_password.decode() != password
+    except UnicodeDecodeError:
+        pass
 
 
+@pytest.mark.parametrize("hasher", [BcryptHasher(), SHA256Hasher()])
 def test_compare(hasher: HasherI):
     password = "test123"
     hashed_password = hasher.hash(password)

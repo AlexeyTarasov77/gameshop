@@ -1,3 +1,5 @@
+from datetime import datetime
+from sqlalchemy import ForeignKey
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy.dialects.postgresql import BYTEA, CITEXT
@@ -17,3 +19,9 @@ class User(SqlAlchemyBaseModel):
     orders: Mapped[list["Order"]] = relationship(back_populates="user")  # noqa
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
+
+
+class Token(SqlAlchemyBaseModel):
+    hash: Mapped[bytes] = mapped_column(BYTEA, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
+    expiry: Mapped[datetime]
