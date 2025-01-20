@@ -24,9 +24,9 @@ class UsersRepository(SqlAlchemyRepository[User]):
 class TokensRepository(SqlAlchemyRepository[Token]):
     model = Token
 
-    async def create(self, hash: bytes, user_id: int, expires_in: timedelta) -> None:
-        expiry = datetime.now() + expires_in
-        await super().create(hash=hash, user_id=user_id, expiry=expiry)
+    async def save(self, token: Token) -> None:
+        self.session.add(token)
+        await self.session.flush()
 
     async def get_by_hash(self, hash: bytes) -> Token:
         return await super().get_one(hash=hash)

@@ -84,9 +84,21 @@ class CustomerDTO(BaseDTO):
 class CustomerWithUserIdDTO(CustomerDTO):
     user_id: Base64Int | None
 
+    @classmethod
+    def from_order(cls, order: Order) -> Self:
+        obj = super().from_order(order)
+        obj.user_id = order.user_id
+        return obj
+
 
 class CustomerWithUserDTO(CustomerDTO):
     user: ShowUser | None
+
+    @classmethod
+    def from_order(cls, order: Order) -> Self:
+        obj = super().from_order(order)
+        obj.user = ShowUser.model_validate(order.user) if order.user else None
+        return obj
 
 
 class CreateOrderDTO(BaseDTO):

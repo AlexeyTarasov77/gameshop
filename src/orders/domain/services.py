@@ -26,7 +26,7 @@ class OrdersService(BaseService):
                 raise self.exception_mapper.map_with_entity(e)(
                     **dto.model_dump()
                 ) from e
-        return ShowOrder.model_validate(order)
+        return ShowOrder.from_model(order)
 
     async def update_order(self, dto: UpdateOrderDTO, order_id: int) -> ShowOrder:
         try:
@@ -36,7 +36,7 @@ class OrdersService(BaseService):
             raise self.exception_mapper.map_with_entity(e)(
                 id=order_id,
             ) from e
-        return ShowOrder.model_validate(order)
+        return ShowOrder.from_model(order)
 
     async def delete_order(self, order_id: int) -> None:
         try:
@@ -61,7 +61,8 @@ class OrdersService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return [
-            ShowOrderExtended.model_validate(order) for order in orders
+            ShowOrderExtended.from_model(order, items=order.items, user=order.user)
+            for order in orders
         ], total_records
 
     async def list_all_orders(

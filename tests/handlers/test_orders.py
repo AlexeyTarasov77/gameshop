@@ -19,7 +19,7 @@ from handlers.helpers import (
     check_paginated_response,
     pagination_test_cases,
 )
-from users.domain.interfaces import TokenProviderI
+from users.domain.interfaces import StatelessTokenProviderI
 from users.models import User
 
 
@@ -36,6 +36,7 @@ def _gen_order_data() -> dict[str, str]:
     customer_data = _gen_customer_data()
     data = {
         **{"customer_" + k: v for k, v in customer_data.items()},
+        "items": [_gen_order_item_data() for _ in range(random.randint(1, 10))],
     }
     return data
 
@@ -178,7 +179,7 @@ def test_get_order(new_order: Order, expected_status: int, order_id: int | None)
     assert resp.status_code == expected_status
     if expected_status == 200:
         resp_data = resp.json()
-        assert "user" in resp_data
+        assert "user" in resp_data["customer"]
         assert "items" in resp_data
         assert "product" in resp_data["items"][0]
         if user := resp_data.get("user"):
@@ -210,7 +211,7 @@ def test_list_orders_for_user(
     user_id = ""
     headers = {}
     if with_user_id:
-        token_provider = Resolve(TokenProviderI)
+        token_provider = Resolve(StatelessTokenProviderI)
         token = token_provider.new_token(
             {"uid": new_user.id}, timedelta(days=(-1 if expired_token else 1))
         )
@@ -222,7 +223,7 @@ def test_list_orders_for_user(
         check_paginated_response("orders", resp_data, params)
         for order in resp_data["orders"]:
             assert "product" in order["items"][0]
-            if user := order.get("user"):
+            if user := order["customer"].get("user"):
                 assert base64_to_int(user[id]) == user_id
 
 

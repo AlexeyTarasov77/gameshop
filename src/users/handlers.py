@@ -50,7 +50,7 @@ async def signin(
 
 @router.patch("/activate")
 async def activate_user(
-    token: t.Annotated[str, Body(min_length=100, embed=True)],
+    token: t.Annotated[str, Body(min_length=15, embed=True)],
     users_service: UsersServiceDep,
 ) -> dict[str, bool | schemas.ShowUser]:
     try:

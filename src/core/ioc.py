@@ -17,13 +17,14 @@ from products.domain.services import ProductsService
 from users.domain.interfaces import (
     MailProviderI,
     PasswordHasherI,
+    StatefullTokenProviderI,
     TokenHasherI,
-    TokenProviderI,
+    StatelessTokenProviderI,
 )
 from users.domain.services import UsersService
 from users.hashing import BcryptHasher, SHA256Hasher
 from users.mailing import AsyncMailer
-from users.tokens import JwtTokenProvider
+from users.tokens import JwtTokenProvider, SecureTokenProvider
 
 from config import Config, init_config
 from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
@@ -50,11 +51,12 @@ def _init_container() -> punq.Container:
     container.register(PasswordHasherI, BcryptHasher)
     container.register(TokenHasherI, SHA256Hasher)
     container.register(
-        TokenProviderI,
+        StatelessTokenProviderI,
         JwtTokenProvider,
         secret_key=cfg.jwt.secret,
         signing_alg=cfg.jwt.alg,
     )
+    container.register(StatefullTokenProviderI, SecureTokenProvider)
     container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)

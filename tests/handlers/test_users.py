@@ -5,13 +5,17 @@ import typing as t
 from datetime import datetime, timedelta
 
 import pytest
-from users.domain.interfaces import PasswordHasherI, TokenProviderI
+from users.domain.interfaces import (
+    PasswordHasherI,
+    StatefullTokenProviderI,
+    StatelessTokenProviderI,
+)
 from users.handlers import router
-from users.models import User
+from users.models import Token, User
 
 from handlers.conftest import client, fake, db
 
-token_provider = Resolve(TokenProviderI)
+statefull_token_provider = Resolve(StatefullTokenProviderI)
 
 
 def _gen_user_data() -> dict[str, str]:
@@ -35,35 +39,31 @@ def new_user():
     ["token_generator", "expected_status"],
     [
         (
-            lambda user_id: token_provider.new_token(
-                {"uid": user_id}, timedelta(days=1)
-            ),
+            lambda gen_token: gen_token(None),
             200,
         ),
-        (lambda user_id: "invalid", 422),
-        (
-            lambda user_id: token_provider.new_token({"fail": True}, timedelta(days=1)),
-            400,
-        ),
-        (
-            lambda user_id: token_provider.new_token(
-                {"uid": user_id}, timedelta(days=-1)
-            ),
-            400,
-        ),
-        (lambda user_id: token_provider.new_token({"uid": 0}, timedelta(days=1)), 400),
-        (
-            lambda user_id: token_provider.new_token({"uid": 9999}, timedelta(days=1)),
-            404,
-        ),
+        (lambda gen_token: "123456789", 422),
+        (lambda gen_token: gen_token(9999999), 404),
+        (lambda gen_token: "Drmhze6EPcv0fN_81Bj-nA", 404),
     ],
 )
 def test_activate_user(
-    new_user: User, token_generator: t.Callable[[int], str], expected_status: int
+    new_user: User,
+    token_generator: t.Callable[[t.Callable[[int | None], str]], str],
+    expected_status: int,
 ):
-    resp = client.patch(
-        f"{router.prefix}/activate", json={"token": token_generator(new_user.id)}
-    )
+    def gen_token(user_id: int | None) -> str:
+        plain_token, token_obj = statefull_token_provider.new_token(
+            user_id or new_user.id, timedelta(days=1)
+        )
+        if user_id is None:
+            # insert only in case if user_id is taken from real user due to db integrity error otherwise
+            with db.sync_engine.begin() as conn:
+                conn.execute(insert(Token).values(**token_obj.dump()))
+        return plain_token
+
+    plain_token = token_generator(gen_token)
+    resp = client.patch(f"{router.prefix}/activate", json={"token": plain_token})
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 200:

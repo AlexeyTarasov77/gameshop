@@ -26,8 +26,7 @@ class ProductsService(BaseService):
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         try:
             async with self.uow as uow:
-                repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                product = await repo.create(dto)
+                product = await uow.products_repo.create(dto)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
                 **dto.model_dump(include={"name", "category_name", "platform_name"})
@@ -39,12 +38,11 @@ class ProductsService(BaseService):
     ) -> tuple[list[ShowProductWithRelations], int]:
         try:
             async with self.uow as uow:
-                repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                products = await repo.paginated_list(
+                products = await uow.products_repo.paginated_list(
                     limit=pagination_params.page_size,
                     offset=pagination_params.calc_offset(),
                 )
-                total_records = await repo.get_records_count()
+                total_records = await uow.products_repo.get_records_count()
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return [
@@ -54,8 +52,7 @@ class ProductsService(BaseService):
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:
             async with self.uow as uow:
-                repo = t.cast(ProductsRepositoryI, uow.products_repo)
-                product = await repo.get_by_id(product_id)
+                product = await uow.products_repo.get_by_id(product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return ShowProductWithRelations.model_validate(product)
