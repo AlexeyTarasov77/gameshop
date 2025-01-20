@@ -1,12 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Annotated
+from typing import Annotated, Self
 from pydantic import AfterValidator, EmailStr, Field, field_validator
-from products.schemas import ShowProduct
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
-from orders.models import OrderStatus
+from orders.models import Order, OrderStatus
 
 
 def check_phone(value: str) -> str:
@@ -63,21 +62,40 @@ class OrderItemShowDTO(_BaseOrderItemDTO):
     product: OrderItemProduct
 
 
-class CustomerDataDTO(BaseDTO):
+class CustomerDTO(BaseDTO):
     email: EmailStr | None = None
     phone: PhoneNumber | None = None
     tg_username: CustomerTg
-    user_id: Base64Int | None = None
     name: CustomerName | None = None
+
+    @classmethod
+    def from_order(cls, order: Order) -> Self:
+        prefix = "customer_"
+        return cls.model_construct(
+            None,
+            **{
+                k.removeprefix(prefix): getattr(order, k)
+                for k in order.__table__.c.keys()
+                if k.startswith(prefix)
+            },
+        )
+
+
+class CustomerWithUserIdDTO(CustomerDTO):
+    user_id: Base64Int | None
+
+
+class CustomerWithUserDTO(CustomerDTO):
+    user: ShowUser | None
 
 
 class CreateOrderDTO(BaseDTO):
     cart: list[OrderItemCreateDTO]
-    user: CustomerDataDTO
+    user: CustomerDTO
 
     @field_validator("cart")
     @classmethod
-    def check_cart(cls, value):
+    def check_cart(cls, value: list) -> list:
         assert len(value) > 0
         return value
 
@@ -86,20 +104,21 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class BaseOrderDTO(BaseDTO):
+class ShowOrder(BaseDTO):
     id: Base64Int
     order_date: datetime
     status: OrderStatus
-    customer_email: EmailStr | None
-    customer_name: str | None
-    customer_phone: str | None
-    customer_tg: CustomerTg
+    customer: CustomerWithUserIdDTO
+
+    @classmethod
+    def from_model(cls, order: Order, **kwargs):
+        return cls(
+            **order.dump(),
+            customer=cls.__annotations__["customer"].from_order(order),
+            **kwargs,
+        )
 
 
-class BaseShowOrder(BaseOrderDTO):
-    user_id: int | None
-
-
-class ShowOrderWithRelations(BaseOrderDTO):
-    user: ShowUser | None
+class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
+    customer: CustomerWithUserDTO  # type: ignore

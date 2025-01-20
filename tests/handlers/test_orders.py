@@ -4,7 +4,7 @@ from decimal import Decimal
 import typing as t
 import pytest
 from sqlalchemy import select
-from core.ioc import Resolve, get_container
+from core.ioc import Resolve
 from handlers.test_products import new_product  # noqa
 from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
@@ -35,7 +35,6 @@ def _gen_customer_data() -> dict[str, str]:
 def _gen_order_data() -> dict[str, str]:
     customer_data = _gen_customer_data()
     data = {
-        "customer_tg": customer_data.pop("tg_username"),
         **{"customer_" + k: v for k, v in customer_data.items()},
     }
     return data

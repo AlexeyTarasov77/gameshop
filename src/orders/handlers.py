@@ -9,9 +9,9 @@ from core.http.exceptions import HttpExceptionsMapper
 from orders.domain.services import OrdersService, ServiceValidationError
 from orders.schemas import (
     CreateOrderDTO,
-    BaseShowOrder,
+    ShowOrder,
     UpdateOrderDTO,
-    ShowOrderWithRelations,
+    ShowOrderExtended,
 )
 from users.dependencies import get_optional_user_id, get_user_id_or_raise
 
@@ -25,7 +25,7 @@ async def create_order(
     dto: CreateOrderDTO,
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
     orders_service: OrdersServiceDep,
-) -> BaseShowOrder:
+) -> ShowOrder:
     try:
         order = await orders_service.create_order(dto, user_id)
     except ServiceValidationError as e:
@@ -61,7 +61,7 @@ async def delete_order(order_id: EntityIDParam, orders_service: OrdersServiceDep
 
 
 class OrdersPaginatedResponse(PaginatedResponse):
-    orders: list[ShowOrderWithRelations]
+    orders: list[ShowOrderExtended]
 
 
 @router.get("/list")
@@ -104,7 +104,7 @@ async def list_orders_for_user(
 @router.get("/detail/{order_id}")
 async def get_order(
     order_id: EntityIDParam, orders_service: OrdersServiceDep
-) -> ShowOrderWithRelations:
+) -> ShowOrderExtended:
     try:
         return await orders_service.get_order(int(order_id))
     except ServiceValidationError as e:

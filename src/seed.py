@@ -109,7 +109,7 @@ async def create_orders(n: int, users: list[User], products: list[Product]):
         return {
             "customer_name": fake.user_name(),
             "customer_email": fake.email(),
-            "customer_tg": fake.user_name(),
+            "customer_tg_username": fake.user_name(),
             "customer_phone": fake.phone_number(),
             "status": random.choice(list(OrderStatus)),
             "user": _call_optional(lambda: random.choice(users)),

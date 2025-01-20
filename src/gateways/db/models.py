@@ -4,13 +4,10 @@ import typing as t
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import DeclarativeBase
 
-from core.schemas import BaseDTO
 
-
-class SqlAlchemyBaseModel[T: BaseDTO](DeclarativeBase):
+class SqlAlchemyBaseModel(DeclarativeBase):
     repr_cols_num: int = 3
     repr_cols: tuple = ()
-    model_schema: T | None = None
 
     def __repr__(self) -> str:
         cols = []
@@ -19,9 +16,7 @@ class SqlAlchemyBaseModel[T: BaseDTO](DeclarativeBase):
                 cols.append(f"{col}={getattr(self, col)!r}")
         return f"<{self.__class__.__name__}({', '.join(cols)})>"
 
-    def to_read_model(self) -> T | dict[str, t.Any]:
-        if self.model_schema:
-            return self.model_schema.model_validate(self)
+    def dump(self) -> dict[str, t.Any]:
         return {col: getattr(self, col) for col in self.__table__.columns.keys()}
 
     @declared_attr.directive

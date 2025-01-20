@@ -3,7 +3,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
-import asyncio
 from orders.models import Order, OrderItem
 from orders.schemas import (
     CreateOrderDTO,
@@ -23,13 +22,10 @@ class OrdersRepository(PaginationRepository[Order]):
             .options(selectinload(self.model.items))
         )
 
-    async def create(self, dto: CreateOrderDTO) -> Order:
+    async def create(self, dto: CreateOrderDTO, user_id: int | None) -> Order:
         return await super().create(
-            customer_email=dto.user.email,
-            customer_name=dto.user.name,
-            customer_phone=dto.user.phone,
-            customer_tg=dto.user.tg_username,
-            user_id=dto.user.user_id,
+            **{"customer_" + k: v for k, v in dto.user},
+            user_id=user_id,
         )
 
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: int) -> Order:

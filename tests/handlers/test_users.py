@@ -1,17 +1,17 @@
 from sqlalchemy import insert, update
-from core.ioc import Resolve, get_container
+from core.ioc import Resolve
 from handlers.helpers import base64_to_int, create_model_obj, is_base64
 import typing as t
 from datetime import datetime, timedelta
 
 import pytest
-from users.domain.interfaces import BaseHasherI, PasswordHasherI, TokenProviderI
+from users.domain.interfaces import PasswordHasherI, TokenProviderI
 from users.handlers import router
 from users.models import User
 
-from handlers.conftest import client, container, fake, db
+from handlers.conftest import client, fake, db
 
-token_provider = t.cast(TokenProviderI, container.resolve(TokenProviderI))
+token_provider = Resolve(TokenProviderI)
 
 
 def _gen_user_data() -> dict[str, str]:
