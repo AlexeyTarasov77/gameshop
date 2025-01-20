@@ -1,7 +1,7 @@
 import typing as t
 from datetime import timedelta
 
-from users.models import User
+from users.models import Token, User
 from users.schemas import CreateUserDTO
 
 
@@ -15,10 +15,24 @@ class UsersRepositoryI(t.Protocol):
     async def get_by_email(self, email: str) -> User: ...
 
 
-class HasherI(t.Protocol):
+class TokensRepositoryI(t.Protocol):
+    async def create(
+        self, hash: bytes, user_id: int, expires_in: timedelta
+    ) -> None: ...
+
+    async def get_by_hash(self, hash: bytes) -> Token: ...
+
+
+class BaseHasherI(t.Protocol):
     def hash(self, s: str) -> bytes: ...
 
     def compare(self, s: str, hash: bytes) -> bool: ...
+
+
+class PasswordHasherI(BaseHasherI): ...
+
+
+class TokenHasherI(BaseHasherI): ...
 
 
 class TokenProviderI(t.Protocol):

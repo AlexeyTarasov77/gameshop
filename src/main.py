@@ -4,7 +4,7 @@ from logging import Logger
 from typing import cast
 
 import uvicorn
-from core.ioc import get_container
+from core.ioc import Resolve, get_container
 from core.router import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,10 +35,9 @@ def app_factory() -> FastAPI:
 
 
 async def main() -> None:
-    container = get_container()
-    cfg = cast(Config, container.resolve(Config))
-    logger = cast(Logger, container.resolve(Logger))
-    db = cast(SqlAlchemyDatabase, container.resolve(SqlAlchemyDatabase))
+    cfg = Resolve(Config)
+    logger = Resolve(Logger)
+    db = Resolve(SqlAlchemyDatabase)
     logger.info("Pinging database...")
     await asyncio.wait_for(db.ping(), 3)
     logger.info("Database is ready!")

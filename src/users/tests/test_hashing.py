@@ -1,10 +1,10 @@
 import pytest
-from users.domain.interfaces import HasherI
+from users.domain.interfaces import BaseHasherI
 from users.hashing import BcryptHasher, SHA256Hasher
 
 
 @pytest.mark.parametrize("hasher", [BcryptHasher(), SHA256Hasher()])
-def test_hash(hasher: HasherI):
+def test_hash(hasher: BaseHasherI):
     password = "test123"
     hashed_password = hasher.hash(password)
     try:
@@ -14,7 +14,7 @@ def test_hash(hasher: HasherI):
 
 
 @pytest.mark.parametrize("hasher", [BcryptHasher(), SHA256Hasher()])
-def test_compare(hasher: HasherI):
+def test_compare(hasher: BaseHasherI):
     password = "test123"
     hashed_password = hasher.hash(password)
     assert hasher.compare(password, hashed_password)

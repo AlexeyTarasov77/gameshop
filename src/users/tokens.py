@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 
 import jwt
 
+from users.domain.interfaces import TokensRepositoryI
+
 
 class JwtTokenProvider:
     def __init__(self, secret_key: str, signing_alg: str) -> None:
@@ -17,3 +19,7 @@ class JwtTokenProvider:
 
     def extract_payload(self, token: str) -> dict[str, t.Any]:
         return jwt.decode(token, self._secret, [self.alg])
+
+
+class StatefullTokenProvider:
+    def __init__(self, repo: TokensRepositoryI): ...

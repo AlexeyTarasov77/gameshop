@@ -1,11 +1,11 @@
 from sqlalchemy import insert, update
-from core.ioc import get_container
+from core.ioc import Resolve, get_container
 from handlers.helpers import base64_to_int, create_model_obj, is_base64
 import typing as t
 from datetime import datetime, timedelta
 
 import pytest
-from users.domain.interfaces import HasherI, TokenProviderI
+from users.domain.interfaces import BaseHasherI, PasswordHasherI, TokenProviderI
 from users.handlers import router
 from users.models import User
 
@@ -26,7 +26,7 @@ def _gen_user_data() -> dict[str, str]:
 @pytest.fixture
 def new_user():
     data = _gen_user_data()
-    hasher = t.cast(HasherI, get_container().resolve(HasherI))
+    hasher = Resolve(PasswordHasherI)
     hashed_password = hasher.hash(data.pop("password"))
     yield from create_model_obj(User, password_hash=hashed_password, **data)
 
@@ -97,7 +97,7 @@ def test_signin(
     is_user_active: bool,
 ):
     with db.sync_engine.begin() as conn:
-        hasher = t.cast(HasherI, get_container().resolve(HasherI))
+        hasher = Resolve(PasswordHasherI)
         user_password = fake.password(length=10)
         hashed_password = hasher.hash(user_password)
         stmt = (

@@ -3,6 +3,7 @@ from decimal import Decimal
 import re
 from typing import Annotated
 from pydantic import AfterValidator, EmailStr, Field, field_validator
+from products.schemas import ShowProduct
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import OrderStatus
@@ -43,14 +44,23 @@ CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
 
 
-class OrderItemCreateDTO(BaseDTO):
+class _BaseOrderItemDTO(BaseDTO):
     quantity: int = Field(gt=0)
     price: Decimal
+
+
+class OrderItemCreateDTO(_BaseOrderItemDTO):
     product_id: Base64Int
 
 
-class OrderItemShowDTO(OrderItemCreateDTO):
+class OrderItemProduct(BaseDTO):
     id: Base64Int
+    name: str
+
+
+class OrderItemShowDTO(_BaseOrderItemDTO):
+    id: Base64Int
+    product: OrderItemProduct
 
 
 class CustomerDataDTO(BaseDTO):

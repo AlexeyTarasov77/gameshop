@@ -47,7 +47,7 @@ class OrderItem(SqlAlchemyBaseModel):
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="CASCADE")
     )
-    product: Mapped[Product] = relationship()
+    product: Mapped[Product] = relationship(lazy="joined")
     order_id: Mapped[int] = mapped_column(ForeignKey("order.id"))
     order: Mapped[Order] = relationship(back_populates="items")
     price: Mapped[Decimal]

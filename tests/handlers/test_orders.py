@@ -4,7 +4,7 @@ from decimal import Decimal
 import typing as t
 import pytest
 from sqlalchemy import select
-from core.ioc import get_container
+from core.ioc import Resolve, get_container
 from handlers.test_products import new_product  # noqa
 from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
@@ -181,6 +181,7 @@ def test_get_order(new_order: Order, expected_status: int, order_id: int | None)
         resp_data = resp.json()
         assert "user" in resp_data
         assert "items" in resp_data
+        assert "product" in resp_data["items"][0]
         if user := resp_data.get("user"):
             assert base64_to_int(user["id"]) == new_order.user_id
         resp_order_id = base64_to_int(resp_data["id"])
@@ -210,7 +211,7 @@ def test_list_orders_for_user(
     user_id = ""
     headers = {}
     if with_user_id:
-        token_provider = t.cast(TokenProviderI, get_container().resolve(TokenProviderI))
+        token_provider = Resolve(TokenProviderI)
         token = token_provider.new_token(
             {"uid": new_user.id}, timedelta(days=(-1 if expired_token else 1))
         )
@@ -221,6 +222,7 @@ def test_list_orders_for_user(
     if expected_status == 200:
         check_paginated_response("orders", resp_data, params)
         for order in resp_data["orders"]:
+            assert "product" in order["items"][0]
             if user := order.get("user"):
                 assert base64_to_int(user[id]) == user_id
 

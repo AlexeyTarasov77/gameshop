@@ -1,11 +1,12 @@
 import abc
 from collections.abc import Callable
-import logging
 import typing as t
+from logging import Logger
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from gateways.db.exceptions import AbstractDatabaseExceptionMapper
 from gateways.db.main import SqlAlchemyDatabase
 from news.domain.interfaces import NewsRepositoryI
 from news.repositories import NewsRepository
@@ -26,10 +27,8 @@ from products.repositories import (
     PlatformsRepository,
     ProductsRepository,
 )
-from users.domain.interfaces import UsersRepositoryI
-from users.repositories import UsersRepository
-
-logging.basicConfig(level=logging.DEBUG)
+from users.domain.interfaces import TokensRepositoryI, UsersRepositoryI
+from users.repositories import TokensRepository, UsersRepository
 
 
 class AcceptsSessionI(t.Protocol):
@@ -43,6 +42,7 @@ class AbstractUnitOfWork[T](abc.ABC):
     platforms_repo: PlatformsRepositoryI
     categories_repo: CategoriesRepositoryI
     users_repo: UsersRepositoryI
+    tokens_repo: TokensRepositoryI
     orders_repo: OrdersRepositoryI
     order_items_repo: OrderItemsRepositoryI
 
@@ -75,17 +75,16 @@ class AbstractUnitOfWork[T](abc.ABC):
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
     def __init__(
         self,
+        exception_mapper: AbstractDatabaseExceptionMapper,
         session_factory: async_sessionmaker[AsyncSession],
-        logger: logging.Logger,
+        logger: Logger,
     ) -> None:
         self.logger = logger
+        self.exception_mapper = exception_mapper
         super().__init__(session_factory)
 
     def _handle_exc(self, exc: Exception) -> t.NoReturn:
-        from core.ioc import get_container
-
-        db = t.cast(SqlAlchemyDatabase, get_container().resolve(SqlAlchemyDatabase))
-        db.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
+        self.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
 
     async def __aenter__(self) -> t.Self:
         return await super().__aenter__()
@@ -93,6 +92,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
     def _init_repos(self):
         # initializing repositories using created session
         self.users_repo = self._register_repo(UsersRepository)
+        self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
         self.platforms_repo = self._register_repo(PlatformsRepository)
         self.categories_repo = self._register_repo(CategoriesRepository)

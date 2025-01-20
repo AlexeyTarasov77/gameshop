@@ -9,8 +9,9 @@ from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
 
 from users.domain.interfaces import (
-    HasherI,
     MailProviderI,
+    PasswordHasherI,
+    TokenHasherI,
     TokenProviderI,
     UsersRepositoryI,
 )
@@ -35,17 +36,19 @@ class UsersService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
+        token_hasher: TokenHasherI,
+        password_hasher: PasswordHasherI,
+        token_provider: TokenProviderI,
+        mail_provider: MailProviderI,
         activation_token_ttl: timedelta,
         auth_token_ttl: timedelta,
         activation_link: str,
     ) -> None:
         super().__init__(uow)
-        from core.ioc import get_container
-
-        container = get_container()
-        self.hasher = t.cast(HasherI, container.resolve(HasherI))
-        self.token_provider = t.cast(TokenProviderI, container.resolve(TokenProviderI))
-        self.mail_provider = t.cast(MailProviderI, container.resolve(MailProviderI))
+        self.password_hasher = password_hasher
+        self.token_hasher = token_hasher
+        self.token_provider = token_provider
+        self.mail_provider = mail_provider
         self.activation_link = activation_link
         self.activation_token_ttl = activation_token_ttl
         self.auth_token_ttl = auth_token_ttl
@@ -54,14 +57,14 @@ class UsersService(BaseService):
         return self.token_provider.new_token({"uid": uid}, self.activation_token_ttl)
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
-        password_hash = self.hasher.hash(dto.password)
+        password_hash = self.password_hasher.hash(dto.password)
         try:
             async with self.uow as uow:
-                repo = t.cast(UsersRepositoryI, uow.users_repo)
-                user = await repo.create_with_hashed_password(
+                user = await uow.users_repo.create_with_hashed_password(
                     dto,
                     password_hash=password_hash,
                 )
+                activation_token = await uow.tokens_repo
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(
                 email=dto.email, username=dto.username
@@ -90,7 +93,7 @@ class UsersService(BaseService):
             raise self.exception_mapper.map_with_entity(e)(email=dto.email) from e
         if not user.is_active:
             raise UserIsNotActivatedError()
-        if not self.hasher.compare(dto.password, user.password_hash):
+        if not self.password_hasher.compare(dto.password, user.password_hash):
             raise PasswordDoesNotMatchError()
         return self.token_provider.new_token({"uid": user.id}, self.auth_token_ttl)
 

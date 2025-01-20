@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
+from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 import asyncio
 from orders.models import Order, OrderItem
@@ -9,6 +10,7 @@ from orders.schemas import (
     OrderItemCreateDTO,
     UpdateOrderDTO,
 )
+from products.models import Product
 
 
 class OrdersRepository(PaginationRepository[Order]):
@@ -36,16 +38,41 @@ class OrdersRepository(PaginationRepository[Order]):
     async def delete_by_id(self, order_id: int) -> None:
         return await super().delete(id=order_id)
 
+    def _get_rels_load_options(self):
+        return selectinload(self.model.items).options(
+            joinedload(OrderItem.product).load_only(Product.id, Product.name)
+        )
+
+    async def _paginated_list(self, limit: int, offset: int, **filter_by):
+        stmt = (
+            select(self.model)
+            .offset(offset)
+            .limit(limit)
+            .filter_by(**filter_by)
+            .options(self._get_rels_load_options())
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
+
     async def list_orders_for_user(
         self, limit: int, offset: int, user_id: int
     ) -> Sequence[Order]:
-        return await super().paginated_list(limit, offset, user_id=user_id)
+        return await self._paginated_list(limit, offset, user_id=user_id)
 
     async def list_all_orders(self, limit: int, offset: int) -> Sequence[Order]:
-        return await super().paginated_list(limit, offset)
+        return await self._paginated_list(limit, offset)
 
     async def get_by_id(self, order_id: int) -> Order:
-        return await super().get_one(id=order_id)
+        stmt = (
+            select(self.model)
+            .filter_by(id=order_id)
+            .options(self._get_rels_load_options())
+        )
+        res = await self.session.execute(stmt)
+        order = res.scalars().one_or_none()
+        if not order:
+            raise NotFoundError()
+        return order
 
 
 class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
