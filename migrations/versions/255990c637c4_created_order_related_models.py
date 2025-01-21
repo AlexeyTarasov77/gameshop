@@ -58,10 +58,7 @@ def upgrade() -> None:
         sa.Column(
             "quantity", sa.Integer(), nullable=False, server_default=sa.text("0")
         ),
-        sa.ForeignKeyConstraint(
-            ["order_id"],
-            ["order.id"],
-        ),
+        sa.ForeignKeyConstraint(["order_id"], ["order.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["product_id"], ["product.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )

@@ -5,7 +5,7 @@ from typing import Sequence
 
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import delete, insert, select, update, text
+from sqlalchemy import CursorResult, delete, insert, select, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -74,9 +74,13 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
             raise NotFoundError()
         return obj
 
-    async def delete(self, **filter_by) -> None:
+    async def delete(self, **filter_by) -> CursorResult:
         stmt = delete(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
+        return res
+
+    async def delete_or_raise_not_found(self, **filter_by) -> None:
+        res = await self.delete(**filter_by)
         if res.rowcount < 1:
             raise NotFoundError()
 

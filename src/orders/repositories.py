@@ -32,7 +32,7 @@ class OrdersRepository(PaginationRepository[Order]):
         return await super().update(dto.model_dump(), id=order_id)
 
     async def delete_by_id(self, order_id: int) -> None:
-        return await super().delete(id=order_id)
+        return await super().delete_or_raise_not_found(id=order_id)
 
     def _get_rels_load_options(self):
         return selectinload(self.model.items).options(

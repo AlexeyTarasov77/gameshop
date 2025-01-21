@@ -14,7 +14,6 @@ from users.domain.interfaces import (
     StatefullTokenProviderI,
     TokenHasherI,
     StatelessTokenProviderI,
-    UsersRepositoryI,
 )
 from users.schemas import CreateUserDTO, ShowUser, UserSignInDTO
 
@@ -115,6 +114,7 @@ class UsersService(BaseService):
             async with self.uow as uow:
                 token = await uow.tokens_repo.get_by_hash(token_hash)
                 user = await uow.users_repo.update_by_id(token.user_id, is_active=True)
+                await uow.tokens_repo.delete_all_for_user(user.id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return ShowUser.model_validate(user)
@@ -123,6 +123,7 @@ class UsersService(BaseService):
         try:
             async with self.uow as uow:
                 user = await uow.users_repo.get_by_email(email)
+                await uow.tokens_repo.delete_all_for_user(user.id)
                 plain_token, token_obj = self.statefull_token_provider.new_token(
                     user.id, self.activation_token_ttl
                 )

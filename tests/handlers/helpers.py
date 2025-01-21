@@ -1,6 +1,8 @@
 import base64
+from logging import Logger
 from typing import Any
 from sqlalchemy.inspection import inspect
+from core.ioc import Resolve
 from handlers.conftest import db
 from gateways.db.models import SqlAlchemyBaseModel
 from core.pagination import PaginatedResponse
@@ -45,7 +47,11 @@ def check_paginated_response(
 def create_model_obj(model: type[SqlAlchemyBaseModel], **values):
     if not values:
         raise Exception("Empty values")
-    pk_col_name = inspect(model).primary_key[0].name
+    pks = inspect(model).primary_key
+    if len(pks) > 1:
+        Resolve(Logger).warning("create_model_obj: %s has more than one pk", model)
+    assert pks, f"{model} has no pk"
+    pk_col_name = pks[0].name
     with db.sync_engine.begin() as conn:
         stmt = insert(model).values(**values).returning(model)
         res = conn.execute(stmt)

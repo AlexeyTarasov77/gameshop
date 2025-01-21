@@ -1,3 +1,5 @@
+from contextlib import suppress
+from logging import Logger
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -9,7 +11,7 @@ from handlers.test_products import new_product  # noqa
 from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
 from orders.handlers import router
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderItem, OrderStatus
 from products.models import Product
 from handlers.helpers import (
     create_model_obj,
@@ -22,6 +24,9 @@ from handlers.helpers import (
 from users.domain.interfaces import StatelessTokenProviderI
 from users.models import User
 
+if t.TYPE_CHECKING:
+    from _typeshed import SupportsNext
+
 
 def _gen_customer_data() -> dict[str, str]:
     return {
@@ -32,28 +37,40 @@ def _gen_customer_data() -> dict[str, str]:
     }
 
 
-def _gen_order_data() -> dict[str, str]:
-    customer_data = _gen_customer_data()
-    data = {
-        **{"customer_" + k: v for k, v in customer_data.items()},
-        "items": [_gen_order_item_data() for _ in range(random.randint(1, 10))],
-    }
-    return data
-
-
-def _gen_order_item_data() -> dict:
+def _gen_order_item_data(order_id: int | None = None) -> dict:
     with db.sync_engine.begin() as conn:
         product_ids = conn.execute(select(Product.id)).scalars().all()
-    return {
+    data = {
         "price": str(Decimal(fake.random_int(100))),
         "quantity": fake.random_int(1, 10),
         "product_id": random.choice(product_ids),
     }
+    if order_id:
+        data["order_id"] = order_id
+    return data
+
+
+def _gen_order_data() -> dict[str, str]:
+    customer_data = _gen_customer_data()
+    data = {**{"customer_" + k: v for k, v in customer_data.items()}}
+    return data
 
 
 @pytest.fixture
 def new_order(new_user: User):  # noqa
-    yield from create_model_obj(Order, **_gen_order_data())
+    data = _gen_order_data()
+    order_coro = create_model_obj(Order, **data, user_id=new_user.id)
+    order = next(order_coro)
+    items_coros: list[SupportsNext] = [
+        create_model_obj(OrderItem, **_gen_order_item_data(order.id))
+        for _ in range(random.randint(1, 10))
+    ]
+    [next(coro) for coro in items_coros]
+    yield order
+    # cleanup order and its items
+    with suppress(StopIteration):
+        [next(coro) for coro in items_coros]
+        next(order_coro)
 
 
 def _gen_order_create_data():
@@ -179,10 +196,11 @@ def test_get_order(new_order: Order, expected_status: int, order_id: int | None)
     assert resp.status_code == expected_status
     if expected_status == 200:
         resp_data = resp.json()
+        print("RESP DATA", resp_data, "ITEMS", resp_data["items"])
         assert "user" in resp_data["customer"]
         assert "items" in resp_data
         assert "product" in resp_data["items"][0]
-        if user := resp_data.get("user"):
+        if user := resp_data["customer"].get("user"):
             assert base64_to_int(user["id"]) == new_order.user_id
         resp_order_id = base64_to_int(resp_data["id"])
         assert resp_order_id == new_order.id
@@ -208,7 +226,6 @@ def test_list_orders_for_user(
     with_user_id: bool,
     expired_token: bool,
 ):
-    user_id = ""
     headers = {}
     if with_user_id:
         token_provider = Resolve(StatelessTokenProviderI)
@@ -224,7 +241,7 @@ def test_list_orders_for_user(
         for order in resp_data["orders"]:
             assert "product" in order["items"][0]
             if user := order["customer"].get("user"):
-                assert base64_to_int(user[id]) == user_id
+                assert base64_to_int(user["id"]) == new_user.id
 
 
 @pytest.mark.parametrize(["expected_status", "params"], pagination_test_cases)

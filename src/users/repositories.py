@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+
+from sqlalchemy import delete
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
 from users.models import Token, User
@@ -30,3 +32,6 @@ class TokensRepository(SqlAlchemyRepository[Token]):
 
     async def get_by_hash(self, hash: bytes) -> Token:
         return await super().get_one(hash=hash)
+
+    async def delete_all_for_user(self, user_id: int) -> None:
+        await super().delete(user_id=user_id)

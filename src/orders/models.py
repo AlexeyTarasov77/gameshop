@@ -28,11 +28,13 @@ class Order(SqlAlchemyBaseModel):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE")
     )
-    user: Mapped[User | None] = relationship(back_populates="orders", lazy="joined")
+    user: Mapped[User | None] = relationship(
+        back_populates="orders", lazy="joined", passive_deletes=True
+    )
     customer_phone: Mapped[str | None]
     customer_name: Mapped[str | None]
     items: Mapped[list["OrderItem"]] = relationship(
-        back_populates="order", lazy="selectin"
+        back_populates="order", lazy="selectin", passive_deletes=True
     )
     status: Mapped[OrderStatus] = mapped_column(
         server_default=text(OrderStatus.PENDING.value)
@@ -45,10 +47,10 @@ class Order(SqlAlchemyBaseModel):
 class OrderItem(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     product_id: Mapped[int] = mapped_column(
-        ForeignKey("product.id", ondelete="CASCADE")
+        ForeignKey("product.id", ondelete="RESTRICT")
     )
     product: Mapped[Product] = relationship(lazy="joined")
-    order_id: Mapped[int] = mapped_column(ForeignKey("order.id"))
+    order_id: Mapped[int] = mapped_column(ForeignKey("order.id", ondelete="CASCADE"))
     order: Mapped[Order] = relationship(back_populates="items")
     price: Mapped[Decimal]
     quantity: Mapped[int] = mapped_column(CheckConstraint("quantity > 0"))

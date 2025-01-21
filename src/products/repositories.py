@@ -38,7 +38,7 @@ class ProductsRepository(PaginationRepository[Product]):
         return product
 
     async def delete_by_id(self, product_id: int) -> None:
-        await super().delete(id=product_id)
+        await super().delete_or_raise_not_found(id=product_id)
 
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)
