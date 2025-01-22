@@ -1,5 +1,6 @@
 import typing as t
 
+from core.pagination import PaginationParams
 from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
@@ -11,7 +12,13 @@ class ProductsRepositoryI(t.Protocol):
 
     async def delete_by_id(self, product_id: int) -> None: ...
 
-    async def paginated_list(self, limit: int, offset: int) -> t.Sequence[Product]: ...
+    async def paginated_list(
+        self, pagination_params: PaginationParams
+    ) -> t.Sequence[Product]: ...
+
+    async def search_paginated_list(
+        self, query: str, pagination_params: PaginationParams
+    ) -> t.Sequence[Product]: ...
 
     async def get_records_count(self) -> int: ...
 

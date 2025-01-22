@@ -16,7 +16,6 @@ from handlers.helpers import (
 )
 from sqlalchemy import text
 
-from gateways.db.models import SqlAlchemyBaseModel
 from handlers.conftest import client, db, fake
 from products.handlers import router
 from products.models import BaseRefModel, Category, DeliveryMethod, Platform, Product
@@ -31,8 +30,6 @@ def compare_product_fields(
         except TypeError:
             return getattr(comparable, key)
 
-    if isinstance(comparable, SqlAlchemyBaseModel):
-        comparable.__getitem__ = comparable.__getattribute__
     assert src["name"] == get_comparable_val("name")
     assert src["description"] == get_comparable_val("description")
     assert src["regular_price"] == str(get_comparable_val("regular_price"))
@@ -300,3 +297,28 @@ def test_categories_list(new_category: Category):
 
 def test_delivery_methods_list(new_delivery_method: DeliveryMethod):
     _test_objects_list_helper(new_delivery_method, "delivery-methods")
+
+
+@pytest.mark.parametrize(
+    ["expected_status", "params"],
+    [
+        (200, {"query": "".join(fake.random_letters(2))}),
+        (
+            200,
+            {"page_size": 5, "page_num": 1, "query": "".join(fake.random_letters(2))},
+        ),
+        (422, None),
+        (422, {"query": ""}),
+        (422, {"page_size": 0, "query": "".join(fake.random_letters(2))}),
+        (422, {"page_num": 0, "query": "".join(fake.random_letters(2))}),
+    ],
+)
+def test_search_products(expected_status: int, params: dict[str, int] | None):
+    resp = client.get(f"{router.prefix}/search", params=params)
+    assert resp.status_code == expected_status
+    resp_data = resp.json()
+    if expected_status == 200:
+        assert params
+        check_paginated_response("products", resp_data, params)
+        for product in resp_data["products"]:
+            assert params["query"] in product["name"]

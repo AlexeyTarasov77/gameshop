@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Sequence
 
+from core.pagination import PaginationParams
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import CursorResult, delete, insert, select, update, text
@@ -86,8 +87,17 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
 
 
 class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
-    async def paginated_list(self, limit: int, offset: int, **filter_by) -> Sequence[T]:
-        stmt = select(self.model).offset(offset).limit(limit).filter_by(**filter_by)
+    def _get_pagination_stmt(self, pagination_params: PaginationParams):
+        return (
+            select(self.model)
+            .offset(pagination_params.calc_offset())
+            .limit(pagination_params.page_size)
+        )
+
+    async def paginated_list(
+        self, pagination_params: PaginationParams, **filter_by
+    ) -> Sequence[T]:
+        stmt = self._get_pagination_stmt(pagination_params).filter_by(**filter_by)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 

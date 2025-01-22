@@ -1,6 +1,8 @@
 import typing as t
 from http import HTTPStatus
 
+from pydantic import ValidationError
+
 from core.http.exceptions import HttpExceptionsMapper
 from core.http.utils import EntityIDParam
 from core.pagination import PaginatedResponse, PaginationDep
@@ -107,3 +109,24 @@ async def delivery_methods_list(
     products_service: ProductsServiceDep,
 ) -> dict[str, list[schemas.DeliveryMethodDTO]]:
     return {"delivery_methods": await products_service.delivery_methods_list()}
+
+
+@router.get("/search")
+async def search_products(
+    query: schemas.SearchQuery,
+    pagination_params: PaginationDep,
+    products_service: ProductsServiceDep,
+) -> ProductsPaginatedResponse:
+    try:
+        products, total_records = await products_service.search_products(
+            query, pagination_params
+        )
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+    return ProductsPaginatedResponse(
+        products=products,
+        total_records=total_records,
+        total_on_page=len(products),
+        first_page=1,
+        **pagination_params.model_dump(),
+    )

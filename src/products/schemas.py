@@ -18,7 +18,14 @@ def _check_discount[T: int](value: T) -> T:
     return value
 
 
+def _check_query(value: str) -> str:
+    stripped = value.strip()
+    assert stripped
+    return stripped
+
+
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
+SearchQuery = Annotated[str, AfterValidator(_check_query)]
 ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 
@@ -67,15 +74,6 @@ class BaseShowProductDTO(BaseProductDTO):
     total_price: Decimal
     created_at: datetime
     updated_at: datetime
-
-    # @computed_field
-    # @property
-    # def total_price(self) -> Decimal:
-    #     discount = self.discount
-    #     if self.discount_valid_to and datetime.now() > self.discount_valid_to:
-    #         discount = 0
-    #     return self.regular_price - discount // 100 * self.regular_price
-    #
 
 
 class ShowProduct(BaseShowProductDTO):

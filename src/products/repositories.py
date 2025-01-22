@@ -1,5 +1,6 @@
+from collections.abc import Sequence
+from core.pagination import PaginationParams
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
-from sqlalchemy import select, text
 
 from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
@@ -7,6 +8,17 @@ from products.schemas import CreateProductDTO, UpdateProductDTO
 
 class ProductsRepository(PaginationRepository[Product]):
     model = Product
+
+    async def search_paginated_list(
+        self, query: str, pagination_params: PaginationParams
+    ) -> Sequence[Product]:
+        stmt = (
+            super()
+            ._get_pagination_stmt(pagination_params)
+            .where(self.model.name.match(query))
+        )
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
     async def create(self, dto: CreateProductDTO) -> Product:
         product = await super().create(

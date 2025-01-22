@@ -91,3 +91,18 @@ class ProductsService(BaseService):
                 await uow.products_repo.delete_by_id(product_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(id=product_id) from e
+
+    async def search_products(
+        self, query: str, pagination_params: PaginationParams
+    ) -> tuple[list[ShowProductWithRelations], int]:
+        try:
+            async with self.uow as uow:
+                products = await uow.products_repo.search_paginated_list(
+                    query, pagination_params
+                )
+                total_records = await uow.products_repo.get_records_count()
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)() from e
+        return [
+            ShowProductWithRelations.model_validate(product) for product in products
+        ], total_records
