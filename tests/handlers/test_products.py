@@ -16,9 +16,27 @@ from handlers.helpers import (
 )
 from sqlalchemy import text
 
+from gateways.db.models import SqlAlchemyBaseModel
 from handlers.conftest import client, db, fake
 from products.handlers import router
 from products.models import BaseRefModel, Category, DeliveryMethod, Platform, Product
+
+
+def compare_product_fields(
+    src: dict[str, t.Any], comparable: dict[str, t.Any] | Product
+):
+    def get_comparable_val(key: str):
+        try:
+            return comparable[key]  # type: ignore
+        except TypeError:
+            return getattr(comparable, key)
+
+    if isinstance(comparable, SqlAlchemyBaseModel):
+        comparable.__getitem__ = comparable.__getattribute__
+    assert src["name"] == get_comparable_val("name")
+    assert src["description"] == get_comparable_val("description")
+    assert src["regular_price"] == str(get_comparable_val("regular_price"))
+    assert src["discount"] == get_comparable_val("discount")
 
 
 def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
@@ -148,10 +166,7 @@ def test_create_product(
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 201:
-        assert resp_data["name"] == data["name"]
-        assert resp_data["description"] == data["description"]
-        assert resp_data["regular_price"] == data["regular_price"]
-        assert resp_data["discount"] == data["discount"]
+        compare_product_fields(resp_data, data)
         assert is_base64(resp_data["category_id"])
         assert is_base64(resp_data["delivery_method_id"])
         assert is_base64(resp_data["platform_id"])
@@ -181,10 +196,14 @@ def test_update_product(
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 200:
-        assert is_base64(resp_data["id"])
-        assert is_base64(resp_data["category_id"])
-        assert is_base64(resp_data["platform_id"])
-        assert is_base64(resp_data["delivery_method_id"])
+        assert all(
+            [
+                is_base64(resp_data["delivery_method_id"]),
+                is_base64(resp_data["platform_id"]),
+                is_base64(resp_data["category_id"]),
+                is_base64(resp_data["id"]),
+            ]
+        )
 
         resp_data["id"] = base64_to_int(resp_data["id"])
         resp_data["category_id"] = base64_to_int(resp_data["category_id"])
@@ -241,10 +260,8 @@ def test_get_product(
         resp_data = resp.json()
         assert "product" in resp_data
         resp_product = resp_data["product"]
-        assert resp_product["name"] == new_product.name
-        assert resp_product["description"] == new_product.description
-        assert resp_product["regular_price"] == str(new_product.regular_price)
-        assert resp_product["discount"] == new_product.discount
+        compare_product_fields(resp_product, new_product)
+        assert resp_product["total_price"] == str(new_product.total_price)
         assert base64_to_int(resp_product["category"]["id"]) == new_product.category_id
         assert base64_to_int(resp_product["platform"]["id"]) == new_product.platform_id
         assert (

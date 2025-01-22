@@ -1,4 +1,5 @@
 import base64
+from collections.abc import Generator
 from logging import Logger
 from typing import Any
 from sqlalchemy.inspection import inspect
@@ -44,7 +45,9 @@ def check_paginated_response(
             assert data_obj.page_num == params["page_num"]
 
 
-def create_model_obj(model: type[SqlAlchemyBaseModel], **values):
+def create_model_obj[T: type[SqlAlchemyBaseModel]](
+    model: T, **values
+) -> Generator[T, Any, Any]:
     if not values:
         raise Exception("Empty values")
     pks = inspect(model).primary_key
@@ -54,16 +57,21 @@ def create_model_obj(model: type[SqlAlchemyBaseModel], **values):
     pk_col_name = pks[0].name
     with db.sync_engine.begin() as conn:
         stmt = insert(model).values(**values).returning(model)
-        res = conn.execute(stmt)
-        obj = res.one()
+        res = conn.execute(stmt).first()
+        assert res
+        obj = model(**res._mapping)
     yield obj
     with db.sync_engine.begin() as conn:
         stmt = delete(model).filter_by(**{pk_col_name: getattr(obj, pk_col_name)})
         conn.execute(stmt)
 
 
-def get_model_obj(model: type[SqlAlchemyBaseModel], **filter_by):
+def get_model_obj[T: type[SqlAlchemyBaseModel]](model: T, **filter_by) -> T | None:
     with db.sync_engine.begin() as conn:
         stmt = select(model).filter_by(**filter_by)
-        res = conn.execute(stmt)
-        return res.one_or_none()
+        res = conn.execute(stmt).first()
+        if res is not None:
+            return model(
+                **{k: v for k, v in res._mapping.items() if k in model.__table__.c}
+            )
+        return None

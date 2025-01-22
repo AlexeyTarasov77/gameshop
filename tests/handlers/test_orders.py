@@ -196,10 +196,12 @@ def test_get_order(new_order: Order, expected_status: int, order_id: int | None)
     assert resp.status_code == expected_status
     if expected_status == 200:
         resp_data = resp.json()
-        print("RESP DATA", resp_data, "ITEMS", resp_data["items"])
         assert "user" in resp_data["customer"]
         assert "items" in resp_data
         assert "product" in resp_data["items"][0]
+        assert Decimal(resp_data["total"]) == sum(
+            Decimal(item["total_price"]) for item in resp_data["items"]
+        )
         if user := resp_data["customer"].get("user"):
             assert base64_to_int(user["id"]) == new_order.user_id
         resp_order_id = base64_to_int(resp_data["id"])
@@ -240,6 +242,9 @@ def test_list_orders_for_user(
         check_paginated_response("orders", resp_data, params)
         for order in resp_data["orders"]:
             assert "product" in order["items"][0]
+            assert order["total"] == str(
+                sum([Decimal(item["total_price"]) for item in order["items"]])
+            )
             if user := order["customer"].get("user"):
                 assert base64_to_int(user["id"]) == new_user.id
 
@@ -255,4 +260,8 @@ def test_list_all_orders(
     assert resp.status_code == expected_status
     resp_data = resp.json()
     if expected_status == 200:
+        for order in resp_data["orders"]:
+            assert order["total"] == str(
+                sum([Decimal(item["total_price"]) for item in order["items"]])
+            )
         check_paginated_response("orders", resp_data, params)

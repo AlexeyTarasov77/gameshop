@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 import re
 from typing import Annotated, Self
-from pydantic import AfterValidator, EmailStr, Field, field_validator
+from pydantic import AfterValidator, EmailStr, Field, computed_field, field_validator
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import Order, OrderStatus
@@ -60,6 +60,13 @@ class OrderItemProduct(BaseDTO):
 class OrderItemShowDTO(_BaseOrderItemDTO):
     id: Base64Int
     product: OrderItemProduct
+    total_price: Decimal
+
+    # @computed_field
+    # @property
+    # def total_price(self) -> Decimal:
+    #     return self.price * self.quantity
+    #
 
 
 class CustomerDTO(BaseDTO):
@@ -120,17 +127,25 @@ class ShowOrder(BaseDTO):
     id: Base64Int
     order_date: datetime
     status: OrderStatus
+    total: Decimal
     customer: CustomerWithUserIdDTO
 
     @classmethod
     def from_model(cls, order: Order, **kwargs):
-        return cls(
-            **order.dump(),
-            customer=cls.__annotations__["customer"].from_order(order),
-            **kwargs,
+        return cls.model_validate(
+            {
+                **order.dump(),
+                "customer": cls.__annotations__["customer"].from_order(order),
+                **kwargs,
+            }
         )
 
 
 class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
     customer: CustomerWithUserDTO  # type: ignore
+
+    # @computed_field
+    # @property
+    # def total(self) -> Decimal:
+    #     return Decimal(sum(item.total_price for item in self.items))

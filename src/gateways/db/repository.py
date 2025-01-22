@@ -54,7 +54,7 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
     async def get_one(self, **filter_by) -> T:
         stmt = select(self.model).filter_by(**filter_by).limit(1)
         res = await self.session.execute(stmt)
-        obj = res.scalars().one_or_none()
+        obj = res.scalar_one_or_none()
         if not obj:
             raise NotFoundError()
         return obj

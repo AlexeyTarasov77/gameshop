@@ -26,7 +26,7 @@ class OrdersService(BaseService):
                 raise self.exception_mapper.map_with_entity(e)(
                     **dto.model_dump()
                 ) from e
-        return ShowOrder.from_model(order)
+        return ShowOrder.from_model(order, total=order.total)
 
     async def update_order(self, dto: UpdateOrderDTO, order_id: int) -> ShowOrder:
         try:
@@ -36,7 +36,7 @@ class OrdersService(BaseService):
             raise self.exception_mapper.map_with_entity(e)(
                 id=order_id,
             ) from e
-        return ShowOrder.from_model(order)
+        return ShowOrder.from_model(order, total=order.total)
 
     async def delete_order(self, order_id: int) -> None:
         try:
@@ -61,7 +61,9 @@ class OrdersService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return [
-            ShowOrderExtended.from_model(order, items=order.items, user=order.user)
+            ShowOrderExtended.from_model(
+                order, items=order.items, user=order.user, total=order.total
+            )
             for order in orders
         ], total_records
 
@@ -78,7 +80,9 @@ class OrdersService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
         return [
-            ShowOrderExtended.from_model(order, items=order.items, user=order.user)
+            ShowOrderExtended.from_model(
+                order, items=order.items, user=order.user, total=order.total
+            )
             for order in orders
         ], total_records
 
@@ -88,4 +92,6 @@ class OrdersService(BaseService):
                 order = await uow.orders_repo.get_by_id(order_id)
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e
-        return ShowOrderExtended.from_model(order, items=order.items, user=order.user)
+        return ShowOrderExtended.from_model(
+            order, items=order.items, user=order.user, total=order.total
+        )

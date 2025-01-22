@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from core.schemas import Base64Int, BaseDTO, UrlStr
-from pydantic import AfterValidator, Field
+from pydantic import AfterValidator, Field, computed_field
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -64,8 +64,18 @@ class UpdateProductDTO(BaseDTO):
 class BaseShowProductDTO(BaseProductDTO):
     id: Base64Int
     discount_valid_to: datetime | None
+    total_price: Decimal
     created_at: datetime
     updated_at: datetime
+
+    # @computed_field
+    # @property
+    # def total_price(self) -> Decimal:
+    #     discount = self.discount
+    #     if self.discount_valid_to and datetime.now() > self.discount_valid_to:
+    #         discount = 0
+    #     return self.regular_price - discount // 100 * self.regular_price
+    #
 
 
 class ShowProduct(BaseShowProductDTO):

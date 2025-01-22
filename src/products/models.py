@@ -42,7 +42,7 @@ class Product(SqlAlchemyBaseModel):
     updated_at: Mapped[updated_at_type]
 
     @property
-    def total_price(self):
+    def total_price(self) -> Decimal:
         discount = self.discount
         if self.discount_valid_to and datetime.now() > self.discount_valid_to:
             discount = 0

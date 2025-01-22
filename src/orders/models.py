@@ -40,8 +40,9 @@ class Order(SqlAlchemyBaseModel):
         server_default=text(OrderStatus.PENDING.value)
     )
 
-    def get_total(self):
-        return sum(item.total_price for item in self.items)
+    @property
+    def total(self) -> Decimal:
+        return Decimal(sum(item.total_price for item in self.items))
 
 
 class OrderItem(SqlAlchemyBaseModel):
@@ -56,5 +57,5 @@ class OrderItem(SqlAlchemyBaseModel):
     quantity: Mapped[int] = mapped_column(CheckConstraint("quantity > 0"))
 
     @property
-    def total_price(self):
+    def total_price(self) -> Decimal:
         return self.price * self.quantity
