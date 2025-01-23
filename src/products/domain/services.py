@@ -38,10 +38,7 @@ class ProductsService(BaseService):
     ) -> tuple[list[ShowProductWithRelations], int]:
         try:
             async with self.uow as uow:
-                products = await uow.products_repo.paginated_list(
-                    limit=pagination_params.page_size,
-                    offset=pagination_params.calc_offset(),
-                )
+                products = await uow.products_repo.paginated_list(pagination_params)
                 total_records = await uow.products_repo.get_records_count()
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e

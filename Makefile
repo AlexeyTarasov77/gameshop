@@ -28,4 +28,4 @@ migrations/run:
 
 .PHONY: api/deploy
 api/deploy:
-	rsync -aPzc -e 'ssh -p 9999' --delete ~/Desktop/Dev/python/fastAPI/gameshop/ root@185.42.14.137:/root/projects/gameshop
+	rsync -aPzc --exclude '.git' -e 'ssh -p 9999' --delete ~/Desktop/Dev/python/fastAPI/gameshop/ root@185.42.14.137:/root/projects/gameshop

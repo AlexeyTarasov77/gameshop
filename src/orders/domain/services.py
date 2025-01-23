@@ -53,9 +53,8 @@ class OrdersService(BaseService):
         try:
             async with self.uow as uow:
                 orders = await uow.orders_repo.list_orders_for_user(
-                    limit=pagination_params.page_size,
-                    offset=pagination_params.calc_offset(),
-                    user_id=user_id,
+                    pagination_params,
+                    user_id,
                 )
                 total_records = await uow.orders_repo.get_records_count()
         except DatabaseError as e:
@@ -72,10 +71,7 @@ class OrdersService(BaseService):
     ) -> tuple[list[ShowOrderExtended], int]:
         try:
             async with self.uow as uow:
-                orders = await uow.orders_repo.list_all_orders(
-                    limit=pagination_params.page_size,
-                    offset=pagination_params.calc_offset(),
-                )
+                orders = await uow.orders_repo.list_all_orders(pagination_params)
                 total_records = await uow.orders_repo.get_records_count()
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)() from e

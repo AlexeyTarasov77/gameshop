@@ -1,4 +1,5 @@
 import typing as t
+from core.pagination import PaginationParams
 from news import schemas
 from news.models import News
 
@@ -10,7 +11,9 @@ class NewsRepositoryI(t.Protocol):
 
     async def delete_by_id(self, news_id: int) -> None: ...
 
-    async def paginated_list(self, limit: int, offset: int) -> t.Sequence[News]: ...
+    async def paginated_list(
+        self, pagination_params: PaginationParams
+    ) -> t.Sequence[News]: ...
 
     async def get_records_count(self) -> int: ...
 
