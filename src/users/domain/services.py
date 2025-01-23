@@ -1,5 +1,4 @@
 import asyncio
-import typing as t
 from datetime import datetime, timedelta
 
 from jwt.exceptions import InvalidTokenError
@@ -145,3 +144,11 @@ class UsersService(BaseService):
             )
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(email=email) from e
+
+    async def get_user(self, user_id: int) -> ShowUser:
+        try:
+            async with self.uow as uow:
+                user = await uow.users_repo.get_by_id(user_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(user_id=user_id) from e
+        return ShowUser.model_validate(user)

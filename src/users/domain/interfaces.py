@@ -1,5 +1,5 @@
 import typing as t
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from users.models import Token, User
 from users.schemas import CreateUserDTO
@@ -13,6 +13,8 @@ class UsersRepositoryI(t.Protocol):
     async def update_by_id(self, user_id: int, **data) -> User: ...
 
     async def get_by_email(self, email: str) -> User: ...
+
+    async def get_by_id(self, user_id: int) -> User: ...
 
 
 class TokensRepositoryI(t.Protocol):

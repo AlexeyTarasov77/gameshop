@@ -1,6 +1,3 @@
-from datetime import datetime, timedelta
-
-from sqlalchemy import delete
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
 from users.models import Token, User
@@ -21,6 +18,9 @@ class UsersRepository(SqlAlchemyRepository[User]):
         return await super().create(
             password_hash=password_hash, **dto.model_dump(exclude={"password"})
         )
+
+    async def get_by_id(self, user_id: int) -> User:
+        return await super().get_one(id=user_id)
 
 
 class TokensRepository(SqlAlchemyRepository[Token]):

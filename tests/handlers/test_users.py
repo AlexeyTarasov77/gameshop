@@ -15,8 +15,6 @@ from users.models import Token, User
 
 from handlers.conftest import client, fake, db
 
-statefull_token_provider = Resolve(StatefullTokenProviderI)
-
 
 def _gen_user_data() -> dict[str, str]:
     return {
@@ -53,7 +51,7 @@ def test_activate_user(
     expected_status: int,
 ):
     def gen_token(user_id: int | None) -> str:
-        plain_token, token_obj = statefull_token_provider.new_token(
+        plain_token, token_obj = Resolve(StatefullTokenProviderI).new_token(
             user_id or new_user.id, timedelta(days=1)
         )
         if user_id is None:
@@ -166,3 +164,36 @@ def test_resend_activation_token(
         f"{router.prefix}/resend-activation-token", json={"email": email}
     )
     assert resp.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    ["token_generator", "is_token_expired", "expected_status"],
+    [
+        (lambda gen_token: gen_token(None), False, 200),
+        (lambda gen_token: gen_token(999999), False, 404),
+        (lambda gen_token: "test", False, 401),
+        (lambda gen_token: gen_token(None), True, 401),
+    ],
+)
+def test_get_user_by_token(
+    new_user: User,
+    token_generator: t.Callable[[t.Callable[[int | None], str]], str],
+    is_token_expired: bool,
+    expected_status: int,
+):
+    def gen_token(user_id: int | None) -> str:
+        return Resolve(StatelessTokenProviderI).new_token(
+            {"uid": user_id or new_user.id},
+            timedelta(days=-1 if is_token_expired else 1),
+        )
+
+    token = token_generator(gen_token)
+
+    resp = client.get(
+        f"{router.prefix}/get-by-token", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == expected_status
+    if expected_status == 200:
+        resp_data = resp.json()
+        assert base64_to_int(resp_data["id"]) == new_user.id
+        assert resp_data["email"] == new_user.email

@@ -5,8 +5,8 @@ from pydantic import EmailStr
 
 from core.http.exceptions import HttpExceptionsMapper
 from core.service import EntityNotFoundError, ServiceError
-from users.dependencies import UsersServiceDep
-from fastapi import APIRouter, Body, HTTPException, status
+from users.dependencies import UsersServiceDep, get_user_id_or_raise
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 
 from users import schemas
 from users.domain.services import (
@@ -72,5 +72,16 @@ async def resend_activation_token(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "User already activated"
         ) from e
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+
+
+@router.get("/get-by-token")
+async def get_user_by_token(
+    user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
+    users_service: UsersServiceDep,
+) -> schemas.ShowUser:
+    try:
+        return await users_service.get_user(user_id)
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)

@@ -1,5 +1,4 @@
 from contextlib import suppress
-from logging import Logger
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -126,18 +125,8 @@ def test_create_order(
     expected_status: int,
     with_auth: bool,
 ):
-    headers = None
-    # if with_auth:
-    #     users_service = t.cast(UsersService, get_container().resolve(UsersService))
-    #     token = asyncio.run(
-    #         users_service.signin(
-    #             UserSignInDTO(
-    #                 email=new_user.email, password=new_user.password_hash.decode()
-    #             )
-    #         )
-    #     )
-    #     headers = {"Authorization": f"Bearer {token}"}
-    resp = client.post(f"{router.prefix}/create", json=data, headers=headers)
+    # TODO: include auth headers
+    resp = client.post(f"{router.prefix}/create", json=data)
     resp_data = resp.json()
     assert resp.status_code == expected_status
     if expected_status == 201:
