@@ -9,14 +9,17 @@ from products.schemas import CreateProductDTO, UpdateProductDTO
 class ProductsRepository(PaginationRepository[Product]):
     model = Product
 
-    async def search_paginated_list(
-        self, query: str, pagination_params: PaginationParams
+    async def filter_paginated_list(
+        self,
+        query: str | None,
+        category_id: int | None,
+        pagination_params: PaginationParams,
     ) -> Sequence[Product]:
-        stmt = (
-            super()
-            ._get_pagination_stmt(pagination_params)
-            .where(self.model.name.match(query))
-        )
+        stmt = super()._get_pagination_stmt(pagination_params)
+        if query:
+            stmt.where(self.model.name.match(query))
+        if category_id:
+            stmt.filter_by(category_id=category_id)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 

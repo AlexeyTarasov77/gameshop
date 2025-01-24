@@ -12,12 +12,11 @@ class ProductsRepositoryI(t.Protocol):
 
     async def delete_by_id(self, product_id: int) -> None: ...
 
-    async def paginated_list(
-        self, pagination_params: PaginationParams
-    ) -> t.Sequence[Product]: ...
-
-    async def search_paginated_list(
-        self, query: str, pagination_params: PaginationParams
+    async def filter_paginated_list(
+        self,
+        query: str | None,
+        category_id: int | None,
+        pagination_params: PaginationParams,
     ) -> t.Sequence[Product]: ...
 
     async def get_records_count(self) -> int: ...

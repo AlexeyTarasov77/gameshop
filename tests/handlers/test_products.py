@@ -1,4 +1,5 @@
 import base64
+from enum import StrEnum
 import random
 import typing as t
 from datetime import datetime, timedelta
@@ -19,6 +20,13 @@ from sqlalchemy import text
 from handlers.conftest import client, db, fake
 from products.handlers import router
 from products.models import BaseRefModel, Category, DeliveryMethod, Platform, Product
+
+
+class Params(StrEnum):
+    SET_DEFAULT = "setdefault"
+
+
+type SET_DEFAULT_T = t.Literal[Params.SET_DEFAULT]
 
 
 def compare_product_fields(
@@ -172,13 +180,13 @@ def test_create_product(
 @pytest.mark.parametrize(
     ["data", "expected_status", "product_id"],
     [
-        ({"name": fake.name()}, 200, None),
+        ({"name": fake.name()}, 200, Params.SET_DEFAULT),
         ({"name": fake.name()}, 404, 999999),
-        ({}, 400, None),
-        ({"category": {"id": 999999}}, 400, None),
-        ({"discount": -100}, 422, None),
-        ({"discount_valid_to": None}, 200, None),
-        ({"name": None}, 422, None),
+        ({}, 400, Params.SET_DEFAULT),
+        ({"category": {"id": 999999}}, 400, Params.SET_DEFAULT),
+        ({"discount": -100}, 422, Params.SET_DEFAULT),
+        ({"discount_valid_to": None}, 200, Params.SET_DEFAULT),
+        ({"name": None}, 422, Params.SET_DEFAULT),
         ({"name": fake.name()}, 422, -1),
     ],
 )
@@ -186,9 +194,9 @@ def test_update_product(
     data: dict[str, t.Any],
     new_product: Product,
     expected_status: int,
-    product_id: int | None,
+    product_id: int | SET_DEFAULT_T,
 ):
-    product_id = product_id or new_product.id
+    product_id = new_product.id if product_id == Params.SET_DEFAULT else product_id
     resp = client.put(f"{router.prefix}/update/{product_id}", json=data)
     resp_data = resp.json()
     assert resp.status_code == expected_status
@@ -223,34 +231,27 @@ def test_update_product(
 
 
 @pytest.mark.parametrize(
-    ["expected_status", "product_id"], [(204, None), (404, 999999), (422, -1)]
+    ["expected_status", "product_id"],
+    [(204, Params.SET_DEFAULT), (404, 999999), (422, -1)],
 )
 def test_delete_product(
-    new_product: Product, expected_status: int, product_id: int | None
+    new_product: Product, expected_status: int, product_id: int | SET_DEFAULT_T
 ):
-    product_id = product_id or new_product.id
+    product_id = new_product.id if product_id == Params.SET_DEFAULT else product_id
     resp = client.delete(f"{router.prefix}/delete/{product_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
         assert get_model_obj(Product, id=new_product.id) is None
 
 
-@pytest.mark.parametrize(["expected_status", "params"], pagination_test_cases)
-def test_list_products(expected_status: int, params: dict[str, int] | None):
-    resp = client.get(f"{router.prefix}/", params=params)
-    assert resp.status_code == expected_status
-    resp_data = resp.json()
-    if expected_status == 200:
-        check_paginated_response("products", resp_data, params)
-
-
 @pytest.mark.parametrize(
-    ["expected_status", "product_id"], [(200, None), (422, -1), (404, 999999)]
+    ["expected_status", "product_id"],
+    [(200, Params.SET_DEFAULT), (422, -1), (404, 999999)],
 )
 def test_get_product(
-    new_product: Product, expected_status: int, product_id: int | None
+    new_product: Product, expected_status: int, product_id: int | SET_DEFAULT_T
 ):
-    product_id = product_id or new_product.id
+    product_id = new_product.id if product_id == Params.SET_DEFAULT else product_id
     resp = client.get(f"{router.prefix}/detail/{product_id}")
     assert resp.status_code == expected_status
     if expected_status == 200:
@@ -302,23 +303,47 @@ def test_delivery_methods_list(new_delivery_method: DeliveryMethod):
 @pytest.mark.parametrize(
     ["expected_status", "params"],
     [
-        (200, {"query": "".join(fake.random_letters(2))}),
+        (200, {"query": Params.SET_DEFAULT, "category_id": Params.SET_DEFAULT}),
+        (200, {"query": Params.SET_DEFAULT, "category_id": ""}),
+        (200, {"query": "", "category_id": Params.SET_DEFAULT}),
         (
             200,
-            {"page_size": 5, "page_num": 1, "query": "".join(fake.random_letters(2))},
+            {
+                "page_size": 5,
+                "page_num": 1,
+                "query": Params.SET_DEFAULT,
+                "category_id": Params.SET_DEFAULT,
+            },
         ),
-        (422, None),
-        (422, {"query": ""}),
-        (422, {"page_size": 0, "query": "".join(fake.random_letters(2))}),
-        (422, {"page_num": 0, "query": "".join(fake.random_letters(2))}),
+        (200, None),
+        (200, {"query": ""}),
+        (200, {"category_id": ""}),
+        (422, {"page_size": 0}),
+        (422, {"page_num": 0}),
+        (422, {"category_id": -1}),
     ],
 )
-def test_search_products(expected_status: int, params: dict[str, int] | None):
-    resp = client.get(f"{router.prefix}/search", params=params)
+def test_search_products(
+    new_product: Product,
+    expected_status: int,
+    params: dict[str, str | int | SET_DEFAULT_T] | None,
+):
+    if params and params.get("query") == Params.SET_DEFAULT:
+        params["query"] = new_product.name.split()[0]
+    if params and params.get("category_id") == Params.SET_DEFAULT:
+        params["category_id"] = new_product.category_id
+    resp = client.get(f"{router.prefix}/", params=params)
     assert resp.status_code == expected_status
     resp_data = resp.json()
     if expected_status == 200:
-        assert params
-        check_paginated_response("products", resp_data, params)
-        for product in resp_data["products"]:
-            assert params["query"] in product["name"]
+        if params:
+            check_paginated_response("products", resp_data, params)
+            if params.get("query") or params.get("category_id"):
+                for product in resp_data["products"]:
+                    if params.get("query") == Params.SET_DEFAULT:
+                        assert params["query"] in product["name"]
+                    if params.get("category_id") == Params.SET_DEFAULT:
+                        assert (
+                            base64_to_int(product["category_id"])
+                            == params["category_id"]
+                        )

@@ -17,6 +17,10 @@ def is_base64(s: str) -> bool:
         return False
 
 
+def int_to_base64(n: int) -> str:
+    return base64.b64encode(str(n).encode()).decode()
+
+
 def base64_to_int(s: str) -> int:
     return int(base64.b64decode(s).decode())
 
@@ -30,7 +34,7 @@ pagination_test_cases = [
 
 
 def check_paginated_response(
-    objects_key: str, data: dict[str, Any], params: dict[str, int] | None
+    objects_key: str, data: dict[str, Any], params: dict[str, Any] | None
 ):
     data_obj = PaginatedResponse.model_validate(data)
     assert objects_key in data

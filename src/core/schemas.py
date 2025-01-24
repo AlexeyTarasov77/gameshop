@@ -1,7 +1,7 @@
 import base64
 from typing import Annotated, Any
 
-from fastapi import UploadFile
+from fastapi import Query, UploadFile
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -36,15 +36,28 @@ def _parse_int(s: str | int) -> int:
         return int(base64.b64decode(str(s)))
 
 
+def _parse_id_optional(s: str | int) -> int | None:
+    if s != "":
+        id = _parse_int(s)
+        assert id > 0, "Value should be greater than 0"
+        return id
+
+
 type UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 
 Image = Annotated[UploadFile, AfterValidator(_check_image)]
+_base64int_serializer = PlainSerializer(
+    lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
+)
 Base64Int = Annotated[
     str | int,
     BeforeValidator(_parse_int, json_schema_input_type=str),
-    PlainSerializer(
-        lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
-    ),
+    _base64int_serializer,
+]
+Base64IntOptionalIDParam = Annotated[
+    str | int | None,
+    BeforeValidator(_parse_id_optional, json_schema_input_type=str),
+    _base64int_serializer,
 ]
 
 
@@ -53,4 +66,4 @@ class _Unset:
         return False
 
 
-_unset: Any = _Unset()
+unset: Any = _Unset()
