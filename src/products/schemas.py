@@ -2,8 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO, UrlStr
-from pydantic import AfterValidator, Field, computed_field
+from core.schemas import Base64Int, BaseDTO, UrlStr, _unset
+from pydantic import AfterValidator, Field
 
 
 def _check_datetime[T: datetime](value: T) -> T:
@@ -31,8 +31,8 @@ ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 class CategoryDTO(BaseDTO):
     id: Base64Int = Field(gt=0)
-    name: str = None
-    url: str = None
+    name: str = _unset
+    url: str = _unset
 
 
 class PlatformDTO(CategoryDTO): ...
@@ -45,7 +45,7 @@ class BaseProductDTO(BaseDTO):
     name: str = Field(min_length=3)
     description: str = Field(min_length=10)
     regular_price: Decimal = Field(ge=0)
-    discount: ProductDiscount = None
+    discount: ProductDiscount = 0
     image_url: UrlStr
 
 
@@ -57,15 +57,15 @@ class CreateProductDTO(BaseProductDTO):
 
 
 class UpdateProductDTO(BaseDTO):
-    name: str = Field(min_length=3, default=None)
-    description: str = Field(min_length=10, default=None)
-    regular_price: Decimal = Field(ge=0, default=None)
-    category: CategoryDTO = None
-    platform: PlatformDTO = None
-    delivery_method: DeliveryMethodDTO = None
-    image_url: UrlStr = None
-    discount: ProductDiscount = None
-    discount_valid_to: DateTimeAfterNow | None = None
+    name: str = Field(min_length=3, default=_unset)
+    description: str = Field(min_length=10, default=_unset)
+    regular_price: Decimal = Field(ge=0, default=_unset)
+    category: CategoryDTO = _unset
+    platform: PlatformDTO = _unset
+    delivery_method: DeliveryMethodDTO = _unset
+    image_url: UrlStr = _unset
+    discount: ProductDiscount = _unset
+    discount_valid_to: DateTimeAfterNow | None = _unset
 
 
 class BaseShowProductDTO(BaseProductDTO):

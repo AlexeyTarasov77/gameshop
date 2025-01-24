@@ -1,5 +1,5 @@
 import base64
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import UploadFile
 from pydantic import (
@@ -46,3 +46,11 @@ Base64Int = Annotated[
         lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
     ),
 ]
+
+
+class _Unset:
+    def __bool__(self):
+        return False
+
+
+_unset: Any = _Unset()
