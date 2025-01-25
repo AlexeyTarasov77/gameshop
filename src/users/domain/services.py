@@ -152,3 +152,10 @@ class UsersService(BaseService):
         except DatabaseError as e:
             raise self.exception_mapper.map_with_entity(e)(user_id=user_id) from e
         return ShowUser.model_validate(user)
+
+    async def check_is_user_admin(self, user_id: int):
+        try:
+            async with self.uow as uow:
+                return await uow.admins_repo.check_exists(user_id)
+        except DatabaseError as e:
+            raise self.exception_mapper.map_with_entity(e)(user_id=user_id) from e

@@ -21,6 +21,12 @@ class User(SqlAlchemyBaseModel):
     updated_at: Mapped[updated_at_type]
 
 
+class Admin(SqlAlchemyBaseModel):
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE"), unique=True
+    )
+
+
 class Token(SqlAlchemyBaseModel):
     hash: Mapped[bytes] = mapped_column(BYTEA, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))

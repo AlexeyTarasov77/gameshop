@@ -1,7 +1,7 @@
 from http import HTTPStatus
 import typing as t
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from core.http.exceptions import HttpExceptionsMapper
 from core.ioc import Inject
@@ -10,6 +10,7 @@ from core.pagination import PaginatedResponse, PaginationDep
 from core.service import ServiceError
 from news.domain.services import NewsService
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
+from users.dependencies import require_admin
 
 router = APIRouter(prefix="/news", tags=["news"])
 
@@ -37,7 +38,9 @@ async def list_news(
     )
 
 
-@router.post("/create", status_code=HTTPStatus.CREATED)
+@router.post(
+    "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
+)
 async def create_news(dto: CreateNewsDTO, news_service: NewsServiceDep) -> ShowNews:
     try:
         news = await news_service.create_news(dto)
@@ -55,7 +58,7 @@ async def get_news(news_id: EntityIDParam, news_service: NewsServiceDep) -> Show
     return news
 
 
-@router.patch("/update/{news_id}")
+@router.patch("/update/{news_id}", dependencies=[Depends(require_admin)])
 async def update_news(
     news_id: EntityIDParam, dto: UpdateNewsDTO, news_service: NewsServiceDep
 ) -> ShowNews:
@@ -70,7 +73,11 @@ async def update_news(
     return news
 
 
-@router.delete("/delete/{news_id}", status_code=HTTPStatus.NO_CONTENT)
+@router.delete(
+    "/delete/{news_id}",
+    status_code=HTTPStatus.NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_news(news_id: EntityIDParam, news_service: NewsServiceDep):
     try:
         await news_service.delete_news(int(news_id))

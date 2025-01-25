@@ -13,14 +13,17 @@ from orders.schemas import (
     UpdateOrderDTO,
     ShowOrderExtended,
 )
-from users.dependencies import get_optional_user_id, get_user_id_or_raise
+from users.dependencies import get_optional_user_id, get_user_id_or_raise, require_admin
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 OrdersServiceDep = t.Annotated[OrdersService, Inject(OrdersService)]
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create",
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_order(
     dto: CreateOrderDTO,
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
@@ -35,7 +38,7 @@ async def create_order(
     return order
 
 
-@router.patch("/update/{order_id}")
+@router.patch("/update/{order_id}", dependencies=[Depends(require_admin)])
 async def update_order(
     dto: UpdateOrderDTO, order_id: EntityIDParam, orders_service: OrdersServiceDep
 ):
@@ -50,7 +53,11 @@ async def update_order(
     return order
 
 
-@router.delete("/delete/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/delete/{order_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_order(order_id: EntityIDParam, orders_service: OrdersServiceDep):
     try:
         await orders_service.delete_order(int(order_id))
@@ -64,7 +71,7 @@ class OrdersPaginatedResponse(PaginatedResponse):
     orders: list[ShowOrderExtended]
 
 
-@router.get("/list")
+@router.get("/list", dependencies=[Depends(require_admin)])
 async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,

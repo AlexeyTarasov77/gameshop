@@ -1,6 +1,7 @@
+from sqlalchemy import select
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
-from users.models import Token, User
+from users.models import Admin, Token, User
 
 
 class UsersRepository(SqlAlchemyRepository[User]):
@@ -35,3 +36,12 @@ class TokensRepository(SqlAlchemyRepository[Token]):
 
     async def delete_all_for_user(self, user_id: int) -> None:
         await super().delete(user_id=user_id)
+
+
+class AdminsRepository(SqlAlchemyRepository[Admin]):
+    model = Admin
+
+    async def check_exists(self, user_id: int) -> bool:
+        stmt = select(1).select_from(self.model).filter_by(user_id=user_id)
+        res = await self.session.execute(stmt)
+        return bool(res.scalar_one_or_none())

@@ -17,6 +17,10 @@ class UsersRepositoryI(t.Protocol):
     async def get_by_id(self, user_id: int) -> User: ...
 
 
+class AdminsRepositoryI(t.Protocol):
+    async def check_exists(self, user_id: int) -> bool: ...
+
+
 class TokensRepositoryI(t.Protocol):
     async def save(self, token: Token) -> None: ...
 

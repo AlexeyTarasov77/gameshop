@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 
 from products import schemas
 from products.domain.services import ProductsService
+from users.dependencies import check_is_user_admin_or_raise
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -66,7 +67,9 @@ async def create_product(
     return product
 
 
-@router.put("/update/{product_id}")
+@router.put(
+    "/update/{product_id}", dependencies=[Depends(check_is_user_admin_or_raised)]
+)
 async def update_product(
     product_id: EntityIDParam,
     dto: schemas.UpdateProductDTO,

@@ -6,7 +6,7 @@ from typing import Sequence
 from core.pagination import PaginationParams
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import CursorResult, delete, insert, select, update, text
+from sqlalchemy import CursorResult, delete, insert, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -102,7 +102,7 @@ class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
         return res.scalars().all()
 
     async def get_records_count(self) -> int:
-        stmt = text(f'SELECT COUNT(id) FROM "{self.model.__tablename__}"')
+        stmt = select(func.count("*")).select_from(self.model)
         res = await self.session.execute(stmt)
         count = res.scalar()
         if count is None:
