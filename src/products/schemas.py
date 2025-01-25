@@ -66,6 +66,7 @@ class BaseShowProductDTO(BaseProductDTO):
     id: Base64Int
     discount_valid_to: datetime | None
     total_price: Decimal
+    total_discount: int
     created_at: datetime
     updated_at: datetime
 

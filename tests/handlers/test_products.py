@@ -42,6 +42,9 @@ def compare_product_fields(
     assert src["description"] == get_comparable_val("description")
     assert src["regular_price"] == str(get_comparable_val("regular_price"))
     assert src["discount"] == get_comparable_val("discount")
+    if isinstance(comparable, Product):
+        assert src["total_discount"] == comparable.total_discount
+        assert src["total_price"] == str(comparable.total_price)
 
 
 def _gen_product_data(encode_ids: bool = True) -> dict[str, t.Any]:
@@ -175,6 +178,14 @@ def test_create_product(
         assert is_base64(resp_data["category_id"])
         assert is_base64(resp_data["delivery_method_id"])
         assert is_base64(resp_data["platform_id"])
+        assert (
+            resp_data["total_discount"] == 0
+            if resp_data["discount_valid_to"]
+            and (
+                datetime.now() > datetime.fromisoformat(resp_data["discount_valid_to"])
+            )
+            else resp_data["discount"]
+        )
 
 
 @pytest.mark.parametrize(
@@ -259,7 +270,6 @@ def test_get_product(
         assert "product" in resp_data
         resp_product = resp_data["product"]
         compare_product_fields(resp_product, new_product)
-        assert resp_product["total_price"] == str(new_product.total_price)
         assert base64_to_int(resp_product["category"]["id"]) == new_product.category_id
         assert base64_to_int(resp_product["platform"]["id"]) == new_product.platform_id
         assert (
