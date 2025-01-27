@@ -26,7 +26,7 @@ class ProductsPaginatedResponse(PaginatedResponse):
 async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    query: schemas.SearchQuery | None = None,
+    query: str | None = None,
     category_id: Base64IntOptionalIDParam = None,
 ) -> ProductsPaginatedResponse:
     try:

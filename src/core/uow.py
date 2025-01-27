@@ -32,7 +32,7 @@ from users.domain.interfaces import (
     TokensRepositoryI,
     UsersRepositoryI,
 )
-from users.repositories import TokensRepository, UsersRepository
+from users.repositories import AdminsRepository, TokensRepository, UsersRepository
 
 
 class AcceptsSessionI(t.Protocol):
@@ -97,7 +97,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
     def _init_repos(self):
         # initializing repositories using created session
         self.users_repo = self._register_repo(UsersRepository)
-        self.admins_repo = self._register_repo(Admins)
+        self.admins_repo = self._register_repo(AdminsRepository)
         self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
         self.platforms_repo = self._register_repo(PlatformsRepository)

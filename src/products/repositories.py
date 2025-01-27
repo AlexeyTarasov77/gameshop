@@ -17,9 +17,9 @@ class ProductsRepository(PaginationRepository[Product]):
     ) -> Sequence[Product]:
         stmt = super()._get_pagination_stmt(pagination_params)
         if query:
-            stmt.where(self.model.name.match(query))
+            stmt = stmt.where(self.model.name.match(query))
         if category_id:
-            stmt.filter_by(category_id=category_id)
+            stmt = stmt.filter_by(category_id=category_id)
         res = await self.session.execute(stmt)
         return res.scalars().all()
 

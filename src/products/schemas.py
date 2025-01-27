@@ -19,7 +19,6 @@ def _check_discount[T: int](value: T) -> T:
 
 
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
-SearchQuery = Annotated[str, AfterValidator(lambda value: value.strip())]
 ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 
