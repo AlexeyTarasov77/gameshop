@@ -25,7 +25,7 @@ class AbstractDatabaseExceptionMapper[K: Exception](
 ): ...
 
 
-class PostgresExceptionsMapper(AbstractExceptionMapper[pg_exc.Error, DatabaseError]):
+class PostgresExceptionsMapper(AbstractDatabaseExceptionMapper[pg_exc.Error]):
     EXCEPTION_MAPPING: Mapping[type[pg_exc.Error], type[DatabaseError]] = {
         pg_exc.NoData: NotFoundError,
         pg_exc.UniqueViolation: AlreadyExistsError,

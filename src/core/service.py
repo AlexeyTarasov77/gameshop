@@ -80,5 +80,5 @@ class BaseService:
     entity_name = None
 
     def __init__(self, uow: AbstractUnitOfWork) -> None:
-        self.uow = uow
-        self.exception_mapper = ServiceExceptionMapper(self.entity_name)
+        self._uow = uow
+        self._exception_mapper = ServiceExceptionMapper(self.entity_name)

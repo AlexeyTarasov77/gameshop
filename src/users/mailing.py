@@ -45,13 +45,11 @@ class AsyncMailer:
         to: str,
         from_: str | None = None,
         *,
-        timeout: float | None = None,
+        timeout: float = 3,
     ):
         email_details = f"(to={to}, subject={subject})"
         try:
-            await asyncio.wait_for(
-                self._send_mail(subject, body, to, from_), timeout or 3
-            )
+            await asyncio.wait_for(self._send_mail(subject, body, to, from_), timeout)
             self._logger.info("Email was succesfully sent %s", email_details)
         except asyncio.TimeoutError:
             self._logger.warning("Timeout finish to send email %s", email_details)

@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams
@@ -29,10 +30,10 @@ class OrdersRepository(PaginationRepository[Order]):
             user_id=user_id,
         )
 
-    async def update_by_id(self, dto: UpdateOrderDTO, order_id: int) -> Order:
+    async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order:
         return await super().update(dto.model_dump(), id=order_id)
 
-    async def delete_by_id(self, order_id: int) -> None:
+    async def delete_by_id(self, order_id: UUID) -> None:
         return await super().delete_or_raise_not_found(id=order_id)
 
     def _get_rels_load_options(self):
@@ -61,7 +62,7 @@ class OrdersRepository(PaginationRepository[Order]):
     ) -> Sequence[Order]:
         return await self._paginated_list(pagination_params)
 
-    async def get_by_id(self, order_id: int) -> Order:
+    async def get_by_id(self, order_id: UUID) -> Order:
         stmt = (
             select(self.model)
             .filter_by(id=order_id)
@@ -78,7 +79,7 @@ class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
     model = OrderItem
 
     async def create_many(
-        self, dto_list: list[OrderItemCreateDTO], order_id: int
+        self, dto_list: list[OrderItemCreateDTO], order_id: UUID
     ) -> list[OrderItem]:
         return [
             await super().create(

@@ -36,6 +36,7 @@ def get_container() -> punq.Container:
 
 
 def _init_container() -> punq.Container:
+    FRONTEND_URL = "http://localhost:3000"
     container = punq.Container()
     cfg = init_config()
     logger = setup_logger(
@@ -67,13 +68,15 @@ def _init_container() -> punq.Container:
     )
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
-    container.register(OrdersService, OrdersService)
+    container.register(
+        OrdersService, OrdersService, order_details_link=f"{FRONTEND_URL}/orders/%s"
+    )
     container.register(
         UsersService,
         UsersService,
         activation_token_ttl=cfg.jwt.activation_token_ttl,
         auth_token_ttl=cfg.jwt.auth_token_ttl,
-        activation_link="http://localhost:3000/auth/activate?token=%s",
+        activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
     )
 
     return container

@@ -61,5 +61,5 @@ class MailProviderI(t.Protocol):
         to: str,
         from_: str | None = None,
         *,
-        timeout: float | None = None,
+        timeout: float = 3,
     ) -> None: ...

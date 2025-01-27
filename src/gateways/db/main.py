@@ -19,7 +19,7 @@ class SqlAlchemyDatabase:
     def __init__(
         self,
         storage_dsn: str,
-        exception_mapper: AbstractDatabaseExceptionMapper,
+        exception_mapper: type[AbstractDatabaseExceptionMapper],
         **engine_params,
     ) -> None:
         self._dsn = storage_dsn

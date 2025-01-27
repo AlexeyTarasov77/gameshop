@@ -34,7 +34,7 @@ async def get_optional_user_id(
     return None
 
 
-async def check_is_user_admin_or_raise(
+async def require_admin(
     user_id: Annotated[int, Depends(get_user_id_or_raise)],
     users_service: UsersServiceDep,
 ) -> None:

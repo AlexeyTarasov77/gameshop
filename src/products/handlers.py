@@ -7,11 +7,11 @@ from core.pagination import PaginatedResponse, PaginationDep
 from core.ioc import Inject
 from core.schemas import Base64IntOptionalIDParam
 from core.service import ServiceError
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from products import schemas
 from products.domain.services import ProductsService
-from users.dependencies import check_is_user_admin_or_raise
+from users.dependencies import require_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -55,7 +55,9 @@ async def get_product(
     return {"product": product}
 
 
-@router.post("/create", status_code=HTTPStatus.CREATED)
+@router.post(
+    "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
+)
 async def create_product(
     dto: schemas.CreateProductDTO,
     products_service: ProductsServiceDep,
@@ -67,9 +69,7 @@ async def create_product(
     return product
 
 
-@router.put(
-    "/update/{product_id}", dependencies=[Depends(check_is_user_admin_or_raised)]
-)
+@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
 async def update_product(
     product_id: EntityIDParam,
     dto: schemas.UpdateProductDTO,
@@ -84,7 +84,9 @@ async def update_product(
     return product
 
 
-@router.delete("/delete/{product_id}", status_code=204)
+@router.delete(
+    "/delete/{product_id}", status_code=204, dependencies=[Depends(require_admin)]
+)
 async def delete_product(
     product_id: EntityIDParam,
     products_service: ProductsServiceDep,

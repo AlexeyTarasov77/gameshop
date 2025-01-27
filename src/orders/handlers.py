@@ -1,5 +1,5 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
-from core.http.utils import EntityIDParam
 from core.pagination import PaginationDep, PaginatedResponse
 from core.ioc import Inject
 import typing as t
@@ -40,12 +40,12 @@ async def create_order(
 
 @router.patch("/update/{order_id}", dependencies=[Depends(require_admin)])
 async def update_order(
-    dto: UpdateOrderDTO, order_id: EntityIDParam, orders_service: OrdersServiceDep
+    dto: UpdateOrderDTO, order_id: UUID, orders_service: OrdersServiceDep
 ):
     if not dto.model_dump(exclude_unset=True):
         raise HTTPException(422, "Nothing to update. No data provided")
     try:
-        order = await orders_service.update_order(dto, int(order_id))
+        order = await orders_service.update_order(dto, order_id)
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:
@@ -58,9 +58,9 @@ async def update_order(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
-async def delete_order(order_id: EntityIDParam, orders_service: OrdersServiceDep):
+async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
     try:
-        await orders_service.delete_order(int(order_id))
+        await orders_service.delete_order(order_id)
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:
@@ -110,10 +110,10 @@ async def list_orders_for_user(
 
 @router.get("/detail/{order_id}")
 async def get_order(
-    order_id: EntityIDParam, orders_service: OrdersServiceDep
+    order_id: UUID, orders_service: OrdersServiceDep
 ) -> ShowOrderExtended:
     try:
-        return await orders_service.get_order(int(order_id))
+        return await orders_service.get_order(order_id)
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:

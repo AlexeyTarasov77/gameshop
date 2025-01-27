@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 import re
 from typing import Annotated, Self
+from uuid import UUID
 from pydantic import AfterValidator, EmailStr, Field, computed_field, field_validator
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
@@ -53,20 +54,14 @@ class OrderItemCreateDTO(_BaseOrderItemDTO):
 
 
 class OrderItemProduct(BaseDTO):
-    id: Base64Int
+    id: UUID
     name: str
 
 
 class OrderItemShowDTO(_BaseOrderItemDTO):
-    id: Base64Int
+    id: UUID
     product: OrderItemProduct
     total_price: Decimal
-
-    # @computed_field
-    # @property
-    # def total_price(self) -> Decimal:
-    #     return self.price * self.quantity
-    #
 
 
 class CustomerDTO(BaseDTO):
@@ -124,7 +119,7 @@ class UpdateOrderDTO(BaseDTO):
 
 
 class ShowOrder(BaseDTO):
-    id: Base64Int
+    id: UUID
     order_date: datetime
     status: OrderStatus
     total: Decimal
@@ -144,8 +139,3 @@ class ShowOrder(BaseDTO):
 class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
     customer: CustomerWithUserDTO  # type: ignore
-
-    # @computed_field
-    # @property
-    # def total(self) -> Decimal:
-    #     return Decimal(sum(item.total_price for item in self.items))

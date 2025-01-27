@@ -1,4 +1,7 @@
 from decimal import Decimal
+from uuid import uuid4
+from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
+from uuid import UUID
 from enum import Enum
 from sqlalchemy import CheckConstraint, ForeignKey, text
 from gateways.db.column_types import int_pk_type, created_at_type
@@ -21,7 +24,7 @@ class Order(SqlAlchemyBaseModel):
             "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL"
         ),
     )
-    id: Mapped[int_pk_type]
+    id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
     order_date: Mapped[created_at_type]
     customer_email: Mapped[str | None]
     customer_tg_username: Mapped[str]

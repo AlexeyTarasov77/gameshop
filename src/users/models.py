@@ -23,7 +23,7 @@ class User(SqlAlchemyBaseModel):
 
 class Admin(SqlAlchemyBaseModel):
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE"), unique=True
+        ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
     )
 
 
