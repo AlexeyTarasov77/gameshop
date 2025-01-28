@@ -1,14 +1,6 @@
-import typing as t
-
 from core.pagination import PaginationParams
 from core.service import BaseService
 from gateways.db.exceptions import DatabaseError
-from products.domain.interfaces import (
-    CategoriesRepositoryI,
-    PlatformsRepositoryI,
-    ProductsRepositoryI,
-    DeliveryMethodsRepositoryI,
-)
 from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,

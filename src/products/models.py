@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
@@ -50,7 +50,10 @@ class Product(SqlAlchemyBaseModel):
 
     @property
     def total_price(self) -> Decimal:
-        return self.regular_price - self.total_discount // 100 * self.regular_price
+        total = self.regular_price - (
+            Decimal(self.total_discount / 100) * self.regular_price
+        )
+        return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
 
 
 class BaseRefModel(SqlAlchemyBaseModel):
