@@ -42,7 +42,7 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 products = await uow.products_repo.filter_paginated_list(
-                    query, category_id, pagination_params
+                    query.strip() if query else None, category_id, pagination_params
                 )
                 total_records = await uow.products_repo.get_records_count()
         except DatabaseError as e:
