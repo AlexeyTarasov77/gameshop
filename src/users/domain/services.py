@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from jwt.exceptions import InvalidTokenError
 
-from core.service import BaseService
+from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
 
@@ -114,7 +114,7 @@ class UsersService(BaseService):
         try:
             async with self._uow as uow:
                 token = await uow.tokens_repo.get_by_hash(token_hash)
-                user = await uow.users_repo.update_by_id(token.user_id, is_active=True)
+                user = await uow.users_repo.mark_as_active(token.user_id)
                 await uow.tokens_repo.delete_all_for_user(user.id)
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)() from e

@@ -1,5 +1,5 @@
 from core.pagination import PaginationParams
-from core.service import BaseService
+from core.services.base import BaseService
 from gateways.db.exceptions import DatabaseError
 from products.schemas import (
     CategoryDTO,
@@ -18,7 +18,7 @@ class ProductsService(BaseService):
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create(dto)
+                product = await uow.products_repo.create_and_save_upload(dto)
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(
                 **dto.model_dump(include={"name", "category_name", "platform_name"})

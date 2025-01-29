@@ -1,15 +1,15 @@
 import asyncio
-import signal
 from logging import Logger
-from typing import cast
 
+from fastapi.responses import FileResponse
+from core.ioc import Resolve
+from config import Config
+from core.utils import get_upload_dir
 import uvicorn
-from core.ioc import Resolve, get_container
 from core.router import router
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import Config
 from gateways.db.main import SqlAlchemyDatabase
 
 
@@ -23,6 +23,14 @@ def app_factory() -> FastAPI:
             "status": "available",
             "available_routes": [route.path for route in app.routes],
         }
+
+    @app.get("/%s/{filename}" % Resolve(Config).server.media_serve_url)
+    async def media_serve(filename: str):
+        if not (get_upload_dir() / filename).exists():
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"File {filename} does not exist"
+            )
+        return FileResponse(get_upload_dir() / filename)
 
     app.add_middleware(
         CORSMiddleware,

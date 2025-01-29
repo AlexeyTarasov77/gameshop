@@ -1,13 +1,13 @@
 import typing as t
 from http import HTTPStatus
 
-from core.http.exceptions import HttpExceptionsMapper
-from core.http.utils import EntityIDParam
+from core.exception_mappers import HttpExceptionsMapper
+from core.schemas import EntityIDParam
 from core.pagination import PaginatedResponse, PaginationDep
 from core.ioc import Inject
 from core.schemas import Base64IntOptionalIDParam
-from core.service import ServiceError
-from fastapi import APIRouter, HTTPException, Depends
+from core.services.exceptions import ServiceError
+from fastapi import APIRouter, Form, HTTPException, Depends
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -59,7 +59,7 @@ async def get_product(
     "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
 )
 async def create_product(
-    dto: schemas.CreateProductDTO,
+    dto: t.Annotated[schemas.CreateProductDTO, Form()],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     try:
@@ -72,7 +72,7 @@ async def create_product(
 @router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
 async def update_product(
     product_id: EntityIDParam,
-    dto: schemas.UpdateProductDTO,
+    dto: t.Annotated[schemas.UpdateProductDTO, Form()],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):

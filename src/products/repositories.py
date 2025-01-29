@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from core.utils import save_upload_file
 from core.pagination import PaginationParams
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
@@ -23,13 +24,15 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
-    async def create(self, dto: CreateProductDTO) -> Product:
+    async def create_and_save_upload(self, dto: CreateProductDTO) -> Product:
+        image_url = await save_upload_file(dto.image)
         product = await super().create(
             category_id=dto.category.id,
             platform_id=dto.platform.id,
             delivery_method_id=dto.delivery_method.id,
+            image_url=image_url,
             **dto.model_dump(
-                exclude={"category", "platform", "delivery_method"},
+                exclude={"category", "platform", "delivery_method", "image"},
                 exclude_none=True,
             ),
         )
@@ -37,9 +40,11 @@ class ProductsRepository(PaginationRepository[Product]):
 
     async def update_by_id(self, dto: UpdateProductDTO, product_id: int) -> Product:
         data = dto.model_dump(
-            exclude={"image_url", "category", "platform", "delivery_method"},
+            exclude={"image", "category", "platform", "delivery_method"},
             exclude_unset=True,
         )
+        if dto.image:
+            data["image_url"] = await save_upload_file(dto.image)
         if dto.platform:
             data["platform_id"] = dto.platform.id
         if dto.category:

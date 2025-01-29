@@ -1,7 +1,8 @@
 import base64
+import json
 from typing import Annotated, Any
 
-from fastapi import Query, UploadFile
+from fastapi import UploadFile, Path as PathParam
 from pydantic import (
     AfterValidator,
     BaseModel,
@@ -10,7 +11,7 @@ from pydantic import (
     AnyHttpUrl,
 )
 
-from core.utils import filename_split
+from core.utils import get_uploaded_file_url, filename_split
 
 
 class BaseDTO(BaseModel):
@@ -43,9 +44,11 @@ def _parse_id_optional(s: str | int) -> int | None:
         return id
 
 
-type UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
+ParseJson = BeforeValidator(lambda s: json.loads(s))
 
-Image = Annotated[UploadFile, AfterValidator(_check_image)]
+UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
+ImgUrl = Annotated[str, PlainSerializer(lambda path: get_uploaded_file_url(path))]
+UploadImage = Annotated[UploadFile, AfterValidator(_check_image)]
 _base64int_serializer = PlainSerializer(
     lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
 )
@@ -54,6 +57,7 @@ Base64Int = Annotated[
     BeforeValidator(_parse_int, json_schema_input_type=str),
     _base64int_serializer,
 ]
+EntityIDParam = Annotated[Base64Int, PathParam(gt=0)]
 Base64IntOptionalIDParam = Annotated[
     str | int | None,
     BeforeValidator(_parse_id_optional, json_schema_input_type=str),

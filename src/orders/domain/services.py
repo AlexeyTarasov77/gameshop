@@ -1,7 +1,7 @@
 from uuid import UUID
 import asyncio
 from core.pagination import PaginationParams
-from core.service import BaseService
+from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
 from orders.schemas import (

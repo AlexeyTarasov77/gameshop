@@ -1,17 +1,3 @@
-from collections.abc import Mapping
-from functools import partial
-
-from gateways.db.exceptions import (
-    AlreadyExistsError,
-    DatabaseError,
-    NotFoundError,
-    RelatedResourceNotFoundError,
-)
-
-from core.uow import AbstractUnitOfWork
-from core.utils import AbstractExceptionMapper
-
-
 class ServiceError(Exception):
     def _generate_msg(self) -> str:
         return "unexpected service error"
@@ -54,31 +40,3 @@ class EntityRelatedResourceNotFoundError(ServiceError):
                 f"{key}={value}" for key, value in self._params.items()
             )
         return msg % (self._entity_name, params_string)
-
-
-class ServiceExceptionMapper(AbstractExceptionMapper[DatabaseError, ServiceError]):
-    def __init__(self, entity_name: str | None = None) -> None:
-        self.entity_name = entity_name
-
-    EXCEPTION_MAPPING: Mapping[type[DatabaseError], type[ServiceError]] = {
-        NotFoundError: EntityNotFoundError,
-        AlreadyExistsError: EntityAlreadyExistsError,
-        RelatedResourceNotFoundError: EntityRelatedResourceNotFoundError,
-    }
-
-    @classmethod
-    def get_default_exc(cls) -> type[ServiceError]:
-        return ServiceError
-
-    def map_with_entity(self, exc: DatabaseError) -> partial[ServiceError]:
-        mapped_exc_class = super().map(exc)
-        factory_args = {"entity_name": self.entity_name} if self.entity_name else {}
-        return partial(mapped_exc_class, **factory_args)
-
-
-class BaseService:
-    entity_name = None
-
-    def __init__(self, uow: AbstractUnitOfWork) -> None:
-        self._uow = uow
-        self._exception_mapper = ServiceExceptionMapper(self.entity_name)

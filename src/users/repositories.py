@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from core.utils import save_upload_file
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
 from users.models import Admin, Token, User
@@ -7,8 +8,8 @@ from users.models import Admin, Token, User
 class UsersRepository(SqlAlchemyRepository[User]):
     model = User
 
-    async def update_by_id(self, user_id: int, **data) -> User:
-        return await super().update(data, id=user_id)
+    async def mark_as_active(self, user_id: int) -> User:
+        return await super().update({"is_active": True}, id=user_id)
 
     async def get_by_email(self, email: str) -> User:
         return await super().get_one(email=email)
@@ -16,9 +17,10 @@ class UsersRepository(SqlAlchemyRepository[User]):
     async def create_with_hashed_password(
         self, dto: CreateUserDTO, password_hash: bytes
     ) -> User:
-        return await super().create(
-            password_hash=password_hash, **dto.model_dump(exclude={"password"})
-        )
+        data = dto.model_dump(exclude={"password", "photo"})
+        if dto.photo:
+            data["photo_url"] = await save_upload_file(dto.photo)
+        return await super().create(password_hash=password_hash, **data)
 
     async def get_by_id(self, user_id: int) -> User:
         return await super().get_one(id=user_id)

@@ -4,8 +4,8 @@ from core.pagination import PaginationDep, PaginatedResponse
 from core.ioc import Inject
 import typing as t
 
-from core.service import ServiceError
-from core.http.exceptions import HttpExceptionsMapper
+from core.services.exceptions import ServiceError
+from core.exception_mappers import HttpExceptionsMapper
 from orders.domain.services import OrdersService, ServiceValidationError
 from orders.schemas import (
     CreateOrderDTO,
