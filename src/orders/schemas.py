@@ -3,7 +3,7 @@ from decimal import Decimal
 import re
 from typing import Annotated, Self
 from uuid import UUID
-from pydantic import AfterValidator, EmailStr, Field, computed_field, field_validator
+from pydantic import AfterValidator, EmailStr, Field, field_validator
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import Order, OrderStatus

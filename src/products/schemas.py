@@ -53,9 +53,9 @@ class UpdateProductDTO(BaseDTO):
     name: str = Field(min_length=3, default=unset)
     description: str = Field(min_length=10, default=unset)
     regular_price: Decimal = Field(ge=0, default=unset)
-    category: CategoryDTO = unset
-    platform: PlatformDTO = unset
-    delivery_method: DeliveryMethodDTO = unset
+    category: Annotated[CategoryDTO, ParseJson] = unset
+    platform: Annotated[PlatformDTO, ParseJson] = unset
+    delivery_method: Annotated[DeliveryMethodDTO, ParseJson] = unset
     image: UploadImage = unset
     discount: ProductDiscount = unset
     discount_valid_to: DateTimeAfterNow | None = unset

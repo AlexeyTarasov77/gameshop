@@ -72,7 +72,7 @@ async def create_product(
 @router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
 async def update_product(
     product_id: EntityIDParam,
-    dto: schemas.UpdateProductDTO,
+    dto: t.Annotated[schemas.UpdateProductDTO, Form()],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):

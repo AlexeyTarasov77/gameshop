@@ -19,7 +19,7 @@ class NewsService(BaseService):
     async def create_news(self, dto: CreateNewsDTO) -> ShowNews:
         try:
             async with self._uow as uow:
-                news = await uow.news_repo.create(dto)
+                news = await uow.news_repo.create_and_save_upload(dto)
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)() from e
         return ShowNews.model_validate(news)

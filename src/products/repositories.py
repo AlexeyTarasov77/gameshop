@@ -44,7 +44,7 @@ class ProductsRepository(PaginationRepository[Product]):
             exclude_unset=True,
         )
         if dto.image:
-            data["image_url"] = save_upload_file(dto.image)
+            data["image_url"] = await save_upload_file(dto.image)
         if dto.platform:
             data["platform_id"] = dto.platform.id
         if dto.category:

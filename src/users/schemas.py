@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from core.schemas import Base64Int, BaseDTO, UrlStr
+from core.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
 from pydantic import EmailStr, field_validator
 
 
@@ -8,7 +8,7 @@ class CreateUserDTO(BaseDTO):
     username: str
     email: EmailStr
     password: str
-    photo_url: UrlStr | None = None
+    photo: UploadImage | None = None
 
     @field_validator("password")
     @classmethod
@@ -27,7 +27,7 @@ class ShowUser(BaseDTO):
     id: Base64Int
     username: str
     email: EmailStr
-    photo_url: str | None
+    photo_url: ImgUrl | None
     is_active: bool
     created_at: datetime
     updated_at: datetime
