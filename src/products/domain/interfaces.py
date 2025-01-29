@@ -1,6 +1,6 @@
 import typing as t
 
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from products.models import Category, Platform, Product, DeliveryMethod
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
@@ -16,10 +16,9 @@ class ProductsRepositoryI(t.Protocol):
         self,
         query: str | None,
         category_id: int | None,
+        discounted: bool | None,
         pagination_params: PaginationParams,
-    ) -> t.Sequence[Product]: ...
-
-    async def get_records_count(self) -> int: ...
+    ) -> PaginationResT: ...
 
     async def get_by_id(self, product_id: int) -> Product: ...
 

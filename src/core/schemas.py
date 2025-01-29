@@ -1,7 +1,6 @@
 import base64
 import json
 from typing import Annotated, Any
-
 from fastapi import UploadFile, Path as PathParam
 from pydantic import (
     AfterValidator,
@@ -45,7 +44,6 @@ def _parse_id_optional(s: str | int) -> int | None:
 
 
 ParseJson = BeforeValidator(lambda s: json.loads(s))
-
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[str, PlainSerializer(lambda path: get_uploaded_file_url(path))]
 UploadImage = Annotated[UploadFile, AfterValidator(_check_image)]

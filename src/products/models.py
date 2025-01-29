@@ -44,7 +44,7 @@ class Product(SqlAlchemyBaseModel):
     @property
     def total_discount(self) -> int:
         discount = self.discount
-        if self.discount_valid_to and (datetime.now() > self.discount_valid_to):
+        if self.discount_valid_to and (datetime.now() >= self.discount_valid_to):
             discount = 0
         return discount
 

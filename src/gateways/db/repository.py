@@ -3,10 +3,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Sequence
 
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from gateways.db.models import SqlAlchemyBaseModel
-from sqlalchemy import CursorResult, delete, insert, select, update, func
+from sqlalchemy import CursorResult, Row, delete, insert, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -89,17 +89,24 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
 class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
     def _get_pagination_stmt(self, pagination_params: PaginationParams):
         return (
-            select(self.model)
+            select(self.model, func.count().over())
             .offset(pagination_params.calc_offset())
             .limit(pagination_params.page_size)
         )
 
+    def _split_records_and_count(
+        self, res: Sequence[Row[tuple[T, int]]]
+    ) -> PaginationResT[T]:
+        count = res[0][1]
+        records = [row[0] for row in res]
+        return records, count
+
     async def paginated_list(
         self, pagination_params: PaginationParams, **filter_by
-    ) -> Sequence[T]:
+    ) -> PaginationResT[T]:
         stmt = self._get_pagination_stmt(pagination_params).filter_by(**filter_by)
         res = await self.session.execute(stmt)
-        return res.scalars().all()
+        return self._split_records_and_count(res.all())
 
     async def get_records_count(self) -> int:
         stmt = select(func.count("*")).select_from(self.model)

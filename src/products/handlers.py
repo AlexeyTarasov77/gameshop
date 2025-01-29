@@ -28,10 +28,14 @@ async def list_products(
     products_service: ProductsServiceDep,
     query: str | None = None,
     category_id: Base64IntOptionalIDParam = None,
+    discounted: bool | None = None,
 ) -> ProductsPaginatedResponse:
     try:
         products, total_records = await products_service.list_products(
-            query, int(category_id) if category_id else None, pagination_params
+            query,
+            int(category_id) if category_id else None,
+            discounted,
+            pagination_params,
         )
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)

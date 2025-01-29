@@ -1,6 +1,9 @@
 from collections.abc import Sequence
+from datetime import datetime
+
+from sqlalchemy import and_, not_, or_
 from core.utils import save_upload_file
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
 from products.models import Category, Platform, Product, DeliveryMethod
@@ -14,15 +17,30 @@ class ProductsRepository(PaginationRepository[Product]):
         self,
         query: str | None,
         category_id: int | None,
+        discounted: bool | None,
         pagination_params: PaginationParams,
-    ) -> Sequence[Product]:
+    ) -> PaginationResT[model]:
         stmt = super()._get_pagination_stmt(pagination_params)
         if query:
             stmt = stmt.where(self.model.name.ilike(f"%{query}%"))
         if category_id:
             stmt = stmt.filter_by(category_id=category_id)
+        if discounted is not None:
+            base_cond = and_(
+                or_(
+                    self.model.discount_valid_to.is_(None),
+                    self.model.discount_valid_to >= datetime.now(),
+                ),
+                self.model.discount > 0,
+            )
+
+            if discounted is True:
+                stmt = stmt.where(base_cond)
+            else:
+                stmt = stmt.where(not_(base_cond))
+
         res = await self.session.execute(stmt)
-        return res.scalars().all()
+        return super()._split_records_and_count(res.all())
 
     async def create_and_save_upload(self, dto: CreateProductDTO) -> Product:
         image_url = await save_upload_file(dto.image)

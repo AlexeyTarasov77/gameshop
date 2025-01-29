@@ -29,14 +29,17 @@ class ProductsService(BaseService):
         self,
         query: str | None,
         category_id: int | None,
+        discounted: bool | None,
         pagination_params: PaginationParams,
     ) -> tuple[list[ShowProductWithRelations], int]:
         try:
             async with self._uow as uow:
-                products = await uow.products_repo.filter_paginated_list(
-                    query.strip() if query else None, category_id, pagination_params
+                products, total_records = await uow.products_repo.filter_paginated_list(
+                    query.strip() if query else None,
+                    category_id,
+                    discounted,
+                    pagination_params,
                 )
-                total_records = await uow.products_repo.get_records_count()
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)() from e
         return [

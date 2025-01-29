@@ -1,5 +1,6 @@
 import typing as t
 import math
+from collections.abc import Sequence
 from fastapi import Query, Depends
 from pydantic import Field, computed_field, model_validator
 from core.schemas import BaseModel
@@ -20,6 +21,8 @@ async def get_pagination_params(
 
 
 PaginationDep = t.Annotated[PaginationParams, Depends(get_pagination_params)]
+
+type PaginationResT[R] = tuple[Sequence[R], int]
 
 
 class PaginatedResponse(PaginationParams):
