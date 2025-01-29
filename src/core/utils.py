@@ -1,8 +1,11 @@
-import abc
-from collections.abc import Mapping
-from functools import partial
-import logging
+import random
+import string
 import typing as t
+from pathlib import Path
+from config import Config
+
+import aiofiles
+from fastapi import UploadFile
 
 
 def filename_split(orig_filename: str) -> tuple[str, list[str]]:
@@ -16,6 +19,41 @@ def filename_split(orig_filename: str) -> tuple[str, list[str]]:
     return filename, extensions
 
 
+def get_upload_dir() -> Path:
+    from core.ioc import Resolve
+
+    return Path() / Resolve(Config).server.media_serve_url
+
+
+async def save_upload_file(upload_file: UploadFile) -> str:
+    # if not UPLOAD_DIR.exists():
+    #     UPLOAD_DIR.mkdir()
+    if upload_file.filename is None:
+        unique_filename = "".join(
+            random.sample([char for char in string.ascii_letters], 20)
+        ) + str(random.randint(1, 10000))
+    else:
+        name, extensions = filename_split(upload_file.filename)
+        name += str(random.randint(10, 100000))
+        unique_filename = f"{name}.{'.'.join(extensions)}"
+    dest_path = get_upload_dir() / unique_filename
+    try:
+        async with aiofiles.open(dest_path, "wb") as dst:
+            while content := await upload_file.read(1024):
+                await dst.write(content)
+    finally:
+        await upload_file.close()
+    return unique_filename
+
+
+def get_uploaded_file_url(filename: str) -> str:
+    from core.ioc import Resolve
+
+    cfg = Resolve(Config)
+    serve_url = cfg.server.media_serve_url
+    return f"{cfg.server.addr}/{serve_url}/{filename}"
+
+
 class Singleton:
     _instance = None
 
@@ -23,27 +61,3 @@ class Singleton:
         if not cls._instance:
             cls._instance = super().__new__(cls)
         return cls._instance
-
-
-class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
-    EXCEPTION_MAPPING: Mapping[type[K], type[V]]
-
-    @classmethod
-    @abc.abstractmethod
-    def get_default_exc(cls) -> type[V]: ...
-
-    @classmethod
-    def map(cls, exc: K | V) -> type[V] | partial[V]:
-        exc_class = type(exc)
-        if exc_class in cls.EXCEPTION_MAPPING.values():
-            return t.cast(type[V], exc_class)
-        mapped_exc_class = cls.EXCEPTION_MAPPING.get(t.cast(type[K], exc_class))
-        if not mapped_exc_class:
-            logging.warning("Not mapped exception: %s", exc_class)
-            return cls.get_default_exc()
-        return mapped_exc_class
-
-    @classmethod
-    def map_and_raise(cls, exc: K) -> t.NoReturn:
-        mapped = cls.map(exc)
-        raise mapped()

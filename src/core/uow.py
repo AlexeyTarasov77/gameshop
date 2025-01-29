@@ -6,8 +6,7 @@ from logging import Logger
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from gateways.db.exceptions import AbstractDatabaseExceptionMapper
-from gateways.db.main import SqlAlchemyDatabase
+from core.exception_mappers import AbstractDatabaseExceptionMapper
 from news.domain.interfaces import NewsRepositoryI
 from news.repositories import NewsRepository
 from orders.domain.interfaces import (

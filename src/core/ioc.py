@@ -6,7 +6,7 @@ from functools import lru_cache
 import punq
 from fastapi import Depends
 from core.logger import setup_logger
-from gateways.db.exceptions import (
+from core.exception_mappers import (
     AbstractDatabaseExceptionMapper,
     PostgresExceptionsMapper,
 )
