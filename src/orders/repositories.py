@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 from orders.models import Order, OrderItem
@@ -41,7 +41,9 @@ class OrdersRepository(PaginationRepository[Order]):
             joinedload(OrderItem.product).load_only(Product.id, Product.name)
         )
 
-    async def _paginated_list(self, pagination_params: PaginationParams, **filter_by):
+    async def _paginated_list(
+        self, pagination_params: PaginationParams, **filter_by
+    ) -> PaginationResT[model]:
         stmt = (
             super()
             ._get_pagination_stmt(pagination_params)
@@ -50,16 +52,16 @@ class OrdersRepository(PaginationRepository[Order]):
         )
 
         res = await self.session.execute(stmt)
-        return res.scalars().all()
+        return super()._split_records_and_count(res.all())
 
     async def list_orders_for_user(
         self, pagination_params: PaginationParams, user_id: int
-    ) -> Sequence[Order]:
+    ) -> PaginationResT[model]:
         return await self._paginated_list(pagination_params, user_id=user_id)
 
     async def list_all_orders(
         self, pagination_params: PaginationParams
-    ) -> Sequence[Order]:
+    ) -> PaginationResT[model]:
         return await self._paginated_list(pagination_params)
 
     async def get_by_id(self, order_id: UUID) -> Order:

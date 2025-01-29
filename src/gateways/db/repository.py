@@ -97,9 +97,12 @@ class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
     def _split_records_and_count(
         self, res: Sequence[Row[tuple[T, int]]]
     ) -> PaginationResT[T]:
-        count = res[0][1]
-        records = [row[0] for row in res]
-        return records, count
+        try:
+            count = res[0][1]
+            records = [row[0] for row in res]
+            return records, count
+        except IndexError:
+            return [], 0
 
     async def paginated_list(
         self, pagination_params: PaginationParams, **filter_by
@@ -107,11 +110,3 @@ class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
         stmt = self._get_pagination_stmt(pagination_params).filter_by(**filter_by)
         res = await self.session.execute(stmt)
         return self._split_records_and_count(res.all())
-
-    async def get_records_count(self) -> int:
-        stmt = select(func.count("*")).select_from(self.model)
-        res = await self.session.execute(stmt)
-        count = res.scalar()
-        if count is None:
-            raise DatabaseError()
-        return int(count)

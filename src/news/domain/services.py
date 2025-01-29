@@ -10,8 +10,9 @@ class NewsService(BaseService):
     ) -> tuple[list[ShowNews], int]:
         try:
             async with self._uow as uow:
-                news = await uow.news_repo.paginated_list(pagination_params)
-                total_records = await uow.news_repo.get_records_count()
+                news, total_records = await uow.news_repo.paginated_list(
+                    pagination_params
+                )
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)() from e
         return [ShowNews.model_validate(el) for el in news], total_records
