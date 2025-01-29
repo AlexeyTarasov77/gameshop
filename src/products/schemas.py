@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO, UrlStr, unset
+from core.schemas import Base64Int, BaseDTO, ImgUrl, ParseJson, UploadImage, unset
 from pydantic import AfterValidator, Field
 
 
@@ -39,14 +39,14 @@ class BaseProductDTO(BaseDTO):
     description: str = Field(min_length=10)
     regular_price: Decimal = Field(ge=0)
     discount: ProductDiscount = 0
-    image_url: UrlStr
 
 
 class CreateProductDTO(BaseProductDTO):
-    category: CategoryDTO
-    platform: PlatformDTO
-    delivery_method: DeliveryMethodDTO
+    category: Annotated[CategoryDTO, ParseJson]
+    platform: Annotated[PlatformDTO, ParseJson]
+    delivery_method: Annotated[DeliveryMethodDTO, ParseJson]
     discount_valid_to: DateTimeAfterNow | None = None
+    image: UploadImage = unset
 
 
 class UpdateProductDTO(BaseDTO):
@@ -56,7 +56,7 @@ class UpdateProductDTO(BaseDTO):
     category: CategoryDTO = unset
     platform: PlatformDTO = unset
     delivery_method: DeliveryMethodDTO = unset
-    image_url: UrlStr = unset
+    image: UploadImage = unset
     discount: ProductDiscount = unset
     discount_valid_to: DateTimeAfterNow | None = unset
 
@@ -68,6 +68,7 @@ class BaseShowProductDTO(BaseProductDTO):
     total_discount: int
     created_at: datetime
     updated_at: datetime
+    image_url: ImgUrl
 
 
 class ShowProduct(BaseShowProductDTO):

@@ -1,4 +1,5 @@
-from gateways.db.exceptions import AbstractDatabaseExceptionMapper, DBConnectionError
+from core.exception_mappers import AbstractDatabaseExceptionMapper
+from gateways.db.exceptions import DBConnectionError
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker

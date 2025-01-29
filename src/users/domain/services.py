@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from jwt.exceptions import InvalidTokenError
 
-from core.service import BaseService
+from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
 

@@ -3,11 +3,11 @@ import typing as t
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from core.http.exceptions import HttpExceptionsMapper
+from core.exception_mappers import HttpExceptionsMapper
 from core.ioc import Inject
-from core.http.utils import EntityIDParam
+from core.schemas import EntityIDParam
 from core.pagination import PaginatedResponse, PaginationDep
-from core.service import ServiceError
+from core.services.exceptions import ServiceError
 from news.domain.services import NewsService
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
 from users.dependencies import require_admin

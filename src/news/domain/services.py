@@ -1,5 +1,5 @@
 from core.pagination import PaginationParams
-from core.service import BaseService
+from core.services.base import BaseService
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
 from gateways.db.exceptions import DatabaseError
 

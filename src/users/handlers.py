@@ -3,8 +3,8 @@ from http import HTTPStatus
 
 from pydantic import EmailStr
 
-from core.http.exceptions import HttpExceptionsMapper
-from core.service import EntityNotFoundError, ServiceError
+from core.exception_mappers import HttpExceptionsMapper
+from core.services.exceptions import EntityNotFoundError, ServiceError
 from users.dependencies import UsersServiceDep, get_user_id_or_raise
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 
