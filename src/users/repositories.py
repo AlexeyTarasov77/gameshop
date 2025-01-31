@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from core.utils import save_upload_file
+from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
 from users.models import Admin, Token, User
@@ -24,6 +25,21 @@ class UsersRepository(SqlAlchemyRepository[User]):
 
     async def get_by_id(self, user_id: int) -> User:
         return await super().get_one(id=user_id)
+
+    async def get_by_id_and_check_is_admin(
+        self,
+        user_id: int,
+    ) -> tuple[User, bool]:
+        stmt = (
+            select(User, Admin.user_id)
+            .join(Admin, Admin.user_id == User.id, isouter=True)
+            .where(User.id == user_id)
+        )
+        res = await self.session.execute(stmt)
+        data = res.one_or_none()
+        if data is None:
+            raise NotFoundError()
+        return data[0], bool(data[1])
 
 
 class TokensRepository(SqlAlchemyRepository[Token]):

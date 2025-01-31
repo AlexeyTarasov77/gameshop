@@ -14,7 +14,7 @@ from users.domain.interfaces import (
     TokenHasherI,
     StatelessTokenProviderI,
 )
-from users.schemas import CreateUserDTO, ShowUser, UserSignInDTO
+from users.schemas import CreateUserDTO, ShowUser, ShowUserWithRole, UserSignInDTO
 
 
 class InvalidTokenServiceError(Exception): ...
@@ -147,13 +147,16 @@ class UsersService(BaseService):
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(email=email) from e
 
-    async def get_user(self, user_id: int) -> ShowUser:
+    async def get_user(self, user_id: int) -> ShowUserWithRole:
         try:
             async with self._uow as uow:
-                user = await uow.users_repo.get_by_id(user_id)
+                user, is_admin = await uow.users_repo.get_by_id_and_check_is_admin(
+                    user_id
+                )
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(user_id=user_id) from e
-        return ShowUser.model_validate(user)
+        user.is_admin = is_admin
+        return ShowUserWithRole.model_validate(user)
 
     async def check_is_user_admin(self, user_id: int) -> bool:
         try:

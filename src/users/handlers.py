@@ -80,7 +80,7 @@ async def resend_activation_token(
 async def get_user_by_token(
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
     users_service: UsersServiceDep,
-) -> schemas.ShowUser:
+) -> schemas.ShowUserWithRole:
     try:
         return await users_service.get_user(user_id)
     except ServiceError as e:

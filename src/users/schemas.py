@@ -31,3 +31,7 @@ class ShowUser(BaseDTO):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class ShowUserWithRole(ShowUser):
+    is_admin: bool
