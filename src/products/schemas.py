@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO, ImgUrl, ParseJson, UploadImage, unset
+from core.schemas import Base64Int, BaseDTO, ImgUrl, ParseJson, UploadImage
 from pydantic import AfterValidator, Field
 
 
@@ -24,8 +24,8 @@ ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 class CategoryDTO(BaseDTO):
     id: Base64Int = Field(gt=0)
-    name: str = unset
-    url: str = unset
+    name: str | None = None
+    url: str | None = None
 
 
 class PlatformDTO(CategoryDTO): ...
@@ -46,19 +46,19 @@ class CreateProductDTO(BaseProductDTO):
     platform: Annotated[PlatformDTO, ParseJson]
     delivery_method: Annotated[DeliveryMethodDTO, ParseJson]
     discount_valid_to: DateTimeAfterNow | None = None
-    image: UploadImage = unset
+    image: UploadImage
 
 
 class UpdateProductDTO(BaseDTO):
-    name: str = Field(min_length=3, default=unset)
-    description: str = Field(min_length=10, default=unset)
-    regular_price: Decimal = Field(ge=0, default=unset)
-    category: Annotated[CategoryDTO, ParseJson] = unset
-    platform: Annotated[PlatformDTO, ParseJson] = unset
-    delivery_method: Annotated[DeliveryMethodDTO, ParseJson] = unset
-    image: UploadImage = unset
-    discount: ProductDiscount = unset
-    discount_valid_to: DateTimeAfterNow | None = unset
+    name: str | None = Field(min_length=3, default=None)
+    description: str | None = Field(min_length=10, default=None)
+    regular_price: Decimal | None = Field(ge=0, default=None)
+    category: Annotated[CategoryDTO | None, ParseJson] = None
+    platform: Annotated[PlatformDTO | None, ParseJson] = None
+    delivery_method: Annotated[DeliveryMethodDTO | None, ParseJson] = None
+    image: UploadImage | None = None
+    discount: ProductDiscount | None = None
+    discount_valid_to: DateTimeAfterNow | None = None
 
 
 class BaseShowProductDTO(BaseProductDTO):

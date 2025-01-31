@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT

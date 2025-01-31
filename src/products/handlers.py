@@ -73,7 +73,10 @@ async def create_product(
     return product
 
 
-@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
+@router.put(
+    "/update/{product_id}",
+    # dependencies=[Depends(require_admin)]
+)
 async def update_product(
     product_id: EntityIDParam,
     dto: t.Annotated[schemas.UpdateProductDTO, Form()],
