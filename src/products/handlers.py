@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import typing as t
 from http import HTTPStatus
 
@@ -41,6 +42,29 @@ async def list_products(
         HttpExceptionsMapper.map_and_raise(e)
     return ProductsPaginatedResponse(
         products=products,
+        total_records=total_records,
+        total_on_page=len(products),
+        first_page=1,
+        **pagination_params.model_dump(),
+    )
+
+
+class SalesPaginatedResponse(PaginatedResponse):
+    sales: Sequence[schemas.ProductOnSaleDTO]
+
+
+@router.get("/sales")
+async def get_current_sales(
+    pagination_params: PaginationDep, products_service: ProductsServiceDep
+):
+    try:
+        products, total_records = await products_service.get_current_sales(
+            pagination_params,
+        )
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+    return SalesPaginatedResponse(
+        sales=products,
         total_records=total_records,
         total_on_page=len(products),
         first_page=1,

@@ -81,3 +81,10 @@ class ShowProductWithRelations(BaseShowProductDTO):
     category: CategoryDTO
     platform: PlatformDTO
     delivery_method: DeliveryMethodDTO
+
+
+class ProductOnSaleDTO(BaseDTO):
+    name: str
+    photo_url: str
+    price: float
+    deal_until: datetime | None

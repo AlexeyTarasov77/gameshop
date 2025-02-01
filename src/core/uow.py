@@ -18,12 +18,14 @@ from products.domain.interfaces import (
     DeliveryMethodsRepositoryI,
     PlatformsRepositoryI,
     CategoriesRepositoryI,
+    ProductOnSaleRepositoryI,
     ProductsRepositoryI,
 )
 from products.repositories import (
     CategoriesRepository,
     DeliveryMethodsRepository,
     PlatformsRepository,
+    ProductOnSaleRepository,
     ProductsRepository,
 )
 from users.domain.interfaces import (
@@ -39,6 +41,7 @@ class AcceptsSessionI(t.Protocol):
 
 
 class AbstractUnitOfWork[T](abc.ABC):
+    product_on_sale_repo: ProductOnSaleRepositoryI
     news_repo: NewsRepositoryI
     products_repo: ProductsRepositoryI
     admins_repo: AdminsRepositoryI
@@ -99,6 +102,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self.admins_repo = self._register_repo(AdminsRepository)
         self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
+        self.product_on_sale_repo = self._register_repo(ProductOnSaleRepository)
         self.platforms_repo = self._register_repo(PlatformsRepository)
         self.categories_repo = self._register_repo(CategoriesRepository)
         self.delivery_methods_repo = self._register_repo(DeliveryMethodsRepository)

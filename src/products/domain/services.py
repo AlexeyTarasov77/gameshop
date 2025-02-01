@@ -1,4 +1,4 @@
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
 from gateways.db.exceptions import DatabaseError
 from products.schemas import (
@@ -6,6 +6,7 @@ from products.schemas import (
     DeliveryMethodDTO,
     CreateProductDTO,
     PlatformDTO,
+    ProductOnSaleDTO,
     ShowProduct,
     ShowProductWithRelations,
     UpdateProductDTO,
@@ -44,6 +45,20 @@ class ProductsService(BaseService):
             raise self._exception_mapper.map_with_entity(e)() from e
         return [
             ShowProductWithRelations.model_validate(product) for product in products
+        ], total_records
+
+    async def get_current_sales(
+        self, pagination_params: PaginationParams
+    ) -> PaginationResT[ProductOnSaleDTO]:
+        try:
+            async with self._uow as uow:
+                products, total_records = await uow.product_on_sale_repo.paginated_list(
+                    pagination_params,
+                )
+        except DatabaseError as e:
+            raise self._exception_mapper.map_with_entity(e)() from e
+        return [
+            ProductOnSaleDTO.model_validate(product) for product in products
         ], total_records
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:

@@ -5,7 +5,7 @@ from core.utils import save_upload_file
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
-from products.models import Category, Platform, Product, DeliveryMethod
+from products.models import Category, Platform, Product, DeliveryMethod, ProductOnSale
 from products.schemas import CreateProductDTO, UpdateProductDTO
 
 
@@ -79,6 +79,10 @@ class ProductsRepository(PaginationRepository[Product]):
 
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)
+
+
+class ProductOnSaleRepository(PaginationRepository[ProductOnSale]):
+    model = ProductOnSale
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):
