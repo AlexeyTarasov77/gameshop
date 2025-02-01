@@ -10,6 +10,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from products import schemas
 
 
+class ProductOnSale(SqlAlchemyBaseModel):
+    id: Mapped[int_pk_type]
+    name: Mapped[str]
+    price: Mapped[float]
+    deal_until: Mapped[datetime | None]
+    photo_url: Mapped[str]
+
+
 class Product(SqlAlchemyBaseModel):
     __table_args__ = (UniqueConstraint("name", "category_id", "platform_id"),)
 
