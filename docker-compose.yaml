@@ -19,6 +19,17 @@ services:
       interval: 2s
       timeout: 3s
       retries: 5
+  parse_sales:
+    container_name: gameshop_parse_sales
+    build: 
+      dockerfile: Dockerfile.parser
+    volumes: 
+      - ./src/get_discounts_cron.py:/app/src/get_discounts_cron.py
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - MODE=prod
   postgres:
     container_name: gameshop_db
     image: postgres:17.1-alpine

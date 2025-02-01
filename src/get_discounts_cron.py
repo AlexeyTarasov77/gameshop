@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import re
 import asyncio
+
+from sqlalchemy import delete
 from core.ioc import Resolve
 from typing import cast
 from bs4 import BeautifulSoup, Tag, NavigableString
@@ -99,6 +101,7 @@ def parse_discounted_products(count: int | None = None) -> list[ParsableProduct]
 async def main():
     discounted_products = parse_discounted_products(DISCOUNTS_PARSE_LIMIT)
     async with Resolve(SqlAlchemyDatabase).session_factory() as session:
+        await session.execute(delete(ProductOnSale))
         session.add_all(
             [
                 ProductOnSale(

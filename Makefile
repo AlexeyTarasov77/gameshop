@@ -22,9 +22,11 @@ run/tests/docker:
 migrations/new:
 	MODE=local poetry run alembic revision --autogenerate -m "$(msg)"
 
+MODE ?= $(shell echo $$MODE)
+
 .PHONY: migrations/run
 migrations/run:
-	MODE=$(mode) poetry run alembic upgrade head 
+	MODE=$(MODE) poetry run alembic upgrade head 
 
 .PHONY: api/deploy
 api/deploy:
