@@ -1,12 +1,21 @@
 import typing as t
 from http import HTTPStatus
 
+from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
 from core.exception_mappers import HttpExceptionsMapper
 from core.services.exceptions import EntityNotFoundError, ServiceError
 from users.dependencies import UsersServiceDep, get_user_id_or_raise
-from fastapi import APIRouter, Body, Depends, Form, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    status,
+)
 
 from users import schemas
 from users.domain.services import (
@@ -19,13 +28,19 @@ from users.domain.services import (
 router = APIRouter(prefix="/users", tags=["users", "auth"])
 
 
-@router.post("/signup", status_code=HTTPStatus.CREATED)
+@router.post("/signup", status_code=HTTPStatus.CREATED, response_model=None)
 async def signup(
+    req: Request,
     dto: t.Annotated[schemas.CreateUserDTO, Form()],
     users_service: UsersServiceDep,
-) -> schemas.ShowUser:
+) -> schemas.ShowUser | JSONResponse:
     try:
         return await users_service.signup(dto)
+    except UserIsNotActivatedError:
+        return JSONResponse(
+            {"redirect_url": str(req.url_for("resend_activation_token"))},
+            status.HTTP_403_FORBIDDEN,
+        )
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
 

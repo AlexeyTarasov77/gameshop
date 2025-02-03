@@ -2,10 +2,11 @@ import asyncio
 from datetime import datetime, timedelta
 
 from jwt.exceptions import InvalidTokenError
+from sqlalchemy.exc import IntegrityError
 
 from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
-from gateways.db.exceptions import DatabaseError
+from gateways.db.exceptions import AlreadyExistsError, DatabaseError
 
 from users.domain.interfaces import (
     MailProviderI,
@@ -66,6 +67,14 @@ class UsersService(BaseService):
                     user.id, self._activation_token_ttl
                 )
                 await uow.tokens_repo.save(token_obj)
+        except AlreadyExistsError as e:
+            exc = e
+            async with self._uow as uow:
+                existed_user = await uow.users_repo.get_by_email(dto.email)
+                if not existed_user.is_active:
+                    exc = UserIsNotActivatedError()
+            raise exc
+
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(
                 email=dto.email, username=dto.username

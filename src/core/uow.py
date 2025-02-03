@@ -41,6 +41,8 @@ class AcceptsSessionI(t.Protocol):
 
 
 class AbstractUnitOfWork[T](abc.ABC):
+    exception_mapper: AbstractDatabaseExceptionMapper
+
     product_on_sale_repo: ProductOnSaleRepositoryI
     news_repo: NewsRepositoryI
     products_repo: ProductsRepositoryI

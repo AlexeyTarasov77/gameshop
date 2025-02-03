@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import ClassVar
 from sqlalchemy import ForeignKey
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
@@ -8,7 +7,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class User(SqlAlchemyBaseModel):
-    is_admin: ClassVar[bool | None] = None
+    __allow_unmapped__ = True
+    is_admin: bool | None = None
+
     id: Mapped[int_pk_type]
     username: Mapped[str] = mapped_column(unique=True)
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
