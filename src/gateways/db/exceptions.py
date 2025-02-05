@@ -1,4 +1,6 @@
-class DatabaseError(Exception): ...
+class DatabaseError(Exception):
+    def __init__(self, msg: str | None = None):
+        self.msg = msg
 
 
 class DBConnectionError(DatabaseError): ...

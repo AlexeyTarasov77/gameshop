@@ -1,21 +1,24 @@
 import asyncio
 from logging import Logger
 
-from fastapi.responses import FileResponse
-from core.ioc import Resolve
-from config import Config
-from core.utils import get_upload_dir
 import uvicorn
-from core.router import router
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
+from config import Config
+from core.exception_mappers import HttpExceptionsMapper
+from core.ioc import Resolve
+from core.router import router
+from core.services.exceptions import MappedServiceError
+from core.utils import get_upload_dir
 from gateways.db.main import SqlAlchemyDatabase
 
 
 def app_factory() -> FastAPI:
     app = FastAPI()
     app.include_router(router)
+    app.add_exception_handler(MappedServiceError, HttpExceptionsMapper().handle)
 
     @app.get("/ping")
     async def ping() -> dict[str, str | list[str]]:

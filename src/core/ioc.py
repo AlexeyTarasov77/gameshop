@@ -8,6 +8,7 @@ from fastapi import Depends
 from core.logger import setup_logger
 from core.exception_mappers import (
     AbstractDatabaseExceptionMapper,
+    HttpExceptionsMapper,
     PostgresExceptionsMapper,
 )
 from gateways.db.main import SqlAlchemyDatabase
@@ -44,6 +45,7 @@ def _init_container() -> punq.Container:
     )
     container.register(Logger, instance=logger)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
+    container.register(HttpExceptionsMapper, HttpExceptionsMapper)
     db = SqlAlchemyDatabase(
         str(cfg.storage_dsn),
         exception_mapper=PostgresExceptionsMapper,

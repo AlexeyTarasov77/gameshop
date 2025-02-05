@@ -1,6 +1,7 @@
 from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
-from gateways.db.exceptions import DatabaseError
+from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
+from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
@@ -20,9 +21,12 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.create_and_save_upload(dto)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(
-                **dto.model_dump(include={"name", "category_name", "platform_name"})
+        except AlreadyExistsError as e:
+            raise EntityAlreadyExistsError(
+                self.entity_name,
+                name=dto.name,
+                category_id=dto.category.id,
+                platform_id=dto.platform.id,
             ) from e
         return ShowProduct.model_validate(product)
 
@@ -33,16 +37,13 @@ class ProductsService(BaseService):
         discounted: bool | None,
         pagination_params: PaginationParams,
     ) -> tuple[list[ShowProductWithRelations], int]:
-        try:
-            async with self._uow as uow:
-                products, total_records = await uow.products_repo.filter_paginated_list(
-                    query.strip() if query else None,
-                    category_id,
-                    discounted,
-                    pagination_params,
-                )
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+        async with self._uow as uow:
+            products, total_records = await uow.products_repo.filter_paginated_list(
+                query.strip() if query else None,
+                category_id,
+                discounted,
+                pagination_params,
+            )
         return [
             ShowProductWithRelations.model_validate(product) for product in products
         ], total_records
@@ -50,13 +51,10 @@ class ProductsService(BaseService):
     async def get_current_sales(
         self, pagination_params: PaginationParams
     ) -> PaginationResT[ProductOnSaleDTO]:
-        try:
-            async with self._uow as uow:
-                products, total_records = await uow.product_on_sale_repo.paginated_list(
-                    pagination_params,
-                )
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+        async with self._uow as uow:
+            products, total_records = await uow.product_on_sale_repo.paginated_list(
+                pagination_params,
+            )
         return [
             ProductOnSaleDTO.model_validate(product) for product in products
         ], total_records
@@ -65,8 +63,8 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProductWithRelations.model_validate(product)
 
     async def platforms_list(self) -> list[PlatformDTO]:
@@ -87,19 +85,15 @@ class ProductsService(BaseService):
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO
     ) -> ShowProduct:
-        try:
+        with self.handle_exc(
+            name=dto.name,
+            id=product_id,
+        ):
             async with self._uow as uow:
                 product = await uow.products_repo.update_by_id(dto, product_id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(
-                **dto.model_dump(include={"name", "category_name", "platform_name"}),
-                id=product_id,
-            ) from e
         return ShowProduct.model_validate(product)
 
     async def delete_product(self, product_id: int) -> None:
-        try:
+        with self.handle_exc(id=product_id):
             async with self._uow as uow:
                 await uow.products_repo.delete_by_id(product_id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(id=product_id) from e

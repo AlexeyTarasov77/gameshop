@@ -64,7 +64,7 @@ class AbstractUnitOfWork[T](abc.ABC):
         self._init_repos()
         return self
 
-    async def __aexit__(self, exc_type, *args):
+    async def __aexit__(self, exc_type, exc_value, _):
         await self.rollback()
 
     @abc.abstractmethod
@@ -117,17 +117,17 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         for repo_name in self.__annotations__:
             assert repo_name in self.__dict__
 
-    async def __aexit__(self, exc_type, *args) -> None:
+    async def __aexit__(self, exc_type, exc_value, _) -> None:
         assert self.session is not None
         try:
             if exc_type is not None:
                 self.logger.error(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
-                    args[0],
+                    exc_value,
                     exc_info=exc_type,
                 )
-                await super().__aexit__(exc_type, *args)
-                self._handle_exc(args[0])
+                await super().__aexit__(exc_type, exc_value, _)
+                self._handle_exc(exc_value)
 
             self.logger.debug("commiting")
             await self.commit()

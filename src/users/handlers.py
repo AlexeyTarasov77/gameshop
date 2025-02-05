@@ -5,7 +5,6 @@ from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
 from core.exception_mappers import HttpExceptionsMapper
-from core.services.exceptions import EntityNotFoundError, ServiceError
 from users.dependencies import UsersServiceDep, get_user_id_or_raise
 from fastapi import (
     APIRouter,
@@ -19,8 +18,7 @@ from fastapi import (
 
 from users import schemas
 from users.domain.services import (
-    InvalidTokenServiceError,
-    PasswordDoesNotMatchError,
+    InvalidCredentialsError,
     UserAlreadyActivatedError,
     UserIsNotActivatedError,
 )
@@ -41,7 +39,7 @@ async def signup(
             {"redirect_url": str(req.url_for("resend_activation_token"))},
             status.HTTP_403_FORBIDDEN,
         )
-    except ServiceError as e:
+    except Exception as e:
         HttpExceptionsMapper.map_and_raise(e)
 
 
@@ -51,14 +49,14 @@ async def signin(
 ) -> dict[str, str]:
     try:
         token = await users_service.signin(dto)
-    except (EntityNotFoundError, PasswordDoesNotMatchError) as e:
-        raise HTTPException(HTTPStatus.UNAUTHORIZED, "Invalid email or password") from e
+    except InvalidCredentialsError as e:
+        raise HTTPException(HTTPStatus.UNAUTHORIZED, e.msg) from e
     except UserIsNotActivatedError as e:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "User isn't activated. Check your email to activate account and try to signin again!",
         ) from e
-    except ServiceError as e:
+    except Exception as e:
         HttpExceptionsMapper.map_and_raise(e)
     return {"token": token}
 
@@ -70,9 +68,7 @@ async def activate_user(
 ) -> dict[str, bool | schemas.ShowUser]:
     try:
         user = await users_service.activate_user(token)
-    except InvalidTokenServiceError as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, e.args[0]) from e
-    except ServiceError as e:
+    except Exception as e:
         HttpExceptionsMapper.map_and_raise(e)
     return {"activated": True, "user": user}
 
@@ -87,7 +83,7 @@ async def resend_activation_token(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "User already activated"
         ) from e
-    except ServiceError as e:
+    except Exception as e:
         HttpExceptionsMapper.map_and_raise(e)
 
 
@@ -98,5 +94,5 @@ async def get_user_by_token(
 ) -> schemas.ShowUserWithRole:
     try:
         return await users_service.get_user(user_id)
-    except ServiceError as e:
+    except Exception as e:
         HttpExceptionsMapper.map_and_raise(e)

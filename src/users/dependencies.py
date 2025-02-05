@@ -1,5 +1,5 @@
 from typing import Annotated
-from users.domain.services import InvalidTokenServiceError, UsersService
+from users.domain.services import TokenError, UsersService
 from core.ioc import Inject
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
@@ -7,7 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 UsersServiceDep = Annotated[UsersService, Inject(UsersService)]
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="signin", auto_error=False)
 
 
 async def get_user_id_or_raise(
@@ -22,7 +22,7 @@ async def get_user_id_or_raise(
         raise credentials_exception from None
     try:
         return await users_service.extract_user_id_from_token(token)
-    except InvalidTokenServiceError as e:
+    except TokenError as e:
         raise credentials_exception from e
 
 

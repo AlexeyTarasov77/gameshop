@@ -40,9 +40,7 @@ class OrdersService(BaseService):
                     user = await uow.users_repo.get_by_id(user_id)
                 await uow.order_items_repo.create_many(dto.cart, order.id)
             except DatabaseError as e:
-                raise self._exception_mapper.map_with_entity(e)(
-                    **dto.model_dump()
-                ) from e
+                raise self._exception_mapper.map(e)(**dto.model_dump()) from e
         email_body = (
             f"Ваш заказ был успешно оформлен и принят в обработку.\n"
             "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"
@@ -66,7 +64,7 @@ class OrdersService(BaseService):
             async with self._uow as uow:
                 order = await uow.orders_repo.update_by_id(dto, order_id)
         except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(
+            raise self._exception_mapper.map(e)(
                 id=order_id,
             ) from e
         return ShowOrder.from_model(order, total=order.total)
@@ -76,7 +74,7 @@ class OrdersService(BaseService):
             async with self._uow as uow:
                 await uow.orders_repo.delete_by_id(order_id)
         except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(
+            raise self._exception_mapper.map(e)(
                 id=order_id,
             ) from e
 
@@ -90,7 +88,7 @@ class OrdersService(BaseService):
                     user_id,
                 )
         except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+            raise self._exception_mapper.map(e)() from e
         return [
             ShowOrderExtended.from_model(
                 order, items=order.items, user=order.user, total=order.total
@@ -107,7 +105,7 @@ class OrdersService(BaseService):
                     pagination_params
                 )
         except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+            raise self._exception_mapper.map(e)() from e
         return [
             ShowOrderExtended.from_model(
                 order, items=order.items, user=order.user, total=order.total
@@ -120,7 +118,7 @@ class OrdersService(BaseService):
             async with self._uow as uow:
                 order = await uow.orders_repo.get_by_id(order_id)
         except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+            raise self._exception_mapper.map(e)() from e
         return ShowOrderExtended.from_model(
             order, items=order.items, user=order.user, total=order.total
         )

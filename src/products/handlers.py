@@ -1,14 +1,13 @@
 from collections.abc import Sequence
 import typing as t
-from http import HTTPStatus
 
 from core.exception_mappers import HttpExceptionsMapper
 from core.schemas import EntityIDParam
 from core.pagination import PaginatedResponse, PaginationDep
-from core.ioc import Inject
+from core.ioc import Inject, Resolve
 from core.schemas import Base64IntOptionalIDParam
-from core.services.exceptions import ServiceError
-from fastapi import APIRouter, Form, HTTPException, Depends
+from core.services.exceptions import MappedServiceError
+from fastapi import APIRouter, Form, HTTPException, Depends, status
 
 from products import schemas
 from products.domain.services import ProductsService
@@ -38,8 +37,8 @@ async def list_products(
             discounted,
             pagination_params,
         )
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
     return ProductsPaginatedResponse(
         products=products,
         total_records=total_records,
@@ -61,8 +60,8 @@ async def get_current_sales(
         products, total_records = await products_service.get_current_sales(
             pagination_params,
         )
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
     return SalesPaginatedResponse(
         sales=products,
         total_records=total_records,
@@ -78,13 +77,15 @@ async def get_product(
 ) -> dict[str, schemas.ShowProductWithRelations]:
     try:
         product = await products_service.get_product(int(product_id))
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
     return {"product": product}
 
 
 @router.post(
-    "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
+    "/create",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
 )
 async def create_product(
     dto: t.Annotated[schemas.CreateProductDTO, Form()],
@@ -92,31 +93,32 @@ async def create_product(
 ) -> schemas.ShowProduct:
     try:
         product = await products_service.create_product(dto)
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
     return product
 
 
-@router.put(
-    "/update/{product_id}",
-    # dependencies=[Depends(require_admin)]
-)
+@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
 async def update_product(
     product_id: EntityIDParam,
     dto: t.Annotated[schemas.UpdateProductDTO, Form()],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):
-        raise HTTPException(400, "Nothing to update. No data provided")
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Nothing to update. No data provided"
+        )
     try:
         product = await products_service.update_product(int(product_id), dto)
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
     return product
 
 
 @router.delete(
-    "/delete/{product_id}", status_code=204, dependencies=[Depends(require_admin)]
+    "/delete/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
 )
 async def delete_product(
     product_id: EntityIDParam,
@@ -124,8 +126,8 @@ async def delete_product(
 ) -> None:
     try:
         await products_service.delete_product(int(product_id))
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+    except MappedServiceError as e:
+        Resolve(HttpExceptionsMapper).map_and_raise(e)
 
 
 @router.get("/platforms")
