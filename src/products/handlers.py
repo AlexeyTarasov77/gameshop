@@ -87,7 +87,7 @@ async def get_product(
     "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
 )
 async def create_product(
-    dto: t.Annotated[schemas.CreateProductDTO, Form()],
+    dto: t.Annotated[schemas.CreateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     try:
@@ -97,13 +97,10 @@ async def create_product(
     return product
 
 
-@router.put(
-    "/update/{product_id}",
-    # dependencies=[Depends(require_admin)]
-)
+@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
 async def update_product(
     product_id: EntityIDParam,
-    dto: t.Annotated[schemas.UpdateProductDTO, Form()],
+    dto: t.Annotated[schemas.UpdateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):

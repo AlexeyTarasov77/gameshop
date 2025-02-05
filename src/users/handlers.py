@@ -31,7 +31,7 @@ router = APIRouter(prefix="/users", tags=["users", "auth"])
 @router.post("/signup", status_code=HTTPStatus.CREATED, response_model=None)
 async def signup(
     req: Request,
-    dto: t.Annotated[schemas.CreateUserDTO, Form()],
+    dto: t.Annotated[schemas.CreateUserDTO, Form(media_type="multipart/form-data")],
     users_service: UsersServiceDep,
 ) -> schemas.ShowUser | JSONResponse:
     try:

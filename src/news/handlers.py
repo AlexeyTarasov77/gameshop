@@ -42,7 +42,8 @@ async def list_news(
     "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
 )
 async def create_news(
-    dto: t.Annotated[CreateNewsDTO, Form()], news_service: NewsServiceDep
+    dto: t.Annotated[CreateNewsDTO, Form(media_type="multipart/form-data")],
+    news_service: NewsServiceDep,
 ) -> ShowNews:
     try:
         news = await news_service.create_news(dto)
@@ -63,7 +64,7 @@ async def get_news(news_id: EntityIDParam, news_service: NewsServiceDep) -> Show
 @router.patch("/update/{news_id}", dependencies=[Depends(require_admin)])
 async def update_news(
     news_id: EntityIDParam,
-    dto: t.Annotated[UpdateNewsDTO, Form()],
+    dto: t.Annotated[UpdateNewsDTO, Form(media_type="multipart/form-data")],
     news_service: NewsServiceDep,
 ) -> ShowNews:
     if not dto.model_dump(exclude_unset=True):
