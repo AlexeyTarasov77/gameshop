@@ -4,7 +4,8 @@ from http import HTTPStatus
 
 from core.exception_mappers import HttpExceptionsMapper
 from core.schemas import EntityIDParam
-from core.pagination import PaginatedResponse, PaginationDep
+from core.pagination import PaginatedResponse
+from core.dependencies import PaginationDep, restrict_content_type
 from core.ioc import Inject
 from core.schemas import Base64IntOptionalIDParam
 from core.services.exceptions import ServiceError
@@ -84,7 +85,12 @@ async def get_product(
 
 
 @router.post(
-    "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
+    "/create",
+    status_code=HTTPStatus.CREATED,
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
 )
 async def create_product(
     dto: t.Annotated[schemas.CreateProductDTO, Form(media_type="multipart/form-data")],
@@ -97,7 +103,13 @@ async def create_product(
     return product
 
 
-@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
+@router.put(
+    "/update/{product_id}",
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
+)
 async def update_product(
     product_id: EntityIDParam,
     dto: t.Annotated[schemas.UpdateProductDTO, Form(media_type="multipart/form-data")],

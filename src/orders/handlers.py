@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
-from core.pagination import PaginationDep, PaginatedResponse
+from core.pagination import PaginatedResponse
+from core.dependencies import PaginationDep
 from core.ioc import Inject
 import typing as t
 
