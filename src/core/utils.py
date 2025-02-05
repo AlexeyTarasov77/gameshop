@@ -22,7 +22,7 @@ def filename_split(orig_filename: str) -> tuple[str, list[str]]:
 def get_upload_dir() -> Path:
     from core.ioc import Resolve
 
-    return Path() / Resolve(Config).server.media_serve_url
+    return Path() / Resolve(Config).server.media_serve_path
 
 
 async def save_upload_file(upload_file: UploadFile) -> str:
@@ -50,7 +50,7 @@ def get_uploaded_file_url(filename: str) -> str:
     from core.ioc import Resolve
 
     cfg = Resolve(Config)
-    serve_url = cfg.server.media_serve_url
+    serve_url = cfg.server.media_serve_path
     return f"{cfg.server.addr}/{serve_url}/{filename}"
 
 

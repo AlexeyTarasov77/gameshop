@@ -1,7 +1,6 @@
 import typing as t
 import math
 from collections.abc import Sequence
-from fastapi import Query, Depends
 from pydantic import Field, computed_field, model_validator
 from core.schemas import BaseModel
 

@@ -40,7 +40,7 @@ ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 class _Server(BaseModel):
     host: IPvAnyAddress = Field(default="0.0.0.0")
     port: PORT = Field(default=8000)
-    media_serve_url: str = Field(default="media")
+    media_serve_path: str = Field(default="media")
 
     @property
     def addr(self):
