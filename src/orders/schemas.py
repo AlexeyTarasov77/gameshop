@@ -54,12 +54,12 @@ class OrderItemCreateDTO(_BaseOrderItemDTO):
 
 
 class OrderItemProduct(BaseDTO):
-    id: UUID
+    id: int
     name: str
 
 
 class OrderItemShowDTO(_BaseOrderItemDTO):
-    id: UUID
+    id: int
     product: OrderItemProduct
     total_price: Decimal
 

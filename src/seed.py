@@ -2,22 +2,22 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from gateways.db.exceptions import PostgresExceptionsMapper
 import random
 import asyncio
 from gateways.db.main import SqlAlchemyDatabase
 from gateways.db.models import SqlAlchemyBaseModel
-from gateways.db.repository import SqlAlchemyRepository
 from faker import Faker
 from news.models import News
 from products.models import Category, Platform, Product, DeliveryMethod
 from users.hashing import BcryptHasher
 from users.models import User
 from orders.models import Order, OrderItem, OrderStatus
+from core.exception_mappers import PostgresExceptionsMapper
 import os
 
 fake = Faker()
-dsn = os.environ.get("DB_DSN") or input("Введите dsn: ")
+default_dsn = "postgresql+psycopg://postgres:postgres@localhost:5432/gameshop"
+dsn = os.environ.get("DB_DSN") or default_dsn
 db = SqlAlchemyDatabase(dsn, PostgresExceptionsMapper)
 
 
@@ -25,18 +25,18 @@ def _call_optional(func: Callable[..., Any]):
     return func() if fake.boolean() else None
 
 
-def _get_repo(model: type[SqlAlchemyBaseModel]) -> SqlAlchemyRepository:
-    session = db.session_factory()
-    repo = SqlAlchemyRepository[model](session)
-    return repo
+#
+# def _get_repo(model: type[SqlAlchemyBaseModel]) -> SqlAlchemyRepository:
+#     session = db.session_factory()
+#     repo = SqlAlchemyRepository[model](session)
+#     return repo
 
 
 async def _create_entities[T: SqlAlchemyBaseModel](
     model: type[T], data_generator: Callable[[], dict], n: int
 ) -> list[T]:
-    repo = _get_repo(model)
     entities = [model(**data_generator()) for _ in range(n)]
-    async with repo.session as session:
+    async with db.session_factory() as session:
         session.add_all(entities)
         await session.commit()
     return entities
