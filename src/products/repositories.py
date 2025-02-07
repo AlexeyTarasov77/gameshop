@@ -12,7 +12,7 @@ from products.schemas import CreateProductDTO, UpdateProductDTO
 class ProductsRepository(PaginationRepository[Product]):
     model = Product
 
-    async def filter_paginated_list(
+    async def filter_paginated_list_in_stock(
         self,
         query: str | None,
         category_id: int | None,
@@ -20,6 +20,7 @@ class ProductsRepository(PaginationRepository[Product]):
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
         stmt = super()._get_pagination_stmt(pagination_params)
+        stmt = stmt.filter_by(in_stock=True)
         if query:
             stmt = stmt.where(self.model.name.ilike(f"%{query}%"))
         if category_id:
@@ -73,6 +74,9 @@ class ProductsRepository(PaginationRepository[Product]):
             id=product_id,
         )
         return product
+
+    async def update_in_stock(self, product_id: int, value: bool) -> None:
+        await super().update({"in_stock": value}, id=product_id)
 
     async def delete_by_id(self, product_id: int) -> None:
         await super().delete_or_raise_not_found(id=product_id)

@@ -137,6 +137,28 @@ async def delete_product(
         HttpExceptionsMapper.map_and_raise(e)
 
 
+@router.patch("/remove-from-stock/{product_id}", status_code=204)
+async def remove_from_stock(
+    product_id: EntityIDParam,
+    products_service: ProductsServiceDep,
+):
+    try:
+        await products_service.remove_from_stock(int(product_id))
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+
+
+@router.patch("/add-to-stock/{product_id}", status_code=204)
+async def add_to_stock(
+    product_id: EntityIDParam,
+    products_service: ProductsServiceDep,
+):
+    try:
+        await products_service.add_to_stock(int(product_id))
+    except ServiceError as e:
+        HttpExceptionsMapper.map_and_raise(e)
+
+
 @router.get("/platforms")
 async def platforms_list(
     products_service: ProductsServiceDep,

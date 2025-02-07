@@ -103,3 +103,17 @@ class ProductsService(BaseService):
                 await uow.products_repo.delete_by_id(product_id)
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(id=product_id) from e
+
+    async def remove_from_stock(self, product_id: int) -> None:
+        try:
+            async with self._uow as uow:
+                await uow.products_repo.update_in_stock(product_id, False)
+        except DatabaseError as e:
+            raise self._exception_mapper.map_with_entity(e)(id=product_id) from e
+
+    async def add_to_stock(self, product_id: int) -> None:
+        try:
+            async with self._uow as uow:
+                await uow.products_repo.update_in_stock(product_id, True)
+        except DatabaseError as e:
+            raise self._exception_mapper.map_with_entity(e)(id=product_id) from e
