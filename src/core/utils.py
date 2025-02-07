@@ -26,8 +26,6 @@ def get_upload_dir() -> Path:
 
 
 async def save_upload_file(upload_file: UploadFile) -> str:
-    # if not UPLOAD_DIR.exists():
-    #     UPLOAD_DIR.mkdir()
     if upload_file.filename is None:
         unique_filename = "".join(
             random.sample([char for char in string.ascii_letters], 20)
