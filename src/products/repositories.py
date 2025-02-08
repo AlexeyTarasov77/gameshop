@@ -12,18 +12,18 @@ from products.schemas import CreateProductDTO, UpdateProductDTO
 class ProductsRepository(PaginationRepository[Product]):
     model = Product
 
-    async def filter_paginated_list_in_stock(
+    async def filter_paginated_list(
         self,
         query: str | None,
         category_id: int | None,
         discounted: bool | None,
+        in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
         stmt = super()._get_pagination_stmt(pagination_params)
-        stmt = stmt.filter_by(in_stock=True)
         if query:
             stmt = stmt.where(self.model.name.ilike(f"%{query}%"))
-        if category_id:
+        if category_id is not None:
             stmt = stmt.filter_by(category_id=category_id)
         if discounted is not None:
             base_cond = and_(
@@ -38,6 +38,8 @@ class ProductsRepository(PaginationRepository[Product]):
                 stmt = stmt.where(base_cond)
             else:
                 stmt = stmt.where(not_(base_cond))
+        if in_stock is not None:
+            stmt = stmt.filter_by(in_stock=in_stock)
 
         res = await self.session.execute(stmt)
         return super()._split_records_and_count(res.all())
@@ -74,9 +76,6 @@ class ProductsRepository(PaginationRepository[Product]):
             id=product_id,
         )
         return product
-
-    async def update_in_stock(self, product_id: int, value: bool) -> None:
-        await super().update({"in_stock": value}, id=product_id)
 
     async def delete_by_id(self, product_id: int) -> None:
         await super().delete_or_raise_not_found(id=product_id)

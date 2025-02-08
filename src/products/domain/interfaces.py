@@ -10,8 +10,6 @@ class ProductsRepositoryI(t.Protocol):
 
     async def update_by_id(self, dto: UpdateProductDTO, product_id: int) -> Product: ...
 
-    async def update_in_stock(self, product_id: int, value: bool): ...
-
     async def delete_by_id(self, product_id: int) -> None: ...
 
     async def filter_paginated_list(
@@ -19,10 +17,13 @@ class ProductsRepositoryI(t.Protocol):
         query: str | None,
         category_id: int | None,
         discounted: bool | None,
+        in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> PaginationResT[Product]: ...
 
     async def get_by_id(self, product_id: int) -> Product: ...
+
+    async def list_by_ids(self, ids: list[int]) -> list[Product]: ...
 
 
 class PlatformsRepositoryI(t.Protocol):

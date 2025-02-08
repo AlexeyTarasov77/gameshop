@@ -31,12 +31,14 @@ async def list_products(
     query: str | None = None,
     category_id: Base64IntOptionalIDParam = None,
     discounted: bool | None = None,
+    in_stock: bool | None = None,
 ) -> ProductsPaginatedResponse:
     try:
         products, total_records = await products_service.list_products(
             query,
             int(category_id) if category_id else None,
             discounted,
+            in_stock,
             pagination_params,
         )
     except ServiceError as e:
@@ -133,28 +135,6 @@ async def delete_product(
 ) -> None:
     try:
         await products_service.delete_product(int(product_id))
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
-
-
-@router.patch("/remove-from-stock/{product_id}", status_code=204)
-async def remove_from_stock(
-    product_id: EntityIDParam,
-    products_service: ProductsServiceDep,
-):
-    try:
-        await products_service.remove_from_stock(int(product_id))
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
-
-
-@router.patch("/add-to-stock/{product_id}", status_code=204)
-async def add_to_stock(
-    product_id: EntityIDParam,
-    products_service: ProductsServiceDep,
-):
-    try:
-        await products_service.add_to_stock(int(product_id))
     except ServiceError as e:
         HttpExceptionsMapper.map_and_raise(e)
 

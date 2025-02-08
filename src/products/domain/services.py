@@ -31,14 +31,19 @@ class ProductsService(BaseService):
         query: str | None,
         category_id: int | None,
         discounted: bool | None,
+        in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> tuple[list[ShowProductWithRelations], int]:
         try:
             async with self._uow as uow:
-                products, total_records = await uow.products_repo.filter_paginated_list(
+                (
+                    products,
+                    total_records,
+                ) = await uow.products_repo.filter_paginated_list(
                     query.strip() if query else None,
                     category_id,
                     discounted,
+                    in_stock,
                     pagination_params,
                 )
         except DatabaseError as e:
@@ -101,19 +106,5 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 await uow.products_repo.delete_by_id(product_id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(id=product_id) from e
-
-    async def remove_from_stock(self, product_id: int) -> None:
-        try:
-            async with self._uow as uow:
-                await uow.products_repo.update_in_stock(product_id, False)
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)(id=product_id) from e
-
-    async def add_to_stock(self, product_id: int) -> None:
-        try:
-            async with self._uow as uow:
-                await uow.products_repo.update_in_stock(product_id, True)
         except DatabaseError as e:
             raise self._exception_mapper.map_with_entity(e)(id=product_id) from e

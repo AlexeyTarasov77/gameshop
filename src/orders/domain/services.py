@@ -34,6 +34,14 @@ class OrdersService(BaseService):
             )
         try:
             async with self._uow as uow:
+                cart_products = await uow.products_repo.list_by_ids(
+                    [int(item.product_id) for item in dto.cart]
+                )
+                for product in cart_products:
+                    if not product.in_stock:
+                        raise ServiceValidationError(
+                            f"Can't create order! Product {product.name} is not available"
+                        )
                 order = await uow.orders_repo.create(dto, user_id)
                 user = None
                 if user_id:
