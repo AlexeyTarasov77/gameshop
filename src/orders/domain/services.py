@@ -3,7 +3,7 @@ from uuid import UUID
 import asyncio
 from core.pagination import PaginationParams
 from core.services.base import BaseService
-from core.services.exceptions import EntityNotFoundError, ServiceError
+from core.services.exceptions import EntityNotFoundError, UnavailableProductError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from orders.schemas import (
@@ -39,7 +39,7 @@ class OrdersService(BaseService):
                 for product in cart_products:
                     if not product.in_stock:
                         raise UnavailableProductError(product.name)
-                order = await uow.orders_repo.create(dto, user_id)
+                order = await uow.orders_repo.create_from_dto(dto, user_id)
                 user_email: str | None = dto.user.email
                 if user_id is not None:
                     user_email = (await uow.users_repo.get_by_id(user_id)).email

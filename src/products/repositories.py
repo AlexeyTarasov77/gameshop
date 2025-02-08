@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import and_, not_, or_
+from collections.abc import Sequence
+from sqlalchemy import and_, not_, or_, select
 from core.utils import save_upload_file
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
@@ -82,6 +83,11 @@ class ProductsRepository(PaginationRepository[Product]):
 
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)
+
+    async def list_by_ids(self, ids: list[int]) -> Sequence[Product]:
+        stmt = select(Product).where(Product.id.in_(ids))
+        res = await self.session.execute(stmt)
+        return res.scalars().all()
 
 
 class ProductOnSaleRepository(PaginationRepository[ProductOnSale]):

@@ -1,7 +1,6 @@
-from http import HTTPStatus
 import typing as t
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, status
 
 from core.ioc import Inject
 from core.schemas import EntityIDParam, check_dto_not_empty
@@ -32,7 +31,7 @@ async def list_news(
 
 @router.post(
     "/create",
-    status_code=HTTPStatus.CREATED,
+    status_code=status.HTTP_201_CREATED,
     dependencies=[
         restrict_content_type("multipart/form-data"),
         Depends(require_admin),
@@ -68,7 +67,7 @@ async def update_news(
 
 @router.delete(
     "/delete/{news_id}",
-    status_code=HTTPStatus.NO_CONTENT,
+    status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_admin)],
 )
 async def delete_news(news_id: EntityIDParam, news_service: NewsServiceDep):

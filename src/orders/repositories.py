@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
@@ -24,7 +23,7 @@ class OrdersRepository(PaginationRepository[Order]):
             .options(selectinload(self.model.items))
         )
 
-    async def create(self, dto: CreateOrderDTO, user_id: int | None) -> Order:
+    async def create_from_dto(self, dto: CreateOrderDTO, user_id: int | None) -> Order:
         return await super().create(
             **{"customer_" + k: v for k, v in dto.user},
             user_id=user_id,

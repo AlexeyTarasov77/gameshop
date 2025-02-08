@@ -70,7 +70,7 @@ class TestAsyncMailier:
     )
     def test_send_mail(
         self,
-        mailer: AsyncMailer,
+        mailer,
         subject: str,
         body: str,
         to: str,
