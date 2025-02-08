@@ -51,18 +51,14 @@ async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
     await orders_service.delete_order(order_id)
 
 
-class OrdersPaginatedResponse(PaginatedResponse):
-    orders: list[ShowOrderExtended]
-
-
 @router.get("/list", dependencies=[Depends(require_admin)])
 async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
-) -> OrdersPaginatedResponse:
+) -> PaginatedResponse[ShowOrderExtended]:
     orders, total_records = await orders_service.list_all_orders(pagination_params)
-    return OrdersPaginatedResponse(
-        orders=orders,
+    return PaginatedResponse(
+        objects=orders,
         total_records=total_records,
         total_on_page=len(orders),
         **pagination_params.model_dump(),
@@ -74,12 +70,12 @@ async def list_orders_for_user(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
     user_id: int = Depends(get_user_id_or_raise),
-):
+) -> PaginatedResponse[ShowOrderExtended]:
     orders, total_records = await orders_service.list_orders_for_user(
         pagination_params, user_id
     )
-    return OrdersPaginatedResponse(
-        orders=orders,
+    return PaginatedResponse(
+        objects=orders,
         total_records=total_records,
         total_on_page=len(orders),
         **pagination_params.model_dump(),

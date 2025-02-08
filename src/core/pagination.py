@@ -2,7 +2,7 @@ import typing as t
 import math
 from collections.abc import Sequence
 from pydantic import Field, computed_field, model_validator
-from core.schemas import BaseModel
+from core.schemas import BaseDTO, BaseModel
 
 
 class PaginationParams(BaseModel):
@@ -16,7 +16,8 @@ class PaginationParams(BaseModel):
 type PaginationResT[R] = tuple[Sequence[R], int]
 
 
-class PaginatedResponse(PaginationParams):
+class PaginatedResponse[T: BaseDTO](PaginationParams):
+    objects: Sequence[T]
     total_records: int
     total_on_page: int
     first_page: int = 1

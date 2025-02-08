@@ -16,7 +16,7 @@ class User(SqlAlchemyBaseModel):
     password_hash: Mapped[bytes] = mapped_column(BYTEA)
     photo_url: Mapped[str | None]
     is_active: Mapped[bool] = mapped_column(default=False)
-    orders: Mapped[list["Order"]] = relationship(back_populates="user")  # noqa
+    orders: Mapped[list["Order"]] = relationship(back_populates="user")  # type: ignore
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
 

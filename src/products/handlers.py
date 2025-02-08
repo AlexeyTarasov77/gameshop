@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 import typing as t
 
 from core.ioc import Inject
@@ -16,10 +15,6 @@ router = APIRouter(prefix="/products", tags=["products"])
 ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 
 
-class ProductsPaginatedResponse(PaginatedResponse):
-    products: list[schemas.ShowProductWithRelations]
-
-
 @router.get("/")
 async def list_products(
     pagination_params: PaginationDep,
@@ -28,7 +23,7 @@ async def list_products(
     category_id: Base64IntOptionalIDParam = None,
     discounted: bool | None = None,
     in_stock: bool | None = None,
-) -> ProductsPaginatedResponse:
+) -> PaginatedResponse[schemas.ShowProductWithRelations]:
     products, total_records = await products_service.list_products(
         query,
         int(category_id) if category_id else None,
@@ -36,8 +31,8 @@ async def list_products(
         in_stock,
         pagination_params,
     )
-    return ProductsPaginatedResponse(
-        products=products,
+    return PaginatedResponse(
+        objects=products,
         total_records=total_records,
         total_on_page=len(products),
         first_page=1,
@@ -45,21 +40,17 @@ async def list_products(
     )
 
 
-class SalesPaginatedResponse(PaginatedResponse):
-    sales: Sequence[schemas.ProductOnSaleDTO]
-
-
 @router.get("/sales")
 async def get_current_sales(
     pagination_params: PaginationDep, products_service: ProductsServiceDep
 ):
-    products, total_records = await products_service.get_current_sales(
+    sales, total_records = await products_service.get_current_sales(
         pagination_params,
     )
-    return SalesPaginatedResponse(
-        sales=products,
+    return PaginatedResponse(
+        objects=sales,
         total_records=total_records,
-        total_on_page=len(products),
+        total_on_page=len(sales),
         first_page=1,
         **pagination_params.model_dump(),
     )

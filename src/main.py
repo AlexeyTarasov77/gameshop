@@ -12,7 +12,7 @@ from gateways.db.main import SqlAlchemyDatabase
 
 
 def app_factory() -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(version=Resolve(Config).api_version)
     app.include_router(router)
     HTTPExceptionsMapper(app).setup_handlers()
 

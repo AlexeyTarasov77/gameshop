@@ -16,17 +16,13 @@ router = APIRouter(prefix="/news", tags=["news"])
 NewsServiceDep = t.Annotated[NewsService, Inject(NewsService)]
 
 
-class NewsPaginatedResponse(PaginatedResponse):
-    news: list[ShowNews]
-
-
 @router.get("/")
 async def list_news(
     pagination_params: PaginationDep, news_service: NewsServiceDep
-) -> NewsPaginatedResponse:
+) -> PaginatedResponse[ShowNews]:
     news, total_records = await news_service.list_news(pagination_params)
-    return NewsPaginatedResponse(
-        news=news,
+    return PaginatedResponse(
+        objects=news,
         total_records=total_records,
         total_on_page=len(news),
         first_page=1,

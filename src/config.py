@@ -1,4 +1,5 @@
 import argparse
+from ipaddress import ip_address
 import os
 import re
 import sys
@@ -38,7 +39,7 @@ ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 
 
 class _Server(BaseModel):
-    host: IPvAnyAddress = Field(default="0.0.0.0")
+    host: IPvAnyAddress = Field(default=ip_address("0.0.0.0"))
     port: PORT = Field(default=8000)
     media_serve_path: str = Field(default="media")
 
@@ -64,9 +65,9 @@ class _JWT(BaseModel):
 
 class Config(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
-
+    api_version: str = "1.0.0"
     mode: t.Literal["local", "prod", "tests"]
-    server: _Server = Field(default_factory=_Server)
+    server: _Server = Field(default=_Server())
     smtp: _SMTP
     jwt: _JWT
     storage_dsn: PostgresDsn
@@ -80,7 +81,7 @@ class Config(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
-        yaml_file_path = init_settings.init_kwargs.get("yaml_file")
+        yaml_file_path = init_settings.init_kwargs.get("yaml_file")  # type: ignore
         if not yaml_file_path:
             raise Exception("Missing required init arg: yaml_file")
         return (
@@ -119,7 +120,7 @@ def init_config(
         )
     if not Path(final_cfg_path).exists():
         raise ValueError("Config path doesn't exist: %s" % final_cfg_path)
-    cfg = Config(yaml_file=final_cfg_path)
+    cfg = Config(yaml_file=final_cfg_path)  # type: ignore
     if cli_args:
         cfg.server.host = cli_args.host or cfg.server.host
         cfg.server.port = cli_args.port or cfg.server.port

@@ -8,7 +8,9 @@ from users.handlers import router as users_router
 from news.handlers import router as news_router
 from orders.handlers import router as orders_router
 
-api_router = APIRouter(prefix="/api/v1", tags=["api_v1"])
+major_version = Resolve(Config).api_version[0]
+
+api_router = APIRouter(prefix=f"/api/v{major_version}", tags=[f"api_v{major_version}"])
 
 api_router.include_router(product_router)
 api_router.include_router(users_router)
@@ -21,7 +23,7 @@ router.include_router(api_router)
 
 @router.get("/ping")
 async def ping() -> dict[str, str | list[str]]:
-    return {"status": "available", "version": "1.0.0"}
+    return {"status": "available", "version": Resolve(Config).api_version}
 
 
 @router.get("/%s/{filename}" % Resolve(Config).server.media_serve_path)
