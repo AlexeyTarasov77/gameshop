@@ -2,6 +2,7 @@ from uuid import UUID
 import asyncio
 from core.pagination import PaginationParams
 from core.services.base import BaseService
+from core.services.exceptions import ServiceError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import DatabaseError
 from orders.schemas import (
@@ -13,7 +14,9 @@ from orders.schemas import (
 from users.domain.interfaces import MailProviderI
 
 
-class ServiceValidationError(Exception): ...
+class UnavailableProductError(ServiceError):
+    def __init__(self, product_name: str):
+        super().__init__(f"Can't create order! Product {product_name} is not available")
 
 
 class OrdersService(BaseService):
@@ -28,10 +31,6 @@ class OrdersService(BaseService):
         self._order_details_link = order_details_link
 
     async def create_order(self, dto: CreateOrderDTO, user_id: int | None) -> ShowOrder:
-        if not (user_id or (dto.user.email and dto.user.name)):
-            raise ServiceValidationError(
-                "email and name are required for not authorized user"
-            )
         try:
             async with self._uow as uow:
                 cart_products = await uow.products_repo.list_by_ids(
@@ -39,9 +38,7 @@ class OrdersService(BaseService):
                 )
                 for product in cart_products:
                     if not product.in_stock:
-                        raise ServiceValidationError(
-                            f"Can't create order! Product {product.name} is not available"
-                        )
+                        raise UnavailableProductError(product.name)
                 order = await uow.orders_repo.create(dto, user_id)
                 user = None
                 if user_id:

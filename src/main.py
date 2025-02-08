@@ -1,21 +1,20 @@
 import asyncio
 from logging import Logger
 
-from core.exception_mappers import HttpExceptionsMapper
+from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve
 from config import Config
 import uvicorn
 from core.router import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from core.services.exceptions import MappedServiceError
 from gateways.db.main import SqlAlchemyDatabase
 
 
 def app_factory() -> FastAPI:
     app = FastAPI()
     app.include_router(router)
-    app.add_exception_handler(MappedServiceError, HttpExceptionsMapper().handle)
+    HTTPExceptionsMapper(app).setup_handlers()
 
     app.add_middleware(
         CORSMiddleware,

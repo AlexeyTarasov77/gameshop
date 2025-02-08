@@ -6,7 +6,7 @@ from core.ioc import Inject
 import typing as t
 
 from core.services.exceptions import ServiceError
-from core.exception_mappers import HttpExceptionsMapper
+from core.exception_mappers import HTTPExceptionsMapper
 from orders.domain.services import OrdersService, ServiceValidationError
 from orders.schemas import (
     CreateOrderDTO,
@@ -30,13 +30,9 @@ async def create_order(
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
     orders_service: OrdersServiceDep,
 ) -> ShowOrder:
-    try:
-        order = await orders_service.create_order(dto, user_id)
-    except ServiceValidationError as e:
-        raise HTTPException(422, e.args[0])
-    except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
-    return order
+    if not (user_id or (dto.user.email and dto.user.name)):
+        raise HTTPException(422, "email and name are required for not authorized user")
+    return await orders_service.create_order(dto, user_id)
 
 
 @router.patch("/update/{order_id}", dependencies=[Depends(require_admin)])
@@ -50,7 +46,7 @@ async def update_order(
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
     return order
 
 
@@ -65,7 +61,7 @@ async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
 
 
 class OrdersPaginatedResponse(PaginatedResponse):
@@ -80,7 +76,7 @@ async def list_all_orders(
     try:
         orders, total_records = await orders_service.list_all_orders(pagination_params)
     except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
     return OrdersPaginatedResponse(
         orders=orders,
         total_records=total_records,
@@ -100,7 +96,7 @@ async def list_orders_for_user(
             pagination_params, user_id
         )
     except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
     return OrdersPaginatedResponse(
         orders=orders,
         total_records=total_records,
@@ -118,4 +114,4 @@ async def get_order(
     except ServiceValidationError as e:
         raise HTTPException(422, e.args[0])
     except ServiceError as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)

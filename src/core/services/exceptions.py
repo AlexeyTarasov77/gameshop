@@ -1,12 +1,13 @@
 class ServiceError(Exception):
     def __init__(self, msg: str) -> None:
-        self.msg = msg
+        self._msg = msg
         return super().__init__()
 
+    def __str__(self):
+        return self._msg
 
-class MappedServiceError(ServiceError):
-    msg: str
 
+class CommonServiceError(ServiceError):
     def _generate_msg(self) -> str:
         return "unexpected service error"
 
@@ -16,7 +17,7 @@ class MappedServiceError(ServiceError):
         return super().__init__(self._generate_msg())
 
 
-class EntityNotFoundError(MappedServiceError):
+class EntityNotFoundError(CommonServiceError):
     def _generate_msg(self) -> str:
         msg = "%s %s not found"
         params_string = ""
@@ -27,7 +28,7 @@ class EntityNotFoundError(MappedServiceError):
         return msg % (self._entity_name, params_string)
 
 
-class EntityAlreadyExistsError(MappedServiceError):
+class EntityAlreadyExistsError(CommonServiceError):
     def _generate_msg(self) -> str:
         msg = "%s %s already exists"
         params_string = ""
@@ -38,9 +39,15 @@ class EntityAlreadyExistsError(MappedServiceError):
         return msg % (self._entity_name, params_string)
 
 
-class EntityRelatedResourceNotFoundError(MappedServiceError):
+class EntityOperationRestrictedByRefError(CommonServiceError):
     def _generate_msg(self) -> str:
-        msg = "%s's related resources doesn't exist%s"
+        msg = "Can't delete %s, because it is referenced from another model"
+        return msg % self._entity_name
+
+
+class EntityRelationshipNotFoundError(CommonServiceError):
+    def _generate_msg(self) -> str:
+        msg = "%s's relationship doesn't exist%s"
         params_string = ""
         if self._params:
             params_string += ": " + ", ".join(

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
 from core.dependencies import restrict_content_type
-from core.exception_mappers import HttpExceptionsMapper
+from core.exception_mappers import HTTPExceptionsMapper
 from users.dependencies import UsersServiceDep, get_user_id_or_raise
 from fastapi import (
     APIRouter,
@@ -46,7 +46,7 @@ async def signup(
             status.HTTP_403_FORBIDDEN,
         )
     except Exception as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
 
 
 @router.post("/signin")
@@ -63,7 +63,7 @@ async def signin(
             "User isn't activated. Check your email to activate account and try to signin again!",
         ) from e
     except Exception as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
     return {"token": token}
 
 
@@ -75,7 +75,7 @@ async def activate_user(
     try:
         user = await users_service.activate_user(token)
     except Exception as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
     return {"activated": True, "user": user}
 
 
@@ -90,7 +90,7 @@ async def resend_activation_token(
             status.HTTP_400_BAD_REQUEST, "User already activated"
         ) from e
     except Exception as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)
 
 
 @router.get("/get-by-token")
@@ -101,4 +101,4 @@ async def get_user_by_token(
     try:
         return await users_service.get_user(user_id)
     except Exception as e:
-        HttpExceptionsMapper.map_and_raise(e)
+        HTTPExceptionsMapper.map_and_raise(e)

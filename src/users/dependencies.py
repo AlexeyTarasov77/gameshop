@@ -20,10 +20,7 @@ async def get_user_id_or_raise(
     )
     if not token:
         raise credentials_exception from None
-    try:
-        return await users_service.extract_user_id_from_token(token)
-    except TokenError as e:
-        raise credentials_exception from e
+    return await users_service.extract_user_id_from_token(token)
 
 
 async def get_optional_user_id(

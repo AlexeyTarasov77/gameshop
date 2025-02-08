@@ -2,19 +2,17 @@ from collections.abc import Mapping
 import logging
 import abc
 import typing as t
+
+from fastapi.responses import JSONResponse
 import gateways.db.exceptions as db_exc
 from psycopg import errors as pg_exc
-from fastapi.exception_handlers import http_exception_handler
+from core.services import exceptions as service_exc
 
 
-from fastapi import HTTPException, Request, status
+from fastapi import FastAPI, Request, status
 
-from core.services.exceptions import (
-    EntityAlreadyExistsError,
-    EntityNotFoundError,
-    EntityRelatedResourceNotFoundError,
-    MappedServiceError,
-)
+from orders.domain.services import UnavailableProductError
+from users.domain.services import ExpiredTokenError, InvalidTokenError
 
 
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
@@ -38,46 +36,33 @@ class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
         raise self.map_and_init(exc)
 
 
-class HTTPInternalServerError(HTTPException):
-    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    detail = "Internal server error"
-
-
-class HTTPNotFoundException(HTTPDefaultException):
-    status_code = status.HTTP_404_NOT_FOUND
-
-
-class HTTPConflictException(HTTPDefaultException):
-    status_code = status.HTTP_409_CONFLICT
-
-
-class HTTPBadRequestException(HTTPDefaultException):
-    status_code = status.HTTP_400_BAD_REQUEST
-
-
-class HttpExceptionsMapper(
-    AbstractExceptionMapper[MappedServiceError, HTTPDefaultException]
-):
+class HTTPExceptionsMapper:
     """Maps service errors to corresponding http status code"""
 
-    EXCEPTION_MAPPING: Mapping[type[MappedServiceError], type[HTTPDefaultException]] = {
-        EntityNotFoundError: HTTPNotFoundException,
-        EntityAlreadyExistsError: HTTPConflictException,
-        EntityRelatedResourceNotFoundError: HTTPBadRequestException,
+    _EXCEPTION_MAPPING: Mapping[type[Exception], int] = {
+        service_exc.EntityNotFoundError: status.HTTP_404_NOT_FOUND,
+        service_exc.EntityAlreadyExistsError: status.HTTP_409_CONFLICT,
+        service_exc.EntityRelationshipNotFoundError: status.HTTP_400_BAD_REQUEST,
+        service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,
+        UnavailableProductError: status.HTTP_422_UNPROCESSABLE_ENTITY,
+        InvalidTokenError: status.HTTP_401_UNAUTHORIZED,
+        ExpiredTokenError: status.HTTP_401_UNAUTHORIZED,
     }
 
-    def get_default_exc(self):
-        return HTTPDefaultException
+    def __init__(self, app: FastAPI):
+        self._app = app
 
-    async def handle(self, _: Request, exc: Exception):
-        if not isinstance(exc, MappedServiceError):
-            return await http_exception_handler(_, self.get_default_exc()())
-        mapped_exc_cls = super().map(exc)
-        return await http_exception_handler(_, mapped_exc_cls(exc.msg))
+    async def _handle(self, _: Request, exc: Exception):
+        status_code: int = self._EXCEPTION_MAPPING.get(
+            type(exc), status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        message: str = str(exc) if status_code < 500 else "Internal server error."
+        return JSONResponse({"detail": message}, status_code)
 
-    def map_and_init(self, exc: MappedServiceError) -> HTTPDefaultException:
-        mapped_exc_cls = super().map(exc)
-        return mapped_exc_cls(exc.msg)
+    def setup_handlers(self) -> None:
+        for exc_class in self._EXCEPTION_MAPPING:
+            self._app.add_exception_handler(exc_class, self._handle)
+        self._app.add_exception_handler(Exception, self._handle)
 
 
 class AbstractDatabaseExceptionMapper[K: Exception](
@@ -89,33 +74,18 @@ class PostgresExceptionsMapper(AbstractDatabaseExceptionMapper[pg_exc.Error]):
     EXCEPTION_MAPPING: Mapping[type[pg_exc.Error], type[db_exc.DatabaseError]] = {
         pg_exc.NoData: db_exc.NotFoundError,
         pg_exc.UniqueViolation: db_exc.AlreadyExistsError,
-        pg_exc.ForeignKeyViolation: db_exc.RelatedResourceNotFoundError,
     }
 
     def get_default_exc(self) -> type[db_exc.DatabaseError]:
         return db_exc.DatabaseError
 
+    def map(self, exc: pg_exc.Error) -> type[db_exc.DatabaseError]:
+        if isinstance(exc, pg_exc.ForeignKeyViolation):
+            if "is still referenced" in str(exc):
+                return db_exc.OperationRestrictedByRefError
+            return db_exc.RelatedResourceNotFoundError
+        return super().map(exc)
+
     def map_and_init(self, exc: pg_exc.Error) -> db_exc.DatabaseError:
         mapped_exc_cls = super().map(exc)
         return mapped_exc_cls(str(exc))
-
-
-class ServiceExceptionMapper(
-    AbstractExceptionMapper[db_exc.DatabaseError, MappedServiceError]
-):
-    def __init__(self, entity_name: str) -> None:
-        self.entity_name = entity_name
-        self.EXCEPTION_MAPPING: Mapping[
-            type[db_exc.DatabaseError], type[MappedServiceError]
-        ] = {
-            db_exc.NotFoundError: EntityNotFoundError,
-            db_exc.AlreadyExistsError: EntityAlreadyExistsError,
-            db_exc.RelatedResourceNotFoundError: EntityRelatedResourceNotFoundError,
-        }
-
-    def get_default_exc(self) -> type[MappedServiceError]:
-        return MappedServiceError
-
-    def map_and_init(self, exc: db_exc.DatabaseError, **kwargs) -> MappedServiceError:
-        mapped_exc_cls = super().map(exc)
-        return mapped_exc_cls(self.entity_name, **kwargs)

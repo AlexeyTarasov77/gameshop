@@ -1,7 +1,15 @@
 from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
-from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
-from gateways.db.exceptions import AlreadyExistsError, NotFoundError
+from core.services.exceptions import (
+    EntityAlreadyExistsError,
+    EntityNotFoundError,
+    EntityOperationRestrictedByRefError,
+)
+from gateways.db.exceptions import (
+    AlreadyExistsError,
+    NotFoundError,
+    OperationRestrictedByRefError,
+)
 from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
@@ -38,20 +46,17 @@ class ProductsService(BaseService):
         in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> tuple[list[ShowProductWithRelations], int]:
-        try:
-            async with self._uow as uow:
-                (
-                    products,
-                    total_records,
-                ) = await uow.products_repo.filter_paginated_list(
-                    query.strip() if query else None,
-                    category_id,
-                    discounted,
-                    in_stock,
-                    pagination_params,
-                )
-        except DatabaseError as e:
-            raise self._exception_mapper.map_with_entity(e)() from e
+        async with self._uow as uow:
+            (
+                products,
+                total_records,
+            ) = await uow.products_repo.filter_paginated_list(
+                query.strip() if query else None,
+                category_id,
+                discounted,
+                in_stock,
+                pagination_params,
+            )
         return [
             ShowProductWithRelations.model_validate(product) for product in products
         ], total_records
@@ -93,15 +98,25 @@ class ProductsService(BaseService):
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO
     ) -> ShowProduct:
-        with self.handle_exc(
-            name=dto.name,
-            id=product_id,
-        ):
+        try:
             async with self._uow as uow:
                 product = await uow.products_repo.update_by_id(dto, product_id)
+        except AlreadyExistsError:
+            params = {
+                "name": dto.name,
+                "category_id": dto.category.id if dto.category is not None else None,
+                "platform_id": dto.platform.id if dto.platform is not None else None,
+            }
+            raise EntityAlreadyExistsError(
+                self.entity_name, **{k: v for k, v in params.items() if v is not None}
+            )
         return ShowProduct.model_validate(product)
 
     async def delete_product(self, product_id: int) -> None:
-        with self.handle_exc(id=product_id):
+        try:
             async with self._uow as uow:
                 await uow.products_repo.delete_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
+        except OperationRestrictedByRefError:
+            raise EntityOperationRestrictedByRefError(self.entity_name)

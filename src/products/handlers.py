@@ -1,15 +1,12 @@
 from collections.abc import Sequence
 import typing as t
 
-from core.exception_mappers import HttpExceptionsMapper
+from core.ioc import Inject
 from core.schemas import EntityIDParam
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
-from core.ioc import Inject, Resolve
 from core.schemas import Base64IntOptionalIDParam
-from core.services.exceptions import MappedServiceError
 from fastapi import APIRouter, Form, HTTPException, Depends, status
-
 from products import schemas
 from products.domain.services import ProductsService
 from users.dependencies import require_admin
@@ -32,16 +29,13 @@ async def list_products(
     discounted: bool | None = None,
     in_stock: bool | None = None,
 ) -> ProductsPaginatedResponse:
-    try:
-        products, total_records = await products_service.list_products(
-            query,
-            int(category_id) if category_id else None,
-            discounted,
-            in_stock,
-            pagination_params,
-        )
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
+    products, total_records = await products_service.list_products(
+        query,
+        int(category_id) if category_id else None,
+        discounted,
+        in_stock,
+        pagination_params,
+    )
     return ProductsPaginatedResponse(
         products=products,
         total_records=total_records,
@@ -59,12 +53,9 @@ class SalesPaginatedResponse(PaginatedResponse):
 async def get_current_sales(
     pagination_params: PaginationDep, products_service: ProductsServiceDep
 ):
-    try:
-        products, total_records = await products_service.get_current_sales(
-            pagination_params,
-        )
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
+    products, total_records = await products_service.get_current_sales(
+        pagination_params,
+    )
     return SalesPaginatedResponse(
         sales=products,
         total_records=total_records,
@@ -77,12 +68,8 @@ async def get_current_sales(
 @router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
-) -> dict[str, schemas.ShowProductWithRelations]:
-    try:
-        product = await products_service.get_product(int(product_id))
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
-    return {"product": product}
+) -> schemas.ShowProductWithRelations:
+    return await products_service.get_product(int(product_id))
 
 
 @router.post(
@@ -97,11 +84,7 @@ async def create_product(
     dto: t.Annotated[schemas.CreateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
-    try:
-        product = await products_service.create_product(dto)
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
-    return product
+    return await products_service.create_product(dto)
 
 
 @router.put(
@@ -120,11 +103,7 @@ async def update_product(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Nothing to update. No data provided"
         )
-    try:
-        product = await products_service.update_product(int(product_id), dto)
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
-    return product
+    return await products_service.update_product(int(product_id), dto)
 
 
 @router.delete(
@@ -136,28 +115,25 @@ async def delete_product(
     product_id: EntityIDParam,
     products_service: ProductsServiceDep,
 ) -> None:
-    try:
-        await products_service.delete_product(int(product_id))
-    except MappedServiceError as e:
-        Resolve(HttpExceptionsMapper).map_and_raise(e)
+    await products_service.delete_product(int(product_id))
 
 
 @router.get("/platforms")
 async def platforms_list(
     products_service: ProductsServiceDep,
-) -> dict[str, list[schemas.PlatformDTO]]:
-    return {"platforms": await products_service.platforms_list()}
+) -> list[schemas.PlatformDTO]:
+    return await products_service.platforms_list()
 
 
 @router.get("/categories")
 async def categories_list(
     products_service: ProductsServiceDep,
-) -> dict[str, list[schemas.CategoryDTO]]:
-    return {"categories": await products_service.categories_list()}
+) -> list[schemas.CategoryDTO]:
+    return await products_service.categories_list()
 
 
 @router.get("/delivery-methods")
 async def delivery_methods_list(
     products_service: ProductsServiceDep,
-) -> dict[str, list[schemas.DeliveryMethodDTO]]:
-    return {"delivery_methods": await products_service.delivery_methods_list()}
+) -> list[schemas.DeliveryMethodDTO]:
+    return await products_service.delivery_methods_list()

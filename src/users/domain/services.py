@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 
 from core.services.base import BaseService
-from core.services.exceptions import ServiceError
+from core.services.exceptions import EntityNotFoundError, ServiceError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import AlreadyExistsError, DatabaseError, NotFoundError
 
@@ -79,7 +79,7 @@ class UsersService(BaseService):
             async with self._uow as uow:
                 user = await uow.users_repo.create_with_hashed_password(
                     dto,
-                    password_hash=password_hash,
+                    password_hash,
                 )
                 plain_token, token_obj = self._statefull_token_provider.new_token(
                     user.id, self._activation_token_ttl
@@ -92,11 +92,6 @@ class UsersService(BaseService):
                 if not existed_user.is_active:
                     exc = UserIsNotActivatedError()
             raise exc
-
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)(
-                email=dto.email, username=dto.username
-            ) from e
         email_body = (
             f"Здравствуйте, {user.username}. Ваш аккаунт был успешно создан."
             "Для активации аккаунта перейдите по ссылке ниже и подтверждите активацию аккаунта:"
@@ -115,8 +110,6 @@ class UsersService(BaseService):
                 user = await uow.users_repo.get_by_email(dto.email)
         except NotFoundError as e:
             raise InvalidCredentialsError() from e
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)(email=dto.email) from e
         if not user.is_active:
             raise UserIsNotActivatedError()
         if not self._password_hasher.compare(dto.password, user.password_hash):
@@ -145,8 +138,8 @@ class UsersService(BaseService):
                 token = await uow.tokens_repo.get_by_hash(token_hash)
                 user = await uow.users_repo.mark_as_active(token.user_id)
                 await uow.tokens_repo.delete_all_for_user(user.id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)() from e
+        except NotFoundError:
+            raise InvalidTokenError()
         return ShowUser.model_validate(user)
 
     async def resend_activation_token(self, email: str) -> None:
@@ -158,23 +151,23 @@ class UsersService(BaseService):
                     user.id, self._activation_token_ttl
                 )
                 await uow.tokens_repo.save(token_obj)
-            if user.is_active:
-                raise UserAlreadyActivatedError()
-            email_body = (
-                f"Новый токен для активации аккаунта: {plain_token}\n"
-                "Перейдите по ссылке ниже для активации аккаунта\n"
-                f"\t{self._activation_link % plain_token}\t"
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, email=email)
+        if user.is_active:
+            raise UserAlreadyActivatedError()
+        email_body = (
+            f"Новый токен для активации аккаунта: {plain_token}\n"
+            "Перейдите по ссылке ниже для активации аккаунта\n"
+            f"\t{self._activation_link % plain_token}\t"
+        )
+        asyncio.create_task(
+            self._mail_provider.send_mail_with_timeout(
+                "Новый активационный токен",
+                email_body,
+                to=user.email,
+                timeout=3,
             )
-            asyncio.create_task(
-                self._mail_provider.send_mail_with_timeout(
-                    "Новый активационный токен",
-                    email_body,
-                    to=user.email,
-                    timeout=3,
-                )
-            )
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)(email=email) from e
+        )
 
     async def get_user(self, user_id: int) -> ShowUserWithRole:
         try:
