@@ -17,10 +17,13 @@ class ProductsRepositoryI(t.Protocol):
         query: str | None,
         category_id: int | None,
         discounted: bool | None,
+        in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> PaginationResT[Product]: ...
 
     async def get_by_id(self, product_id: int) -> Product: ...
+
+    async def list_by_ids(self, ids: list[int]) -> list[Product]: ...
 
 
 class PlatformsRepositoryI(t.Protocol):

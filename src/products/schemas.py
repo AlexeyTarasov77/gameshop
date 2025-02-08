@@ -38,7 +38,8 @@ class BaseProductDTO(BaseDTO):
     name: str = Field(min_length=3)
     description: str = Field(min_length=10)
     regular_price: Decimal = Field(ge=0)
-    discount: ProductDiscount = 0
+    discount: ProductDiscount
+    in_stock: bool
 
 
 class CreateProductDTO(BaseProductDTO):
@@ -51,6 +52,7 @@ class CreateProductDTO(BaseProductDTO):
 
 class UpdateProductDTO(BaseDTO):
     name: str | None = Field(min_length=3, default=None)
+    in_stock: bool | None = None
     description: str | None = Field(min_length=10, default=None)
     regular_price: Decimal | None = Field(ge=0, default=None)
     category: Annotated[CategoryDTO | None, ParseJson] = None

@@ -15,7 +15,7 @@ from users.models import User
 class OrderStatus(Enum):
     COMPLETED = "COMPLETED"
     PENDING = "PENDING"
-    CANCELLED = "CANCELLED "
+    CANCELLED = "CANCELLED"
 
 
 class Order(SqlAlchemyBaseModel):

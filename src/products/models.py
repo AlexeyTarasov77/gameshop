@@ -44,6 +44,7 @@ class Product(SqlAlchemyBaseModel):
     )
     image_url: Mapped[str]
     regular_price: Mapped[Decimal]
+    in_stock: Mapped[bool] = mapped_column(server_default=text("true"))
     discount: Mapped[int] = mapped_column(server_default=text("0"))
     discount_valid_to: Mapped[datetime | None]
     created_at: Mapped[created_at_type]

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Form, HTTPException
 from core.exception_mappers import HttpExceptionsMapper
 from core.ioc import Inject
 from core.schemas import EntityIDParam
-from core.pagination import PaginatedResponse, PaginationDep
+from core.pagination import PaginatedResponse
+from core.dependencies import PaginationDep, restrict_content_type
 from core.services.exceptions import ServiceError
 from news.domain.services import NewsService
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
@@ -39,10 +40,16 @@ async def list_news(
 
 
 @router.post(
-    "/create", status_code=HTTPStatus.CREATED, dependencies=[Depends(require_admin)]
+    "/create",
+    status_code=HTTPStatus.CREATED,
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
 )
 async def create_news(
-    dto: t.Annotated[CreateNewsDTO, Form()], news_service: NewsServiceDep
+    dto: t.Annotated[CreateNewsDTO, Form(media_type="multipart/form-data")],
+    news_service: NewsServiceDep,
 ) -> ShowNews:
     try:
         news = await news_service.create_news(dto)
@@ -60,10 +67,16 @@ async def get_news(news_id: EntityIDParam, news_service: NewsServiceDep) -> Show
     return news
 
 
-@router.patch("/update/{news_id}", dependencies=[Depends(require_admin)])
+@router.patch(
+    "/update/{news_id}",
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
+)
 async def update_news(
     news_id: EntityIDParam,
-    dto: t.Annotated[UpdateNewsDTO, Form()],
+    dto: t.Annotated[UpdateNewsDTO, Form(media_type="multipart/form-data")],
     news_service: NewsServiceDep,
 ) -> ShowNews:
     if not dto.model_dump(exclude_unset=True):

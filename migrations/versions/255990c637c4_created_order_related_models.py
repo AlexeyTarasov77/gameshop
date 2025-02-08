@@ -33,7 +33,7 @@ def upgrade() -> None:
     )
     op.create_table(
         "order",
-        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.UUID(), nullable=False),
         sa.Column(
             "order_date", sa.DateTime(), server_default=sa.text("now()"), nullable=False
         ),
@@ -53,13 +53,13 @@ def upgrade() -> None:
         "order_item",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("product_id", sa.Integer(), nullable=False),
-        sa.Column("order_id", sa.Integer(), nullable=False),
+        sa.Column("order_id", sa.UUID(), nullable=False),
         sa.Column("price", sa.Numeric(), nullable=False),
         sa.Column(
             "quantity", sa.Integer(), nullable=False, server_default=sa.text("0")
         ),
         sa.ForeignKeyConstraint(["order_id"], ["order.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["product_id"], ["product.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["product_id"], ["product.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
     )
     # ### end Alembic commands ###

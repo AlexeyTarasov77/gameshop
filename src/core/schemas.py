@@ -1,6 +1,7 @@
 import base64
+from contextlib import suppress
 import json
-from typing import Annotated, Any
+from typing import Annotated
 from fastapi import UploadFile, Path as PathParam
 from pydantic import (
     AfterValidator,
@@ -30,10 +31,16 @@ def _check_image[T: UploadFile](file: T) -> T:
 
 
 def _parse_int(s: str | int) -> int:
-    try:
+    if isinstance(s, int):
+        return s
+    with suppress(ValueError):
         return int(s)
+    try:
+        return int(base64.b64decode(str(s)).decode())
     except ValueError:
-        return int(base64.b64decode(str(s)))
+        raise ValueError(
+            'Invalid id, it should be either valid int or int in str form ("1") or valid int base64 encoded'
+        )
 
 
 def _parse_id_optional(s: str | int) -> int | None:

@@ -19,6 +19,6 @@ class CreateNewsDTO(BaseDTO):
 
 
 class UpdateNewsDTO(BaseDTO):
-    title: str = None
-    description: str = None
+    title: str | None = None
+    description: str | None = None
     photo: UploadImage | None = None

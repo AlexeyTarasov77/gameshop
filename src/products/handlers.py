@@ -3,7 +3,8 @@ import typing as t
 
 from core.exception_mappers import HttpExceptionsMapper
 from core.schemas import EntityIDParam
-from core.pagination import PaginatedResponse, PaginationDep
+from core.pagination import PaginatedResponse
+from core.dependencies import PaginationDep, restrict_content_type
 from core.ioc import Inject, Resolve
 from core.schemas import Base64IntOptionalIDParam
 from core.services.exceptions import MappedServiceError
@@ -29,12 +30,14 @@ async def list_products(
     query: str | None = None,
     category_id: Base64IntOptionalIDParam = None,
     discounted: bool | None = None,
+    in_stock: bool | None = None,
 ) -> ProductsPaginatedResponse:
     try:
         products, total_records = await products_service.list_products(
             query,
             int(category_id) if category_id else None,
             discounted,
+            in_stock,
             pagination_params,
         )
     except MappedServiceError as e:
@@ -85,10 +88,13 @@ async def get_product(
 @router.post(
     "/create",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_admin)],
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
 )
 async def create_product(
-    dto: t.Annotated[schemas.CreateProductDTO, Form()],
+    dto: t.Annotated[schemas.CreateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     try:
@@ -98,10 +104,16 @@ async def create_product(
     return product
 
 
-@router.put("/update/{product_id}", dependencies=[Depends(require_admin)])
+@router.put(
+    "/update/{product_id}",
+    dependencies=[
+        restrict_content_type("multipart/form-data"),
+        Depends(require_admin),
+    ],
+)
 async def update_product(
     product_id: EntityIDParam,
-    dto: t.Annotated[schemas.UpdateProductDTO, Form()],
+    dto: t.Annotated[schemas.UpdateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
     if not dto.model_dump(exclude_unset=True):

@@ -17,12 +17,13 @@ class ProductsRepository(PaginationRepository[Product]):
         query: str | None,
         category_id: int | None,
         discounted: bool | None,
+        in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
         stmt = super()._get_pagination_stmt(pagination_params)
         if query:
             stmt = stmt.where(self.model.name.ilike(f"%{query}%"))
-        if category_id:
+        if category_id is not None:
             stmt = stmt.filter_by(category_id=category_id)
         if discounted is not None:
             base_cond = and_(
@@ -37,6 +38,8 @@ class ProductsRepository(PaginationRepository[Product]):
                 stmt = stmt.where(base_cond)
             else:
                 stmt = stmt.where(not_(base_cond))
+        if in_stock is not None:
+            stmt = stmt.filter_by(in_stock=in_stock)
 
         res = await self.session.execute(stmt)
         return super()._split_records_and_count(res.all())

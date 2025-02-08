@@ -32,15 +32,23 @@ class OrdersService(BaseService):
             raise ServiceValidationError(
                 "email and name are required for not authorized user"
             )
-        async with self._uow as uow:
-            try:
+        try:
+            async with self._uow as uow:
+                cart_products = await uow.products_repo.list_by_ids(
+                    [int(item.product_id) for item in dto.cart]
+                )
+                for product in cart_products:
+                    if not product.in_stock:
+                        raise ServiceValidationError(
+                            f"Can't create order! Product {product.name} is not available"
+                        )
                 order = await uow.orders_repo.create(dto, user_id)
                 user = None
                 if user_id:
                     user = await uow.users_repo.get_by_id(user_id)
                 await uow.order_items_repo.create_many(dto.cart, order.id)
-            except DatabaseError as e:
-                raise self._exception_mapper.map(e)(**dto.model_dump()) from e
+        except DatabaseError as e:
+            raise self._exception_mapper.map_with_entity(e)(**dto.model_dump()) from e
         email_body = (
             f"Ваш заказ был успешно оформлен и принят в обработку.\n"
             "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"

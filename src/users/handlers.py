@@ -4,6 +4,7 @@ from http import HTTPStatus
 from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
+from core.dependencies import restrict_content_type
 from core.exception_mappers import HttpExceptionsMapper
 from users.dependencies import UsersServiceDep, get_user_id_or_raise
 from fastapi import (
@@ -26,10 +27,15 @@ from users.domain.services import (
 router = APIRouter(prefix="/users", tags=["users", "auth"])
 
 
-@router.post("/signup", status_code=HTTPStatus.CREATED, response_model=None)
+@router.post(
+    "/signup",
+    status_code=HTTPStatus.CREATED,
+    response_model=None,
+    dependencies=[restrict_content_type("multipart/form-data")],
+)
 async def signup(
     req: Request,
-    dto: t.Annotated[schemas.CreateUserDTO, Form()],
+    dto: t.Annotated[schemas.CreateUserDTO, Form(media_type="multipart/form-data")],
     users_service: UsersServiceDep,
 ) -> schemas.ShowUser | JSONResponse:
     try:
