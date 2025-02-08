@@ -11,9 +11,6 @@ from core.services import exceptions as service_exc
 
 from fastapi import FastAPI, Request, status
 
-from orders.domain.services import UnavailableProductError
-from users.domain.services import ExpiredTokenError, InvalidTokenError
-
 
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
     EXCEPTION_MAPPING: Mapping[type[K], type[V]]
@@ -44,9 +41,12 @@ class HTTPExceptionsMapper:
         service_exc.EntityAlreadyExistsError: status.HTTP_409_CONFLICT,
         service_exc.EntityRelationshipNotFoundError: status.HTTP_400_BAD_REQUEST,
         service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,
-        UnavailableProductError: status.HTTP_422_UNPROCESSABLE_ENTITY,
-        InvalidTokenError: status.HTTP_401_UNAUTHORIZED,
-        ExpiredTokenError: status.HTTP_401_UNAUTHORIZED,
+        service_exc.UnavailableProductError: status.HTTP_422_UNPROCESSABLE_ENTITY,
+        service_exc.InvalidTokenError: status.HTTP_401_UNAUTHORIZED,
+        service_exc.ExpiredTokenError: status.HTTP_401_UNAUTHORIZED,
+        service_exc.InvalidCredentialsError: status.HTTP_401_UNAUTHORIZED,
+        service_exc.UserIsNotActivatedError: status.HTTP_403_FORBIDDEN,
+        service_exc.UserAlreadyActivatedError: status.HTTP_403_FORBIDDEN,
     }
 
     def __init__(self, app: FastAPI):

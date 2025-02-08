@@ -1,15 +1,45 @@
 class ServiceError(Exception):
-    def __init__(self, msg: str) -> None:
-        self._msg = msg
+    _msg = "unexpected service error"
+
+    def __init__(self, msg: str | None = None) -> None:
+        self._msg = msg or self._msg
         return super().__init__()
 
     def __str__(self):
         return self._msg
 
 
+class UnavailableProductError(ServiceError):
+    def __init__(self, product_name: str):
+        super().__init__(f"Can't create order! Product {product_name} is not available")
+
+
+class TokenError(ServiceError): ...
+
+
+class ExpiredTokenError(TokenError):
+    _msg = "Token expired! Please refresh your token."
+
+
+class InvalidTokenError(TokenError):
+    _msg = "Invalid token. Please obtain a new token and try again."
+
+
+class UserIsNotActivatedError(ServiceError):
+    _msg = "User isn't activated. Check your email to activate account and try to signin again!"
+
+
+class InvalidCredentialsError(ServiceError):
+    _msg = "Invalid email or password"
+
+
+class UserAlreadyActivatedError(ServiceError):
+    _msg = "User already activated!"
+
+
 class CommonServiceError(ServiceError):
     def _generate_msg(self) -> str:
-        return "unexpected service error"
+        return self._msg
 
     def __init__(self, entity_name: str, **kwargs) -> None:
         self._entity_name = entity_name

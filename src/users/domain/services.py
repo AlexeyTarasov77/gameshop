@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 
 from core.services.base import BaseService
-from core.services.exceptions import EntityNotFoundError, ServiceError
+from core.services import exceptions as exc
 from core.uow import AbstractUnitOfWork
-from gateways.db.exceptions import AlreadyExistsError, DatabaseError, NotFoundError
+from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from users.domain.interfaces import (
     MailProviderI,
@@ -16,36 +16,6 @@ from users.domain.interfaces import (
     StatelessTokenProviderI,
 )
 from users.schemas import CreateUserDTO, ShowUser, ShowUserWithRole, UserSignInDTO
-
-
-class TokenError(ServiceError): ...
-
-
-class ExpiredTokenError(TokenError):
-    def __init__(self):
-        super().__init__("Token expired! Please refresh your token.")
-
-
-class InvalidTokenError(TokenError):
-    def __init__(self):
-        super().__init__("Invalid token. Please obtain a new token and try again.")
-
-
-class UserIsNotActivatedError(ServiceError):
-    def __init__(self):
-        super().__init__(
-            "User isn't activated. Check your email to activate account and try to signin again!"
-        )
-
-
-class InvalidCredentialsError(ServiceError):
-    def __init__(self):
-        super().__init__("Invalid email or password")
-
-
-class UserAlreadyActivatedError(ServiceError):
-    def __init__(self):
-        super().__init__("User already activated!")
 
 
 class UsersService(BaseService):
@@ -86,12 +56,12 @@ class UsersService(BaseService):
                 )
                 await uow.tokens_repo.save(token_obj)
         except AlreadyExistsError as e:
-            exc = e
+            error = e
             async with self._uow as uow:
                 existed_user = await uow.users_repo.get_by_email(dto.email)
                 if not existed_user.is_active:
-                    exc = UserIsNotActivatedError()
-            raise exc
+                    error = exc.UserIsNotActivatedError()
+            raise error
         email_body = (
             f"Здравствуйте, {user.username}. Ваш аккаунт был успешно создан."
             "Для активации аккаунта перейдите по ссылке ниже и подтверждите активацию аккаунта:"
@@ -109,11 +79,11 @@ class UsersService(BaseService):
             async with self._uow as uow:
                 user = await uow.users_repo.get_by_email(dto.email)
         except NotFoundError as e:
-            raise InvalidCredentialsError() from e
+            raise exc.InvalidCredentialsError() from e
         if not user.is_active:
-            raise UserIsNotActivatedError()
+            raise exc.UserIsNotActivatedError()
         if not self._password_hasher.compare(dto.password, user.password_hash):
-            raise InvalidCredentialsError()
+            raise exc.InvalidCredentialsError()
         return self._jwt_token_provider.new_token(
             {"uid": user.id}, self._auth_token_ttl
         )
@@ -126,9 +96,9 @@ class UsersService(BaseService):
                 raise ValueError()
             token_exp = datetime.fromtimestamp(token_payload["exp"])
         except (InvalidJwtTokenError, ValueError, KeyError) as e:
-            raise InvalidTokenError() from e
+            raise exc.InvalidTokenError() from e
         if token_exp < datetime.now():
-            raise ExpiredTokenError()
+            raise exc.ExpiredTokenError()
         return user_id
 
     async def activate_user(self, plain_token: str) -> ShowUser:
@@ -139,7 +109,7 @@ class UsersService(BaseService):
                 user = await uow.users_repo.mark_as_active(token.user_id)
                 await uow.tokens_repo.delete_all_for_user(user.id)
         except NotFoundError:
-            raise InvalidTokenError()
+            raise exc.InvalidTokenError()
         return ShowUser.model_validate(user)
 
     async def resend_activation_token(self, email: str) -> None:
@@ -152,9 +122,9 @@ class UsersService(BaseService):
                 )
                 await uow.tokens_repo.save(token_obj)
         except NotFoundError:
-            raise EntityNotFoundError(self.entity_name, email=email)
+            raise exc.EntityNotFoundError(self.entity_name, email=email)
         if user.is_active:
-            raise UserAlreadyActivatedError()
+            raise exc.UserAlreadyActivatedError()
         email_body = (
             f"Новый токен для активации аккаунта: {plain_token}\n"
             "Перейдите по ссылке ниже для активации аккаунта\n"
@@ -175,14 +145,11 @@ class UsersService(BaseService):
                 user, is_admin = await uow.users_repo.get_by_id_and_check_is_admin(
                     user_id
                 )
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)(user_id=user_id) from e
+        except NotFoundError:
+            raise exc.EntityNotFoundError(self.entity_name, id=user_id)
         user.is_admin = is_admin
         return ShowUserWithRole.model_validate(user)
 
     async def check_is_user_admin(self, user_id: int) -> bool:
-        try:
-            async with self._uow as uow:
-                return await uow.admins_repo.check_exists(user_id)
-        except DatabaseError as e:
-            raise self._exception_mapper.map(e)(user_id=user_id) from e
+        async with self._uow as uow:
+            return await uow.admins_repo.check_exists(user_id)

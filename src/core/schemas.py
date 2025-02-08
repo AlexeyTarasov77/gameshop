@@ -1,5 +1,6 @@
 import base64
 from contextlib import suppress
+from fastapi import HTTPException, status
 import json
 from typing import Annotated
 from fastapi import UploadFile, Path as PathParam
@@ -17,6 +18,14 @@ from core.utils import get_uploaded_file_url, filename_split
 class BaseDTO(BaseModel):
     class Config:
         from_attributes = True
+
+
+def check_dto_not_empty(dto: BaseDTO):
+    if not dto.model_dump(exclude_unset=True):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Nothing to update. No data provided",
+        )
 
 
 def _check_image[T: UploadFile](file: T) -> T:

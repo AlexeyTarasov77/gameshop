@@ -1,6 +1,5 @@
 import random
 import string
-import typing as t
 from pathlib import Path
 from config import Config
 
@@ -50,12 +49,3 @@ def get_uploaded_file_url(filename: str) -> str:
     cfg = Resolve(Config)
     serve_url = cfg.server.media_serve_path
     return f"{cfg.server.addr}/{serve_url}/{filename}"
-
-
-class Singleton:
-    _instance = None
-
-    def __new__(cls, *args, **kwargs) -> t.Self:
-        if not cls._instance:
-            cls._instance = super().__new__(cls)
-        return cls._instance

@@ -2,11 +2,11 @@ from collections.abc import Sequence
 import typing as t
 
 from core.ioc import Inject
-from core.schemas import EntityIDParam
+from core.schemas import EntityIDParam, check_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
 from core.schemas import Base64IntOptionalIDParam
-from fastapi import APIRouter, Form, HTTPException, Depends, status
+from fastapi import APIRouter, Form, Depends, status
 from products import schemas
 from products.domain.services import ProductsService
 from users.dependencies import require_admin
@@ -99,10 +99,7 @@ async def update_product(
     dto: t.Annotated[schemas.UpdateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
-    if not dto.model_dump(exclude_unset=True):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, "Nothing to update. No data provided"
-        )
+    check_dto_not_empty(dto)
     return await products_service.update_product(int(product_id), dto)
 
 

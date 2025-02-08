@@ -1,5 +1,5 @@
 from typing import Annotated
-from users.domain.services import TokenError, UsersService
+from users.domain.services import UsersService
 from core.ioc import Inject
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer

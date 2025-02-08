@@ -5,9 +5,8 @@ from core.dependencies import PaginationDep
 from core.ioc import Inject
 import typing as t
 
-from core.services.exceptions import ServiceError
-from core.exception_mappers import HTTPExceptionsMapper
-from orders.domain.services import OrdersService, ServiceValidationError
+from core.schemas import check_dto_not_empty
+from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateOrderDTO,
     ShowOrder,
@@ -39,15 +38,8 @@ async def create_order(
 async def update_order(
     dto: UpdateOrderDTO, order_id: UUID, orders_service: OrdersServiceDep
 ):
-    if not dto.model_dump(exclude_unset=True):
-        raise HTTPException(422, "Nothing to update. No data provided")
-    try:
-        order = await orders_service.update_order(dto, order_id)
-    except ServiceValidationError as e:
-        raise HTTPException(422, e.args[0])
-    except ServiceError as e:
-        HTTPExceptionsMapper.map_and_raise(e)
-    return order
+    check_dto_not_empty(dto)
+    return await orders_service.update_order(dto, order_id)
 
 
 @router.delete(
@@ -56,12 +48,7 @@ async def update_order(
     dependencies=[Depends(require_admin)],
 )
 async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
-    try:
-        await orders_service.delete_order(order_id)
-    except ServiceValidationError as e:
-        raise HTTPException(422, e.args[0])
-    except ServiceError as e:
-        HTTPExceptionsMapper.map_and_raise(e)
+    await orders_service.delete_order(order_id)
 
 
 class OrdersPaginatedResponse(PaginatedResponse):
@@ -73,10 +60,7 @@ async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
 ) -> OrdersPaginatedResponse:
-    try:
-        orders, total_records = await orders_service.list_all_orders(pagination_params)
-    except ServiceError as e:
-        HTTPExceptionsMapper.map_and_raise(e)
+    orders, total_records = await orders_service.list_all_orders(pagination_params)
     return OrdersPaginatedResponse(
         orders=orders,
         total_records=total_records,
@@ -91,12 +75,9 @@ async def list_orders_for_user(
     orders_service: OrdersServiceDep,
     user_id: int = Depends(get_user_id_or_raise),
 ):
-    try:
-        orders, total_records = await orders_service.list_orders_for_user(
-            pagination_params, user_id
-        )
-    except ServiceError as e:
-        HTTPExceptionsMapper.map_and_raise(e)
+    orders, total_records = await orders_service.list_orders_for_user(
+        pagination_params, user_id
+    )
     return OrdersPaginatedResponse(
         orders=orders,
         total_records=total_records,
@@ -109,9 +90,4 @@ async def list_orders_for_user(
 async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
 ) -> ShowOrderExtended:
-    try:
-        return await orders_service.get_order(order_id)
-    except ServiceValidationError as e:
-        raise HTTPException(422, e.args[0])
-    except ServiceError as e:
-        HTTPExceptionsMapper.map_and_raise(e)
+    return await orders_service.get_order(order_id)
