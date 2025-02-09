@@ -77,3 +77,4 @@ Base64IntOptionalIDParam = Annotated[
     BeforeValidator(_parse_id_optional, json_schema_input_type=str),
     _base64int_serializer,
 ]
+Unset = object()

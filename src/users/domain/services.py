@@ -6,6 +6,7 @@ from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 from core.services.base import BaseService
 from core.services import exceptions as exc
 from core.uow import AbstractUnitOfWork
+from core.utils import save_upload_file
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from users.domain.interfaces import (
@@ -44,12 +45,12 @@ class UsersService(BaseService):
         self._auth_token_ttl = auth_token_ttl
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
+        photo_url = await save_upload_file(dto.photo) if dto.photo else None
         password_hash = self._password_hasher.hash(dto.password)
         try:
             async with self._uow as uow:
                 user = await uow.users_repo.create_with_hashed_password(
-                    dto,
-                    password_hash,
+                    dto, password_hash, photo_url
                 )
                 plain_token, token_obj = self._statefull_token_provider.new_token(
                     user.id, self._activation_token_ttl

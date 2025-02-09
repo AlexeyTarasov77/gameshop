@@ -45,8 +45,7 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self.session.execute(stmt)
         return super()._split_records_and_count(res.all())
 
-    async def create_and_save_upload(self, dto: CreateProductDTO) -> Product:
-        image_url = await save_upload_file(dto.image)
+    async def create_with_image(self, dto: CreateProductDTO, image_url: str) -> Product:
         product = await super().create(
             category_id=dto.category.id,
             platform_id=dto.platform.id,
@@ -59,13 +58,15 @@ class ProductsRepository(PaginationRepository[Product]):
         )
         return product
 
-    async def update_by_id(self, product_id: int, dto: UpdateProductDTO) -> Product:
+    async def update_by_id(
+        self, product_id: int, dto: UpdateProductDTO, image_url: str | None
+    ) -> Product:
         data = dto.model_dump(
             exclude={"image", "category", "platform", "delivery_method"},
             exclude_unset=True,
         )
-        if dto.image:
-            data["image_url"] = await save_upload_file(dto.image)
+        if image_url:
+            data["image_url"] = image_url
         if dto.platform:
             data["platform_id"] = dto.platform.id
         if dto.category:

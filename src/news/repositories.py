@@ -1,4 +1,4 @@
-from core.utils import save_upload_file
+from types import EllipsisType
 from gateways.db.repository import PaginationRepository
 from news.models import News
 from news.schemas import UpdateNewsDTO, CreateNewsDTO
@@ -7,10 +7,12 @@ from news.schemas import UpdateNewsDTO, CreateNewsDTO
 class NewsRepository(PaginationRepository[News]):
     model = News
 
-    async def update_by_id(self, dto: UpdateNewsDTO, news_id: int) -> News:
+    async def update_by_id(
+        self, news_id: int, dto: UpdateNewsDTO, photo_url: str | None | EllipsisType
+    ) -> News:
         data = dto.model_dump(exclude={"photo"}, exclude_unset=True)
-        if dto.photo:
-            data["photo_url"] = await save_upload_file(dto.photo)
+        if photo_url is not Ellipsis:
+            data["photo_url"] = photo_url
         return await super().update(data, id=news_id)
 
     async def delete_by_id(self, news_id: int) -> None:
@@ -19,8 +21,6 @@ class NewsRepository(PaginationRepository[News]):
     async def get_by_id(self, news_id: int) -> News:
         return await super().get_one(id=news_id)
 
-    async def create_and_save_upload(self, dto: CreateNewsDTO):
+    async def create_with_image(self, dto: CreateNewsDTO, photo_url: str | None):
         data = dto.model_dump(exclude={"photo"})
-        if dto.photo:
-            data["photo_url"] = await save_upload_file(dto.photo)
-        return await super().create(**data)
+        return await super().create(**data, photo_url=photo_url)

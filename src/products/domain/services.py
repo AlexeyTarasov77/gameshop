@@ -5,6 +5,7 @@ from core.services.exceptions import (
     EntityNotFoundError,
     EntityOperationRestrictedByRefError,
 )
+from core.utils import save_upload_file
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
@@ -26,10 +27,10 @@ class ProductsService(BaseService):
     entity_name = "Product"
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
+        image_url = await save_upload_file(dto.image)
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create_and_save_upload(dto)
-                print("PRODUCT", product)
+                product = await uow.products_repo.create_with_image(dto, image_url)
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,
@@ -99,9 +100,12 @@ class ProductsService(BaseService):
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO
     ) -> ShowProduct:
+        image_url = await save_upload_file(dto.image) if dto.image else None
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.update_by_id(product_id, dto)
+                product = await uow.products_repo.update_by_id(
+                    product_id, dto, image_url
+                )
         except AlreadyExistsError:
             params = {
                 "name": dto.name,

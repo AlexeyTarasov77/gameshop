@@ -1,5 +1,4 @@
 from sqlalchemy import select
-from core.utils import save_upload_file
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
@@ -16,12 +15,12 @@ class UsersRepository(SqlAlchemyRepository[User]):
         return await super().get_one(email=email)
 
     async def create_with_hashed_password(
-        self, dto: CreateUserDTO, password_hash: bytes
+        self, dto: CreateUserDTO, password_hash: bytes, photo_url: str | None
     ) -> User:
         data = dto.model_dump(exclude={"password", "photo"})
-        if dto.photo:
-            data["photo_url"] = await save_upload_file(dto.photo)
-        return await super().create(password_hash=password_hash, **data)
+        return await super().create(
+            password_hash=password_hash, photo_url=photo_url, **data
+        )
 
     async def get_by_id(self, user_id: int) -> User:
         return await super().get_one(id=user_id)
@@ -38,7 +37,7 @@ class UsersRepository(SqlAlchemyRepository[User]):
         res = await self.session.execute(stmt)
         data = res.one_or_none()
         if data is None:
-            raise NotFoundError()
+            raise NotFoundError(f"User with id: {user_id} not found")
         return data[0], bool(data[1])
 
 

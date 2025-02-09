@@ -7,7 +7,7 @@ from users.schemas import CreateUserDTO
 
 class UsersRepositoryI(t.Protocol):
     async def create_with_hashed_password(
-        self, dto: CreateUserDTO, password_hash: bytes
+        self, dto: CreateUserDTO, password_hash: bytes, photo_url: str | None
     ) -> User: ...
 
     async def mark_as_active(self, user_id: int) -> User: ...

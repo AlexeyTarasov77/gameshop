@@ -62,7 +62,7 @@ async def update_news(
     news_service: NewsServiceDep,
 ) -> ShowNews:
     check_dto_not_empty(dto)
-    return await news_service.update_news(dto, int(news_id))
+    return await news_service.update_news(int(news_id), dto)
 
 
 @router.delete(

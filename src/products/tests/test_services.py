@@ -78,7 +78,7 @@ class TestProductsService:
         create_product_mock: AsyncMock,
         expected_exc: type[Exception] | None,
     ):
-        products_service._uow.products_repo.create_and_save_upload = create_product_mock
+        products_service._uow.products_repo.create_with_image = create_product_mock
         create_dto_mock = Mock()
         with patch_dto_validate() as model_validate_mock:
             if expected_exc:
