@@ -59,7 +59,7 @@ def _parse_id_optional(s: str | int) -> int | None:
         return id
 
 
-ParseJson = BeforeValidator(lambda s: json.loads(s))
+ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[str, PlainSerializer(lambda path: get_uploaded_file_url(path))]
 UploadImage = Annotated[UploadFile, AfterValidator(_check_image)]

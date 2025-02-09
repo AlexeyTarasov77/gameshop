@@ -40,7 +40,7 @@ class AcceptsSessionI(t.Protocol):
     def __init__(self, session): ...
 
 
-class AbstractUnitOfWork[T](abc.ABC):
+class AbstractUnitOfWork[S](abc.ABC):
     exception_mapper: AbstractDatabaseExceptionMapper
 
     product_on_sale_repo: ProductOnSaleRepositoryI
@@ -55,9 +55,9 @@ class AbstractUnitOfWork[T](abc.ABC):
     orders_repo: OrdersRepositoryI
     order_items_repo: OrderItemsRepositoryI
 
-    def __init__(self, session_factory: Callable[[], T]):
+    def __init__(self, session_factory: Callable[[], S]):
         self._session_factory = session_factory
-        self.session: T | None = None
+        self.session: S | None = None
 
     async def __aenter__(self) -> t.Self:
         self.session = self._session_factory()

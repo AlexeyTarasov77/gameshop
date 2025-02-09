@@ -39,7 +39,6 @@ class BaseProductDTO(BaseDTO):
     description: str = Field(min_length=10)
     regular_price: Decimal = Field(ge=0)
     discount: ProductDiscount
-    in_stock: bool
 
 
 class CreateProductDTO(BaseProductDTO):
@@ -71,6 +70,7 @@ class BaseShowProductDTO(BaseProductDTO):
     created_at: datetime
     updated_at: datetime
     image_url: ImgUrl
+    in_stock: bool
 
 
 class ShowProduct(BaseShowProductDTO):

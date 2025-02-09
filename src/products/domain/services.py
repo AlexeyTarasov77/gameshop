@@ -29,6 +29,7 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.create_and_save_upload(dto)
+                print("PRODUCT", product)
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,
@@ -100,7 +101,7 @@ class ProductsService(BaseService):
     ) -> ShowProduct:
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.update_by_id(dto, product_id)
+                product = await uow.products_repo.update_by_id(product_id, dto)
         except AlreadyExistsError:
             params = {
                 "name": dto.name,
@@ -110,6 +111,8 @@ class ProductsService(BaseService):
             raise EntityAlreadyExistsError(
                 self.entity_name, **{k: v for k, v in params.items() if v is not None}
             )
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProduct.model_validate(product)
 
     async def delete_product(self, product_id: int) -> None:

@@ -59,7 +59,7 @@ class ProductsRepository(PaginationRepository[Product]):
         )
         return product
 
-    async def update_by_id(self, dto: UpdateProductDTO, product_id: int) -> Product:
+    async def update_by_id(self, product_id: int, dto: UpdateProductDTO) -> Product:
         data = dto.model_dump(
             exclude={"image", "category", "platform", "delivery_method"},
             exclude_unset=True,

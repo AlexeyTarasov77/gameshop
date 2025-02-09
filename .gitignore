@@ -1,6 +1,7 @@
 __pycache__/
 .DS_Store
 venv/
+pyrightconfig.json
 poetry.lock
 .ruff_cache
 media/
