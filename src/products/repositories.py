@@ -2,7 +2,6 @@ from datetime import datetime
 
 from collections.abc import Sequence
 from sqlalchemy import and_, not_, or_, select
-from core.utils import save_upload_file
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
@@ -53,7 +52,6 @@ class ProductsRepository(PaginationRepository[Product]):
             image_url=image_url,
             **dto.model_dump(
                 exclude={"category", "platform", "delivery_method", "image"},
-                exclude_none=True,
             ),
         )
         return product

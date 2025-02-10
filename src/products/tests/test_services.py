@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from inspect import iscoroutinefunction
-from pathlib import Path
 from random import randint
+from pathlib import Path
 import sys
 
 
