@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import jwt
 
-from users.domain.interfaces import TokenHasherI, TokensRepositoryI
+from users.domain.interfaces import TokenHasherI
 from users.models import Token
 
 

@@ -5,6 +5,7 @@ from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve
 from config import Config
 import uvicorn
+from core.middlewares import Middlewares
 from core.router import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +15,8 @@ from gateways.db.main import SqlAlchemyDatabase
 def app_factory() -> FastAPI:
     app = FastAPI(version=Resolve(Config).api_version)
     app.include_router(router)
+    Middlewares(app).setup()
     HTTPExceptionsMapper(app).setup_handlers()
-
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

@@ -30,6 +30,7 @@ pytz = "^2025.1"
 beautifulsoup4 = "^4.12.3"
 requests = "^2.32.3"
 pytest-asyncio = "^0.25.3"
+redis = {extras = ["hiredis"], version = "^5.2.1"}
 
 
 [tool.poetry.group.dev.dependencies]
