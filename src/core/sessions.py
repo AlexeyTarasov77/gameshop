@@ -30,16 +30,23 @@ class SessionManager:
             )
         return self._base_key % session_id
 
-    async def update_session(
-        self, json_path: str, data, session_id: str | None = None
+    async def set_to_session(
+        self, path: str, data, session_id: str | None = None
     ) -> None:
         await self._redis_client.json().set(
-            self._build_storing_key(session_id), json_path, data
+            self._build_storing_key(session_id), path, data
         )
 
-    async def get_from_session(self, *json_paths, session_id: str | None = None):
+    async def delete_from_session(
+        self, path: str, session_id: str | None = None
+    ) -> int:
+        return await self._redis_client.json().delete(
+            self._build_storing_key(session_id), path
+        )
+
+    async def get_from_session(self, *paths, session_id: str | None = None):
         return await self._redis_client.json().get(
-            self._build_storing_key(session_id), *json_paths
+            self._build_storing_key(session_id), *paths
         )
 
 
