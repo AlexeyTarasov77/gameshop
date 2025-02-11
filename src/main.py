@@ -1,11 +1,13 @@
 import asyncio
 from logging import Logger
 
+from redis.asyncio import Redis
+
+from core.sessions import SessionManager, SessionMiddleware
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve
 from config import Config
 import uvicorn
-from core.middlewares import Middlewares
 from core.router import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,10 +15,15 @@ from gateways.db.main import SqlAlchemyDatabase
 
 
 def app_factory() -> FastAPI:
-    app = FastAPI(version=Resolve(Config).api_version)
+    cfg = Resolve(Config)
+    app = FastAPI(version=cfg.api_version)
     app.include_router(router)
-    Middlewares(app).setup()
     HTTPExceptionsMapper(app).setup_handlers()
+    app.add_middleware(
+        SessionMiddleware,
+        max_age=int(cfg.server.sessions.cookie_max_age.total_seconds()),
+        session_manager=Resolve(SessionManager),
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -31,8 +38,13 @@ async def main() -> None:
     cfg = Resolve(Config)
     logger = Resolve(Logger)
     db = Resolve(SqlAlchemyDatabase)
+    redis_client = Resolve(Redis)
     logger.info("Pinging database...")
-    await asyncio.wait_for(db.ping(), 3)
+    done_tasks, _ = await asyncio.wait(
+        [asyncio.create_task(redis_client.ping()), asyncio.create_task(db.ping())],
+        timeout=3,
+    )
+    [await task for task in done_tasks]
     logger.info("Database is ready!")
     logger.info(f"Running server in {cfg.mode} mode")
     uvicorn_conf = uvicorn.Config(

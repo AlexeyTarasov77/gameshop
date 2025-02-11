@@ -5,13 +5,19 @@ from functools import lru_cache
 
 import punq
 from fastapi import Depends
+from redis.asyncio import Redis
+from cart.domain.interfaces import CartRepositoryI
+from cart.domain.services import CartService
+from cart.repositories import CartRepository
 from core.logger import setup_logger
 from core.exception_mappers import (
     AbstractDatabaseExceptionMapper,
     HTTPExceptionsMapper,
     PostgresExceptionsMapper,
 )
+from core.sessions import SessionManager
 from gateways.db.main import SqlAlchemyDatabase
+from gateways.redis.main import init_redis_client
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
 from products.domain.services import ProductsService
@@ -45,9 +51,11 @@ def _init_container() -> punq.Container:
     )
     container.register(Logger, instance=logger)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
+    container.register(SessionManager, SessionManager)
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
+    container.register(Redis, instance=init_redis_client(str(cfg.redis_dsn)))
     db = SqlAlchemyDatabase(
-        str(cfg.storage_dsn),
+        str(cfg.pg_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
     )
@@ -80,16 +88,18 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.jwt.auth_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
     )
+    container.register(CartRepositoryI, CartRepository)
+    container.register(CartService, CartService)
 
     return container
 
 
-def Resolve[T](dep: type[T]) -> T:
-    return t.cast(T, get_container().resolve(dep))
+def Resolve[T](dep: type[T], **kwargs) -> T:
+    return t.cast(T, get_container().resolve(dep, **kwargs))
 
 
-def Inject[T](dep: t.Type[T]):  # noqa: N802
+def Inject[T](dep: t.Type[T], **kwargs):  # noqa: N802
     def resolver() -> T:
-        return Resolve(dep)
+        return Resolve(dep, **kwargs)
 
     return Depends(resolver)
