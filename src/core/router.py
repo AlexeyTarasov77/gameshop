@@ -7,6 +7,7 @@ from products.handlers import router as product_router
 from users.handlers import router as users_router
 from news.handlers import router as news_router
 from orders.handlers import router as orders_router
+from cart.handlers import router as cart_router
 
 major_version = Resolve(Config).api_version[0]
 
@@ -16,6 +17,7 @@ api_router.include_router(product_router)
 api_router.include_router(users_router)
 api_router.include_router(news_router)
 api_router.include_router(orders_router)
+api_router.include_router(cart_router)
 
 router = APIRouter()
 router.include_router(api_router)

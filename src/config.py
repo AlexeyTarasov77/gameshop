@@ -14,6 +14,7 @@ from pydantic import (
     Field,
     IPvAnyAddress,
     PostgresDsn,
+    RedisDsn,
 )
 from pydantic_settings import (
     BaseSettings,
@@ -38,10 +39,16 @@ def _parse_timedelta(delta: str) -> timedelta:
 ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 
 
+class _HTTPSessions(BaseModel):
+    key: str = Field(default="session_id")
+    cookie_max_age: ParsableTimedelta = Field(default=timedelta(days=5))
+
+
 class _Server(BaseModel):
     host: IPvAnyAddress = Field(default=ip_address("0.0.0.0"))
     port: PORT = Field(default=8000)
     media_serve_path: str = Field(default="media")
+    sessions: _HTTPSessions = Field(default=_HTTPSessions())
 
     @property
     def addr(self):
@@ -70,7 +77,8 @@ class Config(BaseSettings):
     server: _Server = Field(default=_Server())
     smtp: _SMTP
     jwt: _JWT
-    storage_dsn: PostgresDsn
+    pg_dsn: PostgresDsn
+    redis_dsn: RedisDsn
 
     @classmethod
     def settings_customise_sources(

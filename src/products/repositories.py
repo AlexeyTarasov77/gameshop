@@ -88,6 +88,11 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self.session.execute(stmt)
         return res.scalars().all()
 
+    async def check_in_stock(self, product_id: int) -> bool:
+        stmt = select(Product.id).filter_by(id=product_id, in_stock=True)
+        res = await self.session.execute(stmt)
+        return bool(res.scalar_one_or_none())
+
 
 class ProductOnSaleRepository(PaginationRepository[ProductOnSale]):
     model = ProductOnSale
