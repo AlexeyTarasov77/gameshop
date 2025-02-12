@@ -1,28 +1,39 @@
+from redis.asyncio import Redis
 from cart.schemas import AddToCartDTO
-from core.sessions import SessionManager
+from core.sessions import RedisSessionManager
 from gateways.db.exceptions import NotFoundError
 
 
-class CartRepository:
-    def __init__(self, session_manager: SessionManager):
-        self._session_manager = session_manager
+class CartRepository(RedisSessionManager):
+    def __init__(self, storage: Redis, session_key: str):
+        super().__init__(storage, session_key)
         self._base_path = "$.cart"
 
-    async def add(self, dto: AddToCartDTO, session_id: str):
-        await self._session_manager.set_to_session(
-            f"{self._base_path}.{dto.product_id}", dto.quantity, session_id
+    async def create(self, dto: AddToCartDTO):
+        await super().set_to_session(
+            f"{self._base_path}.{dto.product_id}", dto.quantity
         )
 
-    async def delete_by_id(self, product_id: int, session_id: str):
-        deleted_count = await self._session_manager.delete_from_session(
-            f"{self._base_path}.{product_id}", session_id
+    async def check_exists(self, product_id: int) -> bool:
+        return bool(
+            await super().retrieve_from_session(f"{self._base_path}.{product_id}")
         )
-        if deleted_count == 0:
+
+    async def add(self, dto: AddToCartDTO):
+        res = await self._storage.json().numincrby(
+            self.storage_key,
+            f"{self._base_path}.{dto.product_id}",
+            dto.quantity,
+        )
+        if res is None:
             raise NotFoundError()
 
-    async def update_qty_by_id(self, product_id: int, qty: int, session_id: str):
-        is_set = await self._session_manager.set_to_session(
-            f"{self._base_path}.{product_id}", qty, session_id, xx=True
+    async def delete_by_id(self, product_id: int):
+        await super().delete_from_session(f"{self._base_path}.{product_id}")
+
+    async def update_qty_by_id(self, product_id: int, qty: int):
+        success = await super().set_to_session(
+            f"{self._base_path}.{product_id}", qty, xx=True
         )
-        if not is_set:
+        if not success:
             raise NotFoundError()

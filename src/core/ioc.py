@@ -6,7 +6,7 @@ from functools import lru_cache
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
-from cart.domain.interfaces import CartRepositoryI
+from cart.domain.interfaces import CartManagerI
 from cart.domain.services import CartService
 from cart.repositories import CartRepository
 from core.logger import setup_logger
@@ -15,7 +15,7 @@ from core.exception_mappers import (
     HTTPExceptionsMapper,
     PostgresExceptionsMapper,
 )
-from core.sessions import SessionManager
+from core.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
 from gateways.db.main import SqlAlchemyDatabase
 from gateways.redis.main import init_redis_client
 from news.domain.services import NewsService
@@ -51,7 +51,7 @@ def _init_container() -> punq.Container:
     )
     container.register(Logger, instance=logger)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
-    container.register(SessionManager, SessionManager)
+    container.register(RedisSessionManager, RedisSessionManager)
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
     container.register(Redis, instance=init_redis_client(str(cfg.redis_dsn)))
     db = SqlAlchemyDatabase(
@@ -88,8 +88,10 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.jwt.auth_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
     )
-    container.register(CartRepositoryI, CartRepository)
-    container.register(CartService, CartService)
+    container.register(CartService, CartService, cart_manager_cls=CartRepository)
+    container.register(
+        SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
+    )
 
     return container
 

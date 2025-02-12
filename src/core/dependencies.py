@@ -3,7 +3,6 @@ from fastapi import HTTPException, Header, Request, status, Depends
 from config import Config
 from core.ioc import Resolve
 from core.pagination import PaginationParams
-from core.sessions import SessionManager
 
 
 def restrict_content_type(required_ct: str):
@@ -27,10 +26,3 @@ def get_session_id(req: Request):
 
 
 SessionIdDep = Annotated[str, Depends(get_session_id)]
-
-
-def get_session_manager(session_id: SessionIdDep):
-    return Resolve(SessionManager, session_id=session_id)
-
-
-SessionManagerDep = Annotated[SessionManager, Depends(get_session_manager)]

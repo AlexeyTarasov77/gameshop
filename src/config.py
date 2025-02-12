@@ -41,6 +41,7 @@ ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 
 class _HTTPSessions(BaseModel):
     key: str = Field(default="session_id")
+    ttl: ParsableTimedelta = Field(default=timedelta(days=5))
     cookie_max_age: ParsableTimedelta = Field(default=timedelta(days=5))
 
 

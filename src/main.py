@@ -3,7 +3,7 @@ from logging import Logger
 
 from redis.asyncio import Redis
 
-from core.sessions import SessionManager, SessionMiddleware
+from core.sessions import SessionCreatorI, SessionMiddleware
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve
 from config import Config
@@ -22,7 +22,7 @@ def app_factory() -> FastAPI:
     app.add_middleware(
         SessionMiddleware,
         max_age=int(cfg.server.sessions.cookie_max_age.total_seconds()),
-        session_manager=Resolve(SessionManager),
+        session_creator=Resolve(SessionCreatorI),
     )
     app.add_middleware(
         CORSMiddleware,
