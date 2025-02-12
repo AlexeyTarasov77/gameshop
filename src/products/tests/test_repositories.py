@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from random import randint
 from unittest.mock import Mock, NonCallableMock, create_autospec, patch
 import pytest

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Body, status
 import typing as t
 from cart.schemas import AddToCartDTO
 from core.dependencies import SessionIdDep
@@ -23,3 +23,13 @@ async def remove_from_cart(
     product_id: EntityIDParam, cart_service: CartServiceDep, session_id: SessionIdDep
 ):
     await cart_service.remove_from_cart(int(product_id), session_id)
+
+
+@router.patch("/update/{product_id}")
+async def update_product_qty(
+    product_id: EntityIDParam,
+    qty: t.Annotated[int, Body(embed=True)],
+    cart_service: CartServiceDep,
+    session_id: SessionIdDep,
+):
+    await cart_service.update_product_qty(int(product_id), qty, session_id)

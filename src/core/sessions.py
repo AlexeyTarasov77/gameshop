@@ -2,7 +2,6 @@ from datetime import timedelta
 from redis.asyncio import Redis
 from secrets import token_urlsafe
 from starlette.types import ASGIApp
-
 from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import Message, Receive, Scope, Send
@@ -31,10 +30,13 @@ class SessionManager:
         return self._base_key % session_id
 
     async def set_to_session(
-        self, path: str, data, session_id: str | None = None
-    ) -> None:
-        await self._redis_client.json().set(
-            self._build_storing_key(session_id), path, data
+        self, path: str, data, session_id: str | None = None, **kwargs
+    ) -> bool:
+        return (
+            await self._redis_client.json().set(
+                self._build_storing_key(session_id), path, data, **kwargs
+            )
+            is not None
         )
 
     async def delete_from_session(

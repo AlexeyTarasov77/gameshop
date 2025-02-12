@@ -19,3 +19,10 @@ class CartRepository:
         )
         if deleted_count == 0:
             raise NotFoundError()
+
+    async def update_qty_by_id(self, product_id: int, qty: int, session_id: str):
+        is_set = await self._session_manager.set_to_session(
+            f"{self._base_path}.{product_id}", qty, session_id, xx=True
+        )
+        if not is_set:
+            raise NotFoundError()
