@@ -1,5 +1,7 @@
+from collections.abc import Sequence
 from fastapi import APIRouter, Body, status
 import typing as t
+from products.schemas import ProductInCartDTO, ShowProductWithRelations
 from sessions.schemas import AddToCartDTO
 from core.dependencies import SessionIdDep
 from core.ioc import Inject
@@ -31,6 +33,13 @@ async def remove_from_wishlist(
     await sessions_service.wishlist_remove(int(product_id), session_id)
 
 
+@wishlist_router.get("/")
+async def list_products_in_wishlist(
+    sessions_service: SessionsServiceDep, session_id: SessionIdDep
+) -> Sequence[ShowProductWithRelations]:
+    return await sessions_service.wishlist_list_products(session_id)
+
+
 @cart_router.post("/add")
 async def add_to_cart(
     dto: AddToCartDTO, sessions_service: SessionsServiceDep, session_id: SessionIdDep
@@ -46,6 +55,14 @@ async def remove_from_cart(
     session_id: SessionIdDep,
 ):
     await sessions_service.cart_remove(int(product_id), session_id)
+
+
+@cart_router.get("/")
+async def list_products_in_cart(
+    sessions_service: SessionsServiceDep,
+    session_id: SessionIdDep,
+) -> Sequence[ProductInCartDTO]:
+    return await sessions_service.cart_list_products(session_id)
 
 
 @cart_router.patch("/update/{product_id}")

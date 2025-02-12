@@ -85,6 +85,10 @@ class ShowProductWithRelations(BaseShowProductDTO):
     delivery_method: DeliveryMethodDTO
 
 
+class ProductInCartDTO(ShowProductWithRelations):
+    quantity: int = Field(gt=0)
+
+
 class ProductOnSaleDTO(BaseDTO):
     name: str
     photo_url: str

@@ -83,7 +83,7 @@ class ProductsRepository(PaginationRepository[Product]):
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)
 
-    async def list_by_ids(self, ids: list[int]) -> Sequence[Product]:
+    async def list_by_ids(self, ids: Sequence[int]) -> Sequence[Product]:
         stmt = select(Product).where(Product.id.in_(ids))
         res = await self.session.execute(stmt)
         return res.scalars().all()

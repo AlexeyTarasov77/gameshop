@@ -59,7 +59,7 @@ class RedisSessionManager:
             raise NotFoundError()
         return deleted_count
 
-    async def retrieve_from_session(self, *paths):
+    async def retrieve_from_session(self, *paths) -> list | None:
         return await self._storage.json().get(self.storage_key, *paths)
 
 

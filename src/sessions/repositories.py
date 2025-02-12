@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from sessions.schemas import AddToCartDTO
 from sessions.sessions import RedisSessionManager
 from gateways.db.exceptions import NotFoundError
@@ -36,6 +37,14 @@ class CartRepository(RedisSessionManager):
         if not success:
             raise NotFoundError()
 
+    async def list_items(self) -> dict[int, int]:
+        res = await super().retrieve_from_session(self._base_path)
+        assert res is not None
+        if len(res) == 0:
+            return {}
+        data: dict[str, int] = res[0]
+        return {int(k): v for k, v in data.items()}
+
 
 class WishlistRepository(RedisSessionManager):
     _base_path = "$.wishlist"
@@ -60,3 +69,12 @@ class WishlistRepository(RedisSessionManager):
 
     async def check_exists(self, product_id: int) -> bool:
         return await self._index_of(product_id) != -1
+
+    async def list_ids(self) -> Sequence[int]:
+        res: list[list[int]] | None = await super().retrieve_from_session(
+            self._base_path
+        )
+        assert res is not None
+        if len(res) == 0:
+            return []
+        return res[0]
