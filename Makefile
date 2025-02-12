@@ -30,6 +30,6 @@ migrations/run:
 
 .PHONY: api/deploy
 api/deploy:
-	rsync -aPzc --exclude '.git' -e 'ssh' ~/Desktop/Dev/python/fastAPI/gameshop/ www@185.42.14.137:/home/www/projects/gameshop && \
+	rsync -aPzc --exclude '.git' --exclude 'media' -e 'ssh' ~/Desktop/Dev/python/fastAPI/gameshop/ www@185.42.14.137:/home/www/projects/gameshop && \
 	ssh www@185.42.14.137 'cd ~/projects/gameshop && docker compose restart web'
 

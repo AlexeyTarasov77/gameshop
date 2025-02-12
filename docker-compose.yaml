@@ -1,5 +1,6 @@
 volumes:
   pg_data:
+  redis_data:
 
 services:
   web:
@@ -9,6 +10,8 @@ services:
     build: .
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - ./src:/app/src
@@ -37,8 +40,19 @@ services:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready"]
-      interval: 5s
+      interval: 2s
       timeout: 3s
       retries: 5
     env_file:
       - .env
+
+  redis:
+    container_name: gameshop_redis
+    image: redis/redis-stack:latest
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
