@@ -1,12 +1,14 @@
 import typing as t
 
-from cart.schemas import AddToCartDTO
+from sessions.schemas import AddToCartDTO
 
 
-class CartManagerI(t.Protocol):
+class BaseSessionManagerI(t.Protocol):
     @classmethod
     def get_for_session(cls, session_id: str) -> t.Self: ...
 
+
+class CartManagerI(BaseSessionManagerI, t.Protocol):
     async def add(self, dto: AddToCartDTO) -> int: ...
 
     async def delete_by_id(self, product_id: int): ...
@@ -16,3 +18,11 @@ class CartManagerI(t.Protocol):
     async def check_exists(self, product_id: int): ...
 
     async def create(self, dto: AddToCartDTO): ...
+
+
+class WishlistManagerI(BaseSessionManagerI, t.Protocol):
+    async def append(self, product_id: int): ...
+
+    async def remove(self, product_id: int): ...
+
+    async def check_exists(self, product_id: int): ...

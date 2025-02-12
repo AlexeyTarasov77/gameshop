@@ -3,7 +3,7 @@ from logging import Logger
 
 from redis.asyncio import Redis
 
-from core.sessions import SessionCreatorI, SessionMiddleware
+from sessions.sessions import SessionCreatorI, SessionMiddleware
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve
 from config import Config

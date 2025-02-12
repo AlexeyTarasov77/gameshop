@@ -8,19 +8,20 @@ import pytest
 from contextlib import nullcontext as does_not_raise
 from unittest.mock import AsyncMock, create_autospec
 
-from cart.domain.services import CartService
-from cart.repositories import CartRepository
+from sessions.domain.services import SessionsService
+from sessions.repositories import CartRepository, WishlistRepository
 from core.services.exceptions import EntityNotFoundError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 
 
 @pytest.fixture
-def cart_service() -> CartService:
+def cart_service() -> SessionsService:
     uow = create_autospec(AbstractUnitOfWork)
     uow.__aenter__.return_value = uow
     cart_repo = create_autospec(CartRepository)
-    return CartService(uow, cart_repo)
+    wishlist_repo = create_autospec(WishlistRepository)
+    return SessionsService(uow, cart_repo, wishlist_repo)
 
 
 class TestCartService:
