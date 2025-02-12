@@ -14,8 +14,9 @@ CartServiceDep = t.Annotated[CartService, Inject(CartService)]
 @router.post("/add")
 async def add_to_cart(
     dto: AddToCartDTO, cart_service: CartServiceDep, session_id: SessionIdDep
-) -> None:
-    await cart_service.add_to_cart(dto, session_id)
+) -> dict[str, int]:
+    new_qty = await cart_service.add_to_cart(dto, session_id)
+    return {"quantity": new_qty}
 
 
 @router.delete("/remove/{product_id}", status_code=status.HTTP_204_NO_CONTENT)

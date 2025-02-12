@@ -15,7 +15,8 @@ class CartService(BaseService):
         super().__init__(uow)
         self._cart_manager_cls = cart_manager_cls
 
-    async def add_to_cart(self, dto: AddToCartDTO, session_id: str):
+    async def add_to_cart(self, dto: AddToCartDTO, session_id: str) -> int:
+        dto.quantity = dto.quantity or 1
         async with self._uow as uow:
             in_stock = await uow.products_repo.check_in_stock(int(dto.product_id))
         if not in_stock:
@@ -25,6 +26,7 @@ class CartService(BaseService):
         if is_in_cart:
             return await cart_manager.add(dto)
         await cart_manager.create(dto)
+        return dto.quantity
 
     async def remove_from_cart(self, product_id: int, session_id: str):
         cart_manager = self._cart_manager_cls.get_for_session(session_id)

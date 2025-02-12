@@ -19,14 +19,15 @@ class CartRepository(RedisSessionManager):
             await super().retrieve_from_session(f"{self._base_path}.{product_id}")
         )
 
-    async def add(self, dto: AddToCartDTO):
-        res = await self._storage.json().numincrby(
+    async def add(self, dto: AddToCartDTO) -> int:
+        new_qty = await self._storage.json().numincrby(
             self.storage_key,
             f"{self._base_path}.{dto.product_id}",
             dto.quantity,
         )
-        if res is None:
+        if new_qty is None:
             raise NotFoundError()
+        return int(new_qty[0])
 
     async def delete_by_id(self, product_id: int):
         await super().delete_from_session(f"{self._base_path}.{product_id}")
@@ -37,3 +38,9 @@ class CartRepository(RedisSessionManager):
         )
         if not success:
             raise NotFoundError()
+
+
+class WishlistRepository(RedisSessionManager):
+    def __init__(self, storage: Redis, session_key: str):
+        super().__init__(storage, session_key)
+        self._base_path = "$.wishlist"

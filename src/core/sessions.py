@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Protocol, Self
+from typing import Protocol
 from redis.asyncio import Redis
 from secrets import token_urlsafe
 from starlette.types import ASGIApp
@@ -86,7 +86,7 @@ class SessionMiddleware:
         send_func = send
         session_id: str | None = connection.cookies.get(self.session_key_name)
         if session_id is None:
-            session_id = await self.session_creator.create({"cart": {}})
+            session_id = await self.session_creator.create({"cart": {}, "wishlist": []})
 
             async def send_wrapper(message: Message) -> None:
                 if message["type"] == "http.response.start":
