@@ -1,11 +1,7 @@
 from contextlib import contextmanager
+
 from inspect import iscoroutinefunction
 from random import randint
-from pathlib import Path
-import sys
-
-
-sys.path.append(Path().absolute().as_posix())
 from unittest.mock import (
     AsyncMock,
     Mock,
