@@ -6,7 +6,7 @@ services:
   web:
     container_name: gameshop_web
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     build: .
     depends_on:
       postgres:

@@ -74,7 +74,7 @@ class SessionMiddleware:
         self.app = app
         self.session_creator = session_creator
         self.session_key_name = session_key_name
-        self.security_flags = "httponly; samesite=lax"
+        self.security_flags = "httponly; samesite=none; Secure"
         self.max_age = max_age
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -84,6 +84,7 @@ class SessionMiddleware:
 
         connection = HTTPConnection(scope)
         send_func = send
+        print("COOOKIES", connection.cookies, "HEADERS", connection.headers)
         session_id: str | None = connection.cookies.get(self.session_key_name)
         if session_id is None:
             session_id = await self.session_creator.create({"cart": {}, "wishlist": []})
@@ -91,7 +92,7 @@ class SessionMiddleware:
             async def send_wrapper(message: Message) -> None:
                 if message["type"] == "http.response.start":
                     headers = MutableHeaders(scope=message)
-                    header_value = f"{self.session_key_name}={session_id}; Max-Age={self.max_age}; {self.security_flags}"
+                    header_value = f"{self.session_key_name}={session_id}; Path=/; Max-Age={self.max_age}; {self.security_flags}"
                     headers.append("Set-Cookie", header_value)
                 await send(message)
 
