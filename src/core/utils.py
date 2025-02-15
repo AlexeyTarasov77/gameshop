@@ -48,4 +48,4 @@ def get_uploaded_file_url(filename: str) -> str:
 
     cfg = Resolve(Config)
     serve_url = cfg.server.media_serve_path
-    return f"{cfg.server.addr}/{serve_url}/{filename}"
+    return f"{cfg.server.addr}/{serve_url}?filename={filename}"

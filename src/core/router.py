@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from config import Config
 from core.ioc import Resolve
 from core.utils import get_upload_dir
@@ -29,11 +29,21 @@ async def ping() -> dict[str, str | list[str]]:
     return {"status": "available", "version": Resolve(Config).api_version}
 
 
-@router.get("/%s/{filename}" % Resolve(Config).server.media_serve_path)
-async def media_serve(filename: str | None):
+media_serve_url = f"/{Resolve(Config).server.media_serve_path}"
+
+
+@router.get(media_serve_url)
+async def media_serve(filename: str | None = None):
+    dir = get_upload_dir()
     if filename:
-        if not (get_upload_dir() / filename).exists():
+        if not (dir / filename).exists():
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"File {filename} does not exist"
             )
-        return FileResponse(get_upload_dir() / filename)
+        return FileResponse(dir / filename)
+    content = ""
+    for path in dir.iterdir():
+        path_with_query_param = media_serve_url + f"?filename={path.name}"
+        print(path, path_with_query_param)
+        content += f'<a href="{path_with_query_param}" style="margin-right: 50px;">{path.name}</a>'
+    return HTMLResponse(content)

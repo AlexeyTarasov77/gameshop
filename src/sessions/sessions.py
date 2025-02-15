@@ -1,8 +1,10 @@
 from datetime import timedelta
 from typing import Protocol
+from fastapi import Request, Response
 from redis.asyncio import Redis
 from secrets import token_urlsafe
 from starlette.types import ASGIApp
+from starlette.middleware.base import DispatchFunction, RequestResponseEndpoint
 from starlette.datastructures import MutableHeaders
 from starlette.requests import HTTPConnection
 from starlette.types import Message, Receive, Scope, Send
@@ -63,40 +65,30 @@ class RedisSessionManager:
         return await self._storage.json().get(self.storage_key, *paths)
 
 
-class SessionMiddleware:
-    def __init__(
-        self,
-        app: ASGIApp,
-        session_creator: SessionCreatorI,
-        max_age: int,
-        session_key_name: str = "session_id",
-    ):
-        self.app = app
-        self.session_creator = session_creator
-        self.session_key_name = session_key_name
-        self.security_flags = "httponly; samesite=none; Secure"
-        self.max_age = max_age
+def session_middleware(
+    session_creator: SessionCreatorI,
+    max_age: int | timedelta,
+    session_key_name: str = "session_id",
+) -> DispatchFunction:
+    async def create_session(
+        req: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        nonlocal max_age
+        session_key: str | None = req.cookies.get(session_key_name)
+        if session_key is None:
+            session_key = await session_creator.create({"cart": {}, "wishlist": []})
+        req.scope[session_key_name] = session_key
+        resp = await call_next(req)
+        if isinstance(max_age, timedelta):
+            max_age = int(max_age.total_seconds())
+        resp.set_cookie(
+            session_key_name,
+            session_key,
+            max_age,
+            httponly=True,
+            samesite="none",
+            secure=True,
+        )
+        return resp
 
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] not in ("http", "websocket"):  # pragma: no cover
-            await self.app(scope, receive, send)
-            return
-
-        connection = HTTPConnection(scope)
-        send_func = send
-        print("COOOKIES", connection.cookies, "HEADERS", connection.headers)
-        session_id: str | None = connection.cookies.get(self.session_key_name)
-        if session_id is None:
-            session_id = await self.session_creator.create({"cart": {}, "wishlist": []})
-
-            async def send_wrapper(message: Message) -> None:
-                if message["type"] == "http.response.start":
-                    headers = MutableHeaders(scope=message)
-                    header_value = f"{self.session_key_name}={session_id}; Path=/; Max-Age={self.max_age}; {self.security_flags}"
-                    headers.append("Set-Cookie", header_value)
-                await send(message)
-
-            send_func = send_wrapper
-        scope[self.session_key_name] = session_id
-
-        await self.app(scope, receive, send_func)
+    return create_session

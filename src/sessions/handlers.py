@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from fastapi import APIRouter, Body, status
+from fastapi import APIRouter, Body, Depends, status
 import typing as t
 from products.schemas import ProductInCartDTO, ShowProductWithRelations
 from sessions.schemas import AddToCartDTO
@@ -7,6 +7,7 @@ from core.dependencies import SessionIdDep
 from core.ioc import Inject
 from sessions.domain.services import SessionsService
 from core.schemas import Base64Int, EntityIDParam
+from users.dependencies import get_optional_user_id
 
 cart_router = APIRouter(prefix="/cart", tags=["cart"])
 wishlist_router = APIRouter(prefix="/wishlist", tags=["wishlist"])
