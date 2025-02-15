@@ -42,7 +42,6 @@ ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
 class _HTTPSessions(BaseModel):
     key: str = Field(default="session_id")
     ttl: ParsableTimedelta = Field(default=timedelta(days=5))
-    cookie_max_age: ParsableTimedelta = Field(default=timedelta(days=5))
 
 
 class _Server(BaseModel):
@@ -53,7 +52,7 @@ class _Server(BaseModel):
 
     @property
     def addr(self):
-        return f"http://{self.host}:{self.port}"
+        return f"https://{self.host}"
 
 
 class _SMTP(BaseModel):
