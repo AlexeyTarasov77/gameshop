@@ -6,8 +6,14 @@ from functools import lru_cache
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
+from sessions.domain.interfaces import CartManagerFactoryI, WishlistManagerFactoryI
 from sessions.domain.services import SessionsService
-from sessions.repositories import CartRepository, WishlistRepository
+from sessions.repositories import (
+    CartSessionManager,
+    WishlistSessionManager,
+    cart_manager_factory,
+    wishlist_manager_factory,
+)
 from core.logger import setup_logger
 from core.exception_mappers import (
     AbstractDatabaseExceptionMapper,
@@ -48,11 +54,12 @@ def _init_container() -> punq.Container:
     logger = setup_logger(
         cfg.debug, (Path().parent.parent / "logs" / "errors.log").as_posix()
     )
+    redis = init_redis_client(str(cfg.redis_dsn))
     container.register(Logger, instance=logger)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
     container.register(RedisSessionManager, RedisSessionManager)
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
-    container.register(Redis, instance=init_redis_client(str(cfg.redis_dsn)))
+    container.register(Redis, instance=redis)
     db = SqlAlchemyDatabase(
         str(cfg.pg_dsn),
         exception_mapper=PostgresExceptionsMapper,
@@ -87,12 +94,9 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.jwt.auth_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
     )
-    container.register(
-        SessionsService,
-        SessionsService,
-        cart_manager_cls=CartRepository,
-        wishlist_manager_cls=WishlistRepository,
-    )
+    container.register(CartManagerFactoryI, cart_manager_factory, db=redis)
+    container.register(WishlistManagerFactoryI, wishlist_manager_factory, db=redis)
+    container.register(SessionsService)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )
@@ -104,7 +108,7 @@ def Resolve[T](dep: type[T], **kwargs) -> T:
     return t.cast(T, get_container().resolve(dep, **kwargs))
 
 
-def Inject[T](dep: t.Type[T], **kwargs):  # noqa: N802
+def Inject[T](dep: type[T], **kwargs):
     def resolver() -> T:
         return Resolve(dep, **kwargs)
 

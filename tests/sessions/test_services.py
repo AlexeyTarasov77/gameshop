@@ -6,7 +6,7 @@ from contextlib import nullcontext as does_not_raise
 from unittest.mock import AsyncMock, MagicMock, Mock, create_autospec, patch
 
 from sessions.domain.services import SessionsService
-from sessions.repositories import CartRepository, WishlistRepository
+from sessions.repositories import CartSessionManager, WishlistSessionManager
 from core.services.exceptions import EntityNotFoundError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
@@ -16,9 +16,9 @@ from gateways.db.exceptions import NotFoundError
 def sessions_service() -> SessionsService:
     uow = create_autospec(AbstractUnitOfWork)
     uow.__aenter__.return_value = uow
-    cart_repo = create_autospec(CartRepository)
+    cart_repo = create_autospec(CartSessionManager)
     cart_repo.get_for_session.return_value = cart_repo
-    wishlist_repo = create_autospec(WishlistRepository)
+    wishlist_repo = create_autospec(WishlistSessionManager)
     wishlist_repo.get_for_session.return_value = wishlist_repo
     return SessionsService(uow, cart_repo, wishlist_repo)
 

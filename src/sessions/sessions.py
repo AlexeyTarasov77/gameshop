@@ -3,11 +3,7 @@ from typing import Protocol
 from fastapi import Request, Response
 from redis.asyncio import Redis
 from secrets import token_urlsafe
-from starlette.types import ASGIApp
 from starlette.middleware.base import DispatchFunction, RequestResponseEndpoint
-from starlette.datastructures import MutableHeaders
-from starlette.requests import HTTPConnection
-from starlette.types import Message, Receive, Scope, Send
 
 from gateways.db.exceptions import NotFoundError
 
