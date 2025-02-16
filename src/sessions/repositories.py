@@ -75,25 +75,6 @@ class UserCartManager(_BaseUserManager):
         return {int(k): int(v) for k, v in res.items()}
 
 
-class UserWishlistManager(_BaseUserManager):
-    def __init__(self, db: Redis, user_id: int):
-        super().__init__(db, user_id, "wishlist")
-
-    async def append(self, product_id: int):
-        added = await self._db.sadd(self._key, product_id)
-        if not added:
-            raise AlreadyExistsError()
-
-    async def remove(self, product_id: int):
-        removed = await self._db.srem(self._key, product_id)
-        if not removed:
-            raise NotFoundError()
-
-    async def list_ids(self) -> Sequence[int]:
-        res = await self._db.smembers(self._key)
-        return [int(product_id) for product_id in res]
-
-
 class CartSessionManager(RedisSessionManager):
     _base_json_path = "$.cart"
 
@@ -134,6 +115,25 @@ class CartSessionManager(RedisSessionManager):
             return {}
         data: dict[str, int] = res[0]
         return {int(k): v for k, v in data.items()}
+
+
+class UserWishlistManager(_BaseUserManager):
+    def __init__(self, db: Redis, user_id: int):
+        super().__init__(db, user_id, "wishlist")
+
+    async def append(self, product_id: int):
+        added = await self._db.sadd(self._key, product_id)
+        if not added:
+            raise AlreadyExistsError()
+
+    async def remove(self, product_id: int):
+        removed = await self._db.srem(self._key, product_id)
+        if not removed:
+            raise NotFoundError()
+
+    async def list_ids(self) -> Sequence[int]:
+        res = await self._db.smembers(self._key)
+        return [int(product_id) for product_id in res]
 
 
 class WishlistSessionManager(RedisSessionManager):

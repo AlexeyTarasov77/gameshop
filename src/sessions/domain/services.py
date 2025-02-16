@@ -81,7 +81,6 @@ class SessionsService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=product_id)
 
     async def wishlist_add(self, product_id: int):
-        "Returns: is_added(bool)"
         await self._require_product_in_stock(product_id)
         try:
             await self._wishlist_manager.append(product_id)
