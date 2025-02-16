@@ -7,9 +7,9 @@ from sessions.domain.interfaces import (
 )
 from sessions.schemas import AddToCartDTO
 from core.services.base import BaseService
-from core.services.exceptions import EntityNotFoundError
+from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
 from core.uow import AbstractUnitOfWork
-from gateways.db.exceptions import NotFoundError
+from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
 class SessionsService(BaseService):
@@ -80,13 +80,13 @@ class SessionsService(BaseService):
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
 
-    async def wishlist_add(self, product_id: int) -> bool:
+    async def wishlist_add(self, product_id: int):
+        "Returns: is_added(bool)"
         await self._require_product_in_stock(product_id)
-        is_in_wishlist = await self._wishlist_manager.check_exists(product_id)
-        if not is_in_wishlist:
+        try:
             await self._wishlist_manager.append(product_id)
-            return True
-        return False
+        except AlreadyExistsError:
+            raise EntityAlreadyExistsError(self.entity_name)
 
     async def wishlist_remove(self, product_id: int):
         try:

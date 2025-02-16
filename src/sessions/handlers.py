@@ -34,24 +34,13 @@ def sessions_service_factory(
 SessionsServiceDep = t.Annotated[SessionsService, Depends(sessions_service_factory)]
 
 
-# @dataclass(frozen=True)
-# class CommonHandlerDeps:
-#     sessions_service: SessionsServiceDep
-#     session_id: SessionIdDep
-#     user_id: t.Annotated[int, Depends(get_optional_user_id)]
-#
-#
-# CommonParamsDep = t.Annotated[CommonHandlerDeps, Depends()]
-#
-
-
 @wishlist_router.post("/add")
 async def add_to_wishlist(
     product_id: t.Annotated[Base64Int, Body(gt=0, embed=True)],
     sessions_service: SessionsServiceDep,
-) -> dict[str, int]:
-    added = await sessions_service.wishlist_add(int(product_id))
-    return {"added": added}
+) -> dict[str, bool]:
+    await sessions_service.wishlist_add(int(product_id))
+    return {"success": True}
 
 
 @wishlist_router.delete("/remove/{product_id}", status_code=status.HTTP_204_NO_CONTENT)

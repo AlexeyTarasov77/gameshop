@@ -9,7 +9,7 @@ from sessions.domain.interfaces import (
 )
 from sessions.schemas import AddToCartDTO
 from sessions.sessions import RedisSessionManager
-from gateways.db.exceptions import NotFoundError
+from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
 def cart_manager_factory(db: Redis) -> CartManagerFactoryI:
@@ -66,7 +66,9 @@ class UserCartManager(_BaseUserManager):
 
     async def create(self, dto: AddToCartDTO):
         assert dto.quantity
-        await self._db.hsetnx(self._key, str(dto.product_id), dto.quantity)
+        created = await self._db.hsetnx(self._key, str(dto.product_id), dto.quantity)
+        if not created:
+            raise AlreadyExistsError()
 
     async def list_items(self) -> dict[int, int]:
         res = await self._db.hgetall(self._key)
@@ -77,13 +79,19 @@ class UserWishlistManager(_BaseUserManager):
     def __init__(self, db: Redis, user_id: int):
         super().__init__(db, user_id, "wishlist")
 
-    async def append(self, product_id: int): ...
+    async def append(self, product_id: int):
+        added = await self._db.sadd(self._key, product_id)
+        if not added:
+            raise AlreadyExistsError()
 
-    async def remove(self, product_id: int): ...
+    async def remove(self, product_id: int):
+        removed = await self._db.srem(self._key, product_id)
+        if not removed:
+            raise NotFoundError()
 
-    async def check_exists(self, product_id: int) -> bool: ...
-
-    async def list_ids(self) -> Sequence[int]: ...
+    async def list_ids(self) -> Sequence[int]:
+        res = await self._db.smembers(self._key)
+        return [int(product_id) for product_id in res]
 
 
 class CartSessionManager(RedisSessionManager):
@@ -132,6 +140,8 @@ class WishlistSessionManager(RedisSessionManager):
     _base_json_path = "$.wishlist"
 
     async def append(self, product_id: int):
+        if await self.check_exists(product_id):
+            raise AlreadyExistsError()
         await self._db.json().arrappend(  # type: ignore
             self.storage_key, f"{self._base_json_path}", product_id
         )
