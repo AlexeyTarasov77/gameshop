@@ -20,7 +20,7 @@ class BaseDTO(BaseModel):
         from_attributes = True
 
 
-def check_dto_not_empty(dto: BaseDTO):
+def require_dto_not_empty(dto: BaseDTO):
     if not dto.model_dump(exclude_unset=True):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,

@@ -48,17 +48,29 @@ class UserCartManager(_BaseUserManager):
         super().__init__(db, user_id, "cart")
 
     async def add(self, dto: AddToCartDTO) -> int:
-        return 2
+        assert dto.quantity
+        return await self._db.hincrby(self._key, str(dto.product_id), dto.quantity)
 
-    async def delete_by_id(self, product_id: int): ...
+    async def delete_by_id(self, product_id: int):
+        deleted = await self._db.hdel(self._key, str(product_id))
+        if not deleted:
+            raise NotFoundError()
 
-    async def update_qty_by_id(self, product_id: int, qty: int): ...
+    async def update_qty_by_id(self, product_id: int, qty: int):
+        if not await self.check_exists(product_id):
+            raise NotFoundError()
+        await self._db.hset(self._key, str(product_id), qty)
 
-    async def check_exists(self, product_id: int) -> bool: ...
+    async def check_exists(self, product_id: int) -> bool:
+        return await self._db.hexists(self._key, str(product_id))
 
-    async def create(self, dto: AddToCartDTO): ...
+    async def create(self, dto: AddToCartDTO):
+        assert dto.quantity
+        await self._db.hsetnx(self._key, str(dto.product_id), dto.quantity)
 
-    async def list_items(self) -> dict[int, int]: ...
+    async def list_items(self) -> dict[int, int]:
+        res = await self._db.hgetall(self._key)
+        return {int(k): int(v) for k, v in res.items()}
 
 
 class UserWishlistManager(_BaseUserManager):
@@ -88,7 +100,7 @@ class CartSessionManager(RedisSessionManager):
         )
 
     async def add(self, dto: AddToCartDTO) -> int:
-        new_qty = await self._storage.json().numincrby(
+        new_qty = await self._db.json().numincrby(
             self.storage_key,
             f"{self._base_json_path}.{dto.product_id}",
             dto.quantity,
@@ -120,12 +132,12 @@ class WishlistSessionManager(RedisSessionManager):
     _base_json_path = "$.wishlist"
 
     async def append(self, product_id: int):
-        await self._storage.json().arrappend(  # type: ignore
+        await self._db.json().arrappend(  # type: ignore
             self.storage_key, f"{self._base_json_path}", product_id
         )
 
     async def _index_of(self, product_id: int) -> int:
-        index: list[int] | None = await self._storage.json().arrindex(  # type: ignore
+        index: list[int] | None = await self._db.json().arrindex(  # type: ignore
             self.storage_key, self._base_json_path, product_id
         )
         assert index is not None
@@ -135,7 +147,7 @@ class WishlistSessionManager(RedisSessionManager):
         index = await self._index_of(product_id)
         if index == -1:
             raise NotFoundError()
-        await self._storage.json().arrpop(self.storage_key, self._base_json_path, index)  # type: ignore
+        await self._db.json().arrpop(self.storage_key, self._base_json_path, index)  # type: ignore
 
     async def check_exists(self, product_id: int) -> bool:
         return await self._index_of(product_id) != -1

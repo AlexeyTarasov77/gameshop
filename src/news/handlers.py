@@ -3,7 +3,7 @@ import typing as t
 from fastapi import APIRouter, Depends, Form, status
 
 from core.ioc import Inject
-from core.schemas import EntityIDParam, check_dto_not_empty
+from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
 from news.domain.services import NewsService
@@ -61,7 +61,7 @@ async def update_news(
     dto: t.Annotated[UpdateNewsDTO, Form(media_type="multipart/form-data")],
     news_service: NewsServiceDep,
 ) -> ShowNews:
-    check_dto_not_empty(dto)
+    require_dto_not_empty(dto)
     return await news_service.update_news(int(news_id), dto)
 
 

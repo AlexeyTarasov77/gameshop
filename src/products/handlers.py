@@ -1,7 +1,7 @@
 import typing as t
 
 from core.ioc import Inject
-from core.schemas import EntityIDParam, check_dto_not_empty
+from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
 from core.schemas import Base64IntOptionalIDParam
@@ -90,7 +90,7 @@ async def update_product(
     dto: t.Annotated[schemas.UpdateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
-    check_dto_not_empty(dto)
+    require_dto_not_empty(dto)
     return await products_service.update_product(int(product_id), dto)
 
 

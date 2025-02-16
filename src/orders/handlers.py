@@ -5,7 +5,7 @@ from core.dependencies import PaginationDep
 from core.ioc import Inject
 import typing as t
 
-from core.schemas import check_dto_not_empty
+from core.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateOrderDTO,
@@ -38,7 +38,7 @@ async def create_order(
 async def update_order(
     dto: UpdateOrderDTO, order_id: UUID, orders_service: OrdersServiceDep
 ):
-    check_dto_not_empty(dto)
+    require_dto_not_empty(dto)
     return await orders_service.update_order(dto, order_id)
 
 

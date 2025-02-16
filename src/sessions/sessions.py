@@ -30,16 +30,10 @@ class RedisSessionCreator:
 
 
 class RedisSessionManager:
-    def __init__(self, storage: Redis, session_key: str):
-        self._storage = storage
+    def __init__(self, db: Redis, session_key: str):
+        self._db = db
         self._prefix = "sessions"
         self.session_key = session_key
-
-    @classmethod
-    def get_for_session(cls, session_key: str):
-        from core.ioc import Resolve
-
-        return cls(Resolve(Redis), session_key)
 
     @property
     def storage_key(self) -> str:
@@ -47,18 +41,18 @@ class RedisSessionManager:
 
     async def set_to_session(self, path: str, data, **kwargs) -> bool:
         return (
-            await self._storage.json().set(self.storage_key, path, data, **kwargs)
+            await self._db.json().set(self.storage_key, path, data, **kwargs)
             is not None
         )
 
     async def delete_from_session(self, path: str) -> int:
-        deleted_count = await self._storage.json().delete(self.storage_key, path)
+        deleted_count = await self._db.json().delete(self.storage_key, path)
         if deleted_count == 0:
             raise NotFoundError()
         return deleted_count
 
     async def retrieve_from_session(self, *paths) -> list | None:
-        return await self._storage.json().get(self.storage_key, *paths)
+        return await self._db.json().get(self.storage_key, *paths)
 
 
 def session_middleware(

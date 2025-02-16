@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Literal
 from products.schemas import ProductInCartDTO, ShowProductWithRelations
 from sessions.domain.interfaces import (
     CartManagerI,
@@ -67,11 +68,15 @@ class SessionsService(BaseService):
             ShowProductWithRelations.model_validate(product) for product in products
         ]
 
-    async def cart_update_qty(self, product_id: int, qty: int):
+    async def cart_update_qty(
+        self, product_id: int, qty: int
+    ) -> Literal["updated", "deleted"]:
         try:
             if qty == 0:
-                return await self._cart_manager.delete_by_id(product_id)
-            return await self._cart_manager.update_qty_by_id(product_id, qty)
+                await self._cart_manager.delete_by_id(product_id)
+                return "deleted"
+            await self._cart_manager.update_qty_by_id(product_id, qty)
+            return "updated"
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
 

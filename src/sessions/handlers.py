@@ -95,5 +95,6 @@ async def update_product_qty(
     product_id: EntityIDParam,
     qty: t.Annotated[int, Body(embed=True)],
     sessions_service: SessionsServiceDep,
-):
-    await sessions_service.cart_update_qty(int(product_id), qty)
+) -> dict[str, str]:
+    action = await sessions_service.cart_update_qty(int(product_id), qty)
+    return {"action": action}
