@@ -1,10 +1,9 @@
-from collections.abc import Sequence
+from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
 
 from redis.asyncio import Redis
 from sessions.domain.interfaces import (
-    CartManagerFactoryI,
     CartManagerI,
-    WishlistManagerFactoryI,
     WishlistManagerI,
 )
 from sessions.schemas import AddToCartDTO
@@ -12,28 +11,44 @@ from sessions.sessions import RedisSessionManager
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
-def cart_manager_factory(db: Redis) -> CartManagerFactoryI:
-    def create_func(
-        session_key: str | None = None, user_id: int | None = None
-    ) -> CartManagerI:
+class AbstractManagerFactory[T](ABC):
+    def __init__(self, db: Redis):
+        self._db = db
+
+    @abstractmethod
+    def create(self, session_key: str | None = None, user_id: int | None = None) -> T:
         assert any([session_key, user_id])
+
+
+class CartManagerFactory(AbstractManagerFactory[CartManagerI]):
+    def create(self, session_key: str | None = None, user_id: int | None = None):
+        super().create(session_key, user_id)
         if user_id is not None:
-            return UserCartManager(db, user_id)
-        return CartSessionManager(db, str(session_key))
-
-    return create_func
+            return UserCartManager(self._db, user_id)
+        return CartSessionManager(self._db, str(session_key))
 
 
-def wishlist_manager_factory(db: Redis) -> WishlistManagerFactoryI:
-    def create_func(
-        session_key: str | None = None, user_id: int | None = None
-    ) -> WishlistManagerI:
-        assert any([session_key, user_id])
+class WishlistManagerFactory(AbstractManagerFactory[WishlistManagerI]):
+    def create(self, session_key: str | None = None, user_id: int | None = None):
+        super().create(session_key, user_id)
         if user_id is not None:
-            return UserWishlistManager(db, user_id)
-        return WishlistSessionManager(db, str(session_key))
+            return UserWishlistManager(self._db, user_id)
+        return WishlistSessionManager(self._db, str(session_key))
 
-    return create_func
+
+class SessionCopier:
+    def __init__(self, db: Redis):
+        self._db = db
+
+    async def copy_for_user(self, session_key: str, user_id: int):
+        cart_session_manager = CartSessionManager(self._db, session_key)
+        cart_data = await cart_session_manager.list_items()
+        user_cart_manager = UserCartManager(self._db, user_id)
+        await user_cart_manager.load(cart_data)
+        wishlist_session_manager = WishlistSessionManager(self._db, session_key)
+        wishlist_data = await wishlist_session_manager.list_ids()
+        user_wishlist_manager = UserWishlistManager(self._db, user_id)
+        await user_wishlist_manager.load(wishlist_data)
 
 
 class _BaseUserManager:
@@ -46,6 +61,9 @@ class _BaseUserManager:
 class UserCartManager(_BaseUserManager):
     def __init__(self, db: Redis, user_id: int):
         super().__init__(db, user_id, "cart")
+
+    async def load(self, data: Mapping[int, int]):
+        await self._db.hset(self._key, mapping=data)  # type: ignore
 
     async def add(self, dto: AddToCartDTO) -> int:
         assert dto.quantity
@@ -120,6 +138,9 @@ class CartSessionManager(RedisSessionManager):
 class UserWishlistManager(_BaseUserManager):
     def __init__(self, db: Redis, user_id: int):
         super().__init__(db, user_id, "wishlist")
+
+    async def load(self, product_ids: Sequence[int]):
+        await self._db.sadd(self._key, *product_ids)
 
     async def append(self, product_id: int):
         added = await self._db.sadd(self._key, product_id)

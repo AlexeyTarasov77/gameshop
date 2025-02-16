@@ -17,8 +17,14 @@ class CartManagerI(t.Protocol):
     async def list_items(self) -> dict[int, int]: ...
 
 
+class SessionCopierI(t.Protocol):
+    """Copies anonymous data from session to authorized user's storage"""
+
+    async def copy_for_user(self, session_key: str, user_id: int): ...
+
+
 class _BaseManagerFactoryI[T](t.Protocol):
-    def __call__(
+    def create(
         self, session_key: str | None = None, user_id: int | None = None
     ) -> T: ...
 

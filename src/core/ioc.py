@@ -6,13 +6,16 @@ from functools import lru_cache
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
-from sessions.domain.interfaces import CartManagerFactoryI, WishlistManagerFactoryI
+from sessions.domain.interfaces import (
+    CartManagerFactoryI,
+    SessionCopierI,
+    WishlistManagerFactoryI,
+)
 from sessions.domain.services import SessionsService
 from sessions.repositories import (
-    CartSessionManager,
-    WishlistSessionManager,
-    cart_manager_factory,
-    wishlist_manager_factory,
+    CartManagerFactory,
+    SessionCopier,
+    WishlistManagerFactory,
 )
 from core.logger import setup_logger
 from core.exception_mappers import (
@@ -94,8 +97,9 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.jwt.auth_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
     )
-    container.register(CartManagerFactoryI, cart_manager_factory, db=redis)
-    container.register(WishlistManagerFactoryI, wishlist_manager_factory, db=redis)
+    container.register(CartManagerFactoryI, CartManagerFactory)
+    container.register(WishlistManagerFactoryI, WishlistManagerFactory)
+    container.register(SessionCopierI, SessionCopier)
     container.register(SessionsService)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl

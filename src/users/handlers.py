@@ -3,9 +3,12 @@ import typing as t
 from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
-from core.dependencies import restrict_content_type
+from core.dependencies import SessionKeyDep, restrict_content_type
 from core.services.exceptions import UserIsNotActivatedError
-from users.dependencies import UsersServiceDep, get_user_id_or_raise
+from users.dependencies import (
+    UsersServiceDep,
+    get_user_id_or_raise,
+)
 from fastapi import (
     APIRouter,
     Body,
@@ -42,9 +45,12 @@ async def signup(
 
 @router.post("/signin")
 async def signin(
-    dto: schemas.UserSignInDTO, users_service: UsersServiceDep
+    dto: schemas.UserSignInDTO,
+    users_service: UsersServiceDep,
+    session_key: SessionKeyDep,
 ) -> dict[str, str]:
-    return {"token": await users_service.signin(dto)}
+    token = await users_service.signin(dto, session_key)
+    return {"token": token}
 
 
 @router.patch("/activate")

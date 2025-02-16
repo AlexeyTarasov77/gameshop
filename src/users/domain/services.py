@@ -9,6 +9,7 @@ from core.uow import AbstractUnitOfWork
 from core.utils import save_upload_file
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
+from sessions.domain.interfaces import SessionCopierI
 from users.domain.interfaces import (
     MailProviderI,
     PasswordHasherI,
@@ -30,6 +31,7 @@ class UsersService(BaseService):
         jwt_token_provider: StatelessTokenProviderI,
         statefull_token_provider: StatefullTokenProviderI,
         mail_provider: MailProviderI,
+        session_copier: SessionCopierI,
         activation_token_ttl: timedelta,
         auth_token_ttl: timedelta,
         activation_link: str,
@@ -38,6 +40,7 @@ class UsersService(BaseService):
         self._password_hasher = password_hasher
         self._token_hasher = token_hasher
         self._jwt_token_provider = jwt_token_provider
+        self._session_copier = session_copier
         self._statefull_token_provider = statefull_token_provider
         self._mail_provider = mail_provider
         self._activation_link = activation_link
@@ -75,7 +78,7 @@ class UsersService(BaseService):
         )
         return ShowUser.model_validate(user)
 
-    async def signin(self, dto: UserSignInDTO) -> str:
+    async def signin(self, dto: UserSignInDTO, session_key: str) -> str:
         try:
             async with self._uow as uow:
                 user = await uow.users_repo.get_by_email(dto.email)
@@ -85,9 +88,11 @@ class UsersService(BaseService):
             raise exc.UserIsNotActivatedError()
         if not self._password_hasher.compare(dto.password, user.password_hash):
             raise exc.InvalidCredentialsError()
-        return self._jwt_token_provider.new_token(
+        token = self._jwt_token_provider.new_token(
             {"uid": user.id}, self._auth_token_ttl
         )
+        await self._session_copier.copy_for_user(session_key, user.id)
+        return token
 
     async def extract_user_id_from_token(self, token: str) -> int:
         try:
