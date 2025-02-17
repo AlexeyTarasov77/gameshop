@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import Mapping, Sequence
 
 from redis.asyncio import Redis
@@ -42,13 +43,16 @@ class SessionCopier:
 
     async def copy_for_user(self, session_key: str, user_id: int):
         cart_session_manager = CartSessionManager(self._db, session_key)
-        cart_data = await cart_session_manager.list_items()
-        user_cart_manager = UserCartManager(self._db, user_id)
-        await user_cart_manager.load(cart_data)
         wishlist_session_manager = WishlistSessionManager(self._db, session_key)
-        wishlist_data = await wishlist_session_manager.list_ids()
+        cart_data, wishlist_data = await asyncio.gather(
+            cart_session_manager.list_items(), wishlist_session_manager.list_ids()
+        )
+        user_cart_manager = UserCartManager(self._db, user_id)
         user_wishlist_manager = UserWishlistManager(self._db, user_id)
-        await user_wishlist_manager.load(wishlist_data)
+        await asyncio.gather(
+            user_cart_manager.load(cart_data),
+            user_wishlist_manager.load(wishlist_data),
+        )
 
 
 class _BaseUserManager:
@@ -63,7 +67,8 @@ class UserCartManager(_BaseUserManager):
         super().__init__(db, user_id, "cart")
 
     async def load(self, data: Mapping[int, int]):
-        await self._db.hset(self._key, mapping=data)  # type: ignore
+        if data:
+            await self._db.hset(self._key, mapping=data)  # type: ignore
 
     async def add(self, dto: AddToCartDTO) -> int:
         assert dto.quantity
@@ -140,7 +145,8 @@ class UserWishlistManager(_BaseUserManager):
         super().__init__(db, user_id, "wishlist")
 
     async def load(self, product_ids: Sequence[int]):
-        await self._db.sadd(self._key, *product_ids)
+        if product_ids:
+            await self._db.sadd(self._key, *product_ids)
 
     async def append(self, product_id: int):
         added = await self._db.sadd(self._key, product_id)

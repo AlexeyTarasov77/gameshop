@@ -68,6 +68,23 @@ async def resend_activation_token(
     await users_service.resend_activation_token(email)
 
 
+@router.post("/password-reset", status_code=status.HTTP_202_ACCEPTED)
+async def send_password_reset_token(
+    email: t.Annotated[EmailStr, Body(embed=True)], users_service: UsersServiceDep
+) -> None:
+    await users_service.send_password_reset_token(email)
+
+
+@router.patch("/password-update")
+async def update_password(
+    dto: schemas.UpdatePasswordDTO,
+    users_service: UsersServiceDep,
+):
+    await users_service.update_password(dto.new_password, dto.token)
+    return {"success": True}
+
+
+@router.post("/password-reset-email")
 @router.get("/get-by-token")
 async def get_user_by_token(
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],

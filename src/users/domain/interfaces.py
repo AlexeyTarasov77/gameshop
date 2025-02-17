@@ -1,7 +1,7 @@
 import typing as t
 from datetime import timedelta
 
-from users.models import Token, User
+from users.models import Token, TokenScopes, User
 from users.schemas import CreateUserDTO
 
 
@@ -11,6 +11,7 @@ class UsersRepositoryI(t.Protocol):
     ) -> User: ...
 
     async def mark_as_active(self, user_id: int) -> User: ...
+    async def set_new_password(self, user_id: int, password_hash: bytes) -> None: ...
 
     async def get_by_email(self, email: str) -> User: ...
     async def get_by_id(self, user_id: int) -> User: ...
@@ -24,9 +25,9 @@ class AdminsRepositoryI(t.Protocol):
 class TokensRepositoryI(t.Protocol):
     async def save(self, token: Token) -> None: ...
 
-    async def get_by_hash(self, hash: bytes) -> Token: ...
+    async def get_by_hash(self, hash: bytes, scope: TokenScopes) -> Token: ...
 
-    async def delete_all_for_user(self, user_id: int) -> None: ...
+    async def delete_all_for_user(self, user_id: int, scope: TokenScopes) -> None: ...
 
 
 class BaseHasherI(t.Protocol):
@@ -48,9 +49,9 @@ class StatelessTokenProviderI(t.Protocol):
 
 
 class StatefullTokenProviderI(t.Protocol):
-    hasher: TokenHasherI
-
-    def new_token(self, user_id: int, expires_in: timedelta) -> tuple[str, Token]: ...
+    def new_token(
+        self, user_id: int, expires_in: timedelta, scope: TokenScopes
+    ) -> tuple[str, Token]: ...
 
 
 class MailProviderI(t.Protocol):

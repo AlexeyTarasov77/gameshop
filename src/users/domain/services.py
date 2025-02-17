@@ -17,6 +17,7 @@ from users.domain.interfaces import (
     TokenHasherI,
     StatelessTokenProviderI,
 )
+from users.models import TokenScopes
 from users.schemas import CreateUserDTO, ShowUser, ShowUserWithRole, UserSignInDTO
 
 
@@ -34,7 +35,9 @@ class UsersService(BaseService):
         session_copier: SessionCopierI,
         activation_token_ttl: timedelta,
         auth_token_ttl: timedelta,
+        password_reset_token_ttl: timedelta,
         activation_link: str,
+        password_reset_link: str,
     ) -> None:
         super().__init__(uow)
         self._password_hasher = password_hasher
@@ -44,7 +47,9 @@ class UsersService(BaseService):
         self._statefull_token_provider = statefull_token_provider
         self._mail_provider = mail_provider
         self._activation_link = activation_link
+        self._password_reset_link = password_reset_link
         self._activation_token_ttl = activation_token_ttl
+        self._password_reset_token_ttl = password_reset_token_ttl
         self._auth_token_ttl = auth_token_ttl
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
@@ -56,7 +61,7 @@ class UsersService(BaseService):
                     dto, password_hash, photo_url
                 )
                 plain_token, token_obj = self._statefull_token_provider.new_token(
-                    user.id, self._activation_token_ttl
+                    user.id, self._activation_token_ttl, TokenScopes.ACTIVATION
                 )
                 await uow.tokens_repo.save(token_obj)
         except AlreadyExistsError as e:
@@ -73,7 +78,7 @@ class UsersService(BaseService):
         )
         asyncio.create_task(
             self._mail_provider.send_mail_with_timeout(
-                "Аккаунт успешно создан", email_body, user.email, timeout=3
+                "Аккаунт успешно создан", email_body, user.email
             )
         )
         return ShowUser.model_validate(user)
@@ -94,6 +99,45 @@ class UsersService(BaseService):
         await self._session_copier.copy_for_user(session_key, user.id)
         return token
 
+    async def send_password_reset_token(self, user_email: str):
+        try:
+            async with self._uow as uow:
+                user = await uow.users_repo.get_by_email(user_email)
+                plain_token, token_obj = self._statefull_token_provider.new_token(
+                    user.id, self._password_reset_token_ttl, TokenScopes.PASSWORD_RESET
+                )
+                await uow.tokens_repo.save(token_obj)
+        except NotFoundError:
+            raise exc.EntityNotFoundError(self.entity_name, email=user_email)
+        email_body = (
+            f"Дорогой {user.username}, мы получили запрос на сброс пароля вашего аккаунта."
+            f"\nДля обновления пароля следуйте ссылке ниже:"
+            f"\n{self._password_reset_link % plain_token}"
+            "\nЕсли это были не вы - игнорируйте это письмо"
+        )
+        asyncio.create_task(
+            self._mail_provider.send_mail_with_timeout(
+                "Сброс пароля", email_body, user.email
+            )
+        )
+
+    async def update_password(self, new_password: str, plain_token: str):
+        token_hash = await asyncio.to_thread(self._token_hasher.hash, plain_token)
+        hashed_password = await asyncio.to_thread(
+            self._password_hasher.hash, new_password
+        )
+        try:
+            async with self._uow as uow:
+                token = await uow.tokens_repo.get_by_hash(
+                    token_hash, TokenScopes.PASSWORD_RESET
+                )
+                await uow.users_repo.set_new_password(token.user_id, hashed_password)
+                await uow.tokens_repo.delete_all_for_user(
+                    token.user_id, TokenScopes.PASSWORD_RESET
+                )
+        except NotFoundError:
+            raise exc.InvalidTokenError()
+
     async def extract_user_id_from_token(self, token: str) -> int:
         try:
             token_payload = self._jwt_token_provider.extract_payload(token)
@@ -108,12 +152,16 @@ class UsersService(BaseService):
         return user_id
 
     async def activate_user(self, plain_token: str) -> ShowUser:
-        token_hash = self._statefull_token_provider.hasher.hash(plain_token)
+        token_hash = await asyncio.to_thread(self._token_hasher.hash, plain_token)
         try:
             async with self._uow as uow:
-                token = await uow.tokens_repo.get_by_hash(token_hash)
+                token = await uow.tokens_repo.get_by_hash(
+                    token_hash, TokenScopes.ACTIVATION
+                )
                 user = await uow.users_repo.mark_as_active(token.user_id)
-                await uow.tokens_repo.delete_all_for_user(user.id)
+                await uow.tokens_repo.delete_all_for_user(
+                    user.id, TokenScopes.ACTIVATION
+                )
         except NotFoundError:
             raise exc.InvalidTokenError()
         return ShowUser.model_validate(user)
@@ -122,9 +170,11 @@ class UsersService(BaseService):
         try:
             async with self._uow as uow:
                 user = await uow.users_repo.get_by_email(email)
-                await uow.tokens_repo.delete_all_for_user(user.id)
+                await uow.tokens_repo.delete_all_for_user(
+                    user.id, TokenScopes.ACTIVATION
+                )
                 plain_token, token_obj = self._statefull_token_provider.new_token(
-                    user.id, self._activation_token_ttl
+                    user.id, self._activation_token_ttl, TokenScopes.ACTIVATION
                 )
                 await uow.tokens_repo.save(token_obj)
         except NotFoundError:
@@ -141,7 +191,6 @@ class UsersService(BaseService):
                 "Новый активационный токен",
                 email_body,
                 to=user.email,
-                timeout=3,
             )
         )
 

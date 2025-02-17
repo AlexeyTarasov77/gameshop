@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import jwt
 
 from users.domain.interfaces import TokenHasherI
-from users.models import Token
+from users.models import Token, TokenScopes
 
 
 def _get_expiry(expires_in: timedelta) -> datetime:
@@ -31,9 +31,14 @@ class SecureTokenProvider:
     def __init__(self, hasher: TokenHasherI):
         self.hasher = hasher
 
-    def new_token(self, user_id: int, expires_in: timedelta) -> tuple[str, Token]:
+    def new_token(
+        self, user_id: int, expires_in: timedelta, scope: TokenScopes
+    ) -> tuple[str, Token]:
         expiry = _get_expiry(expires_in)
         plain_token = token_urlsafe(16)
         return plain_token, Token(
-            hash=self.hasher.hash(plain_token), user_id=user_id, expiry=expiry
+            hash=self.hasher.hash(plain_token),
+            user_id=user_id,
+            expiry=expiry,
+            scope=scope,
         )

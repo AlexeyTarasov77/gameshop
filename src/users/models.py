@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
@@ -25,6 +26,11 @@ class User(SqlAlchemyBaseModel):
     updated_at: Mapped[updated_at_type]
 
 
+class TokenScopes(StrEnum):
+    ACTIVATION = "activation"
+    PASSWORD_RESET = "password-reset"
+
+
 class Admin(SqlAlchemyBaseModel):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
@@ -32,6 +38,7 @@ class Admin(SqlAlchemyBaseModel):
 
 
 class Token(SqlAlchemyBaseModel):
+    scope: Mapped[TokenScopes]
     hash: Mapped[bytes] = mapped_column(BYTEA, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
     expiry: Mapped[datetime]

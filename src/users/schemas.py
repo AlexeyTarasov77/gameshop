@@ -1,26 +1,33 @@
 from datetime import datetime
+from typing import Annotated
 
 from core.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
-from pydantic import EmailStr, field_validator
+from pydantic import AfterValidator, EmailStr
+
+
+def validate_password(password: str) -> str:
+    assert len(password) >= 8, "Password must be at least 8 characters long"
+    return password
+
+
+PasswordField = Annotated[str, AfterValidator(validate_password)]
 
 
 class CreateUserDTO(BaseDTO):
     username: str
     email: EmailStr
-    password: str
+    password: PasswordField
     photo: UploadImage | None = None
-
-    @field_validator("password")
-    @classmethod
-    def validate_password[T: str](cls, value: T) -> T:
-        if len(str(value)) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        return value
 
 
 class UserSignInDTO(BaseDTO):
     email: EmailStr
     password: str
+
+
+class UpdatePasswordDTO(BaseDTO):
+    new_password: PasswordField
+    token: str
 
 
 class ShowUser(BaseDTO):

@@ -1,8 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
-from users.models import Admin, Token, User
+from users.models import Admin, Token, TokenScopes, User
 
 
 class UsersRepository(SqlAlchemyRepository[User]):
@@ -24,6 +24,17 @@ class UsersRepository(SqlAlchemyRepository[User]):
 
     async def get_by_id(self, user_id: int) -> User:
         return await super().get_one(id=user_id)
+
+    async def set_new_password(self, user_id: int, password_hash: bytes) -> None:
+        stmt = (
+            update(User)
+            .values(password_hash=password_hash)
+            .filter_by(id=user_id)
+            .returning(User.id)
+        )
+        res = await self.session.execute(stmt)
+        if res.scalar_one_or_none() is None:
+            raise NotFoundError()
 
     async def get_by_id_and_check_is_admin(
         self,
@@ -48,11 +59,11 @@ class TokensRepository(SqlAlchemyRepository[Token]):
         self.session.add(token)
         await self.session.flush()
 
-    async def get_by_hash(self, hash: bytes) -> Token:
-        return await super().get_one(hash=hash)
+    async def get_by_hash(self, hash: bytes, scope: TokenScopes) -> Token:
+        return await super().get_one(hash=hash, scope=scope)
 
-    async def delete_all_for_user(self, user_id: int) -> None:
-        await super().delete(user_id=user_id)
+    async def delete_all_for_user(self, user_id: int, scope: TokenScopes) -> None:
+        await super().delete(user_id=user_id, scope=scope)
 
 
 class AdminsRepository(SqlAlchemyRepository[Admin]):

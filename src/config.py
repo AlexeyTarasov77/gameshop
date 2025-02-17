@@ -66,8 +66,9 @@ class _SMTP(BaseModel):
 class _JWT(BaseModel):
     secret: str
     alg: t.Literal["HS256", "RS256", "SHA256"] = "HS256"
-    activation_token_ttl: ParsableTimedelta
     auth_token_ttl: ParsableTimedelta
+    activation_token_ttl: ParsableTimedelta
+    password_reset_token_ttl: ParsableTimedelta
 
 
 class Config(BaseSettings):

@@ -95,7 +95,9 @@ def _init_container() -> punq.Container:
         UsersService,
         activation_token_ttl=cfg.jwt.activation_token_ttl,
         auth_token_ttl=cfg.jwt.auth_token_ttl,
+        password_reset_token_ttl=cfg.jwt.password_reset_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
+        password_reset_link=f"{FRONTEND_URL}/auth/password-update?token=%s",
     )
     container.register(CartManagerFactoryI, CartManagerFactory)
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
