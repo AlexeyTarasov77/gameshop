@@ -1,8 +1,11 @@
 from datetime import datetime
+from logging import Logger
 from typing import Annotated
 
 from core.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
-from pydantic import AfterValidator, EmailStr
+from pydantic import AfterValidator, EmailStr, model_validator
+
+from users.models import User
 
 
 def validate_password(password: str) -> str:
@@ -38,6 +41,12 @@ class ShowUser(BaseDTO):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def set_default_photo_url(self):
+        if self.photo_url is None:
+            self.photo_url = f"https://robohash.org/{self.id}"
+        return self
 
 
 class ShowUserWithRole(ShowUser):

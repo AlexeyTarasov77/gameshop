@@ -31,7 +31,6 @@ def upgrade() -> None:
             "scope",
             sa.Enum("ACTIVATION", "PASSWORD_RESET", name="tokenscopes"),
             nullable=False,
-            # server_default=sa.text("'ACTIVATION'::tokenscopes"),
         ),
     )
     # ### end Alembic commands ###

@@ -84,7 +84,6 @@ async def update_password(
     return {"success": True}
 
 
-@router.post("/password-reset-email")
 @router.get("/get-by-token")
 async def get_user_by_token(
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],

@@ -8,8 +8,10 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     BeforeValidator,
+    HttpUrl,
     PlainSerializer,
     AnyHttpUrl,
+    ValidationError,
 )
 
 from core.utils import get_uploaded_file_url, filename_split
@@ -59,10 +61,19 @@ def _parse_id_optional(s: str | int) -> int | None:
         return id
 
 
+def _is_valid_url(s: str) -> bool:
+    try:
+        HttpUrl(s)
+    except ValidationError:
+        return False
+    return True
+
+
 ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[
-    str, PlainSerializer(lambda filename: get_uploaded_file_url(filename))
+    str,
+    PlainSerializer(lambda s: get_uploaded_file_url(s) if not _is_valid_url(s) else s),
 ]
 UploadImage = Annotated[UploadFile, AfterValidator(_check_image)]
 _base64int_serializer = PlainSerializer(

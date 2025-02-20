@@ -24,7 +24,7 @@ def get_upload_dir() -> Path:
     return Path() / Resolve(Config).server.media_serve_path
 
 
-async def save_upload_file(upload_file: UploadFile) -> str:
+def _get_unique_filename(upload_file: UploadFile) -> str:
     if upload_file.filename is None:
         unique_filename = "".join(
             random.sample([char for char in string.ascii_letters], 20)
@@ -33,6 +33,11 @@ async def save_upload_file(upload_file: UploadFile) -> str:
         name, extensions = filename_split(upload_file.filename)
         name += str(random.randint(10, 100000))
         unique_filename = f"{name}.{'.'.join(extensions)}"
+    return unique_filename
+
+
+async def save_upload_file(upload_file: UploadFile) -> str:
+    unique_filename = _get_unique_filename(upload_file)
     dest_path = get_upload_dir() / unique_filename
     try:
         async with aiofiles.open(dest_path, "wb") as dst:
