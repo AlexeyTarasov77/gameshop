@@ -51,7 +51,7 @@ def get_container() -> punq.Container:
 
 
 def _init_container() -> punq.Container:
-    FRONTEND_URL = "http://localhost:3000"
+    FRONTEND_URL = "https://gamebazaar.ru"
     container = punq.Container()
     cfg = init_config()
     logger = setup_logger(

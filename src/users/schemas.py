@@ -1,11 +1,8 @@
 from datetime import datetime
-from logging import Logger
 from typing import Annotated
 
 from core.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
 from pydantic import AfterValidator, EmailStr, model_validator
-
-from users.models import User
 
 
 def validate_password(password: str) -> str:

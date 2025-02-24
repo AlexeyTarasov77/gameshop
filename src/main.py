@@ -32,6 +32,8 @@ def app_factory() -> FastAPI:
             "http://127.0.0.1:3000",
             "https://localhost:3000",
             "https://127.0.0.1:3000",
+            "https://gamebazaar.ru",
+            "http://gamebazaar.ru",
         ],
         allow_credentials=True,
         allow_methods=["*"],

@@ -133,8 +133,7 @@ class CartSessionManager(RedisSessionManager):
 
     async def list_items(self) -> dict[int, int]:
         res = await super().retrieve_from_session(self._base_json_path)
-        assert res is not None
-        if len(res) == 0:
+        if res is None or len(res) == 0:
             return {}
         data: dict[str, int] = res[0]
         return {int(k): v for k, v in data.items()}
@@ -193,7 +192,6 @@ class WishlistSessionManager(RedisSessionManager):
         res: list[list[int]] | None = await super().retrieve_from_session(
             self._base_json_path
         )
-        assert res is not None
-        if len(res) == 0:
+        if res is None or len(res) == 0:
             return []
         return res[0]
