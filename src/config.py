@@ -62,12 +62,13 @@ class _SMTP(BaseModel):
     default_sender: EmailStr | None = None
 
 
-class _JWT(BaseModel):
+class _Tokens(BaseModel):
     secret: str
     alg: t.Literal["HS256", "RS256", "SHA256"] = "HS256"
     auth_token_ttl: ParsableTimedelta
     activation_token_ttl: ParsableTimedelta
     password_reset_token_ttl: ParsableTimedelta
+    email_verification_token_ttl: ParsableTimedelta
 
 
 class Config(BaseSettings):
@@ -76,7 +77,7 @@ class Config(BaseSettings):
     mode: t.Literal["local", "prod", "tests"]
     server: _Server = Field(default=_Server())
     smtp: _SMTP
-    jwt: _JWT
+    tokens: _Tokens
     pg_dsn: PostgresDsn
     redis_dsn: RedisDsn
 

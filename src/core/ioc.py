@@ -74,8 +74,8 @@ def _init_container() -> punq.Container:
     container.register(
         StatelessTokenProviderI,
         JwtTokenProvider,
-        secret_key=cfg.jwt.secret,
-        signing_alg=cfg.jwt.alg,
+        secret_key=cfg.tokens.secret,
+        signing_alg=cfg.tokens.alg,
     )
     container.register(StatefullTokenProviderI, SecureTokenProvider)
     container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
@@ -97,11 +97,13 @@ def _init_container() -> punq.Container:
     container.register(
         UsersService,
         UsersService,
-        activation_token_ttl=cfg.jwt.activation_token_ttl,
-        auth_token_ttl=cfg.jwt.auth_token_ttl,
-        password_reset_token_ttl=cfg.jwt.password_reset_token_ttl,
+        activation_token_ttl=cfg.tokens.activation_token_ttl,
+        auth_token_ttl=cfg.tokens.auth_token_ttl,
+        password_reset_token_ttl=cfg.tokens.password_reset_token_ttl,
+        email_verification_token_ttl=cfg.tokens.email_verification_token_ttl,
         activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
         password_reset_link=f"{FRONTEND_URL}/auth/password-update?token=%s",
+        email_verification_link=f"{FRONTEND_URL}/auth/verify-email?token=%s",
     )
     container.register(CartManagerFactoryI, CartManagerFactory)
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)

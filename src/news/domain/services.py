@@ -1,9 +1,8 @@
 from typing import cast
 from core.pagination import PaginationParams
-from types import EllipsisType
 from core.services.base import BaseService
 from core.services.exceptions import EntityNotFoundError
-from core.utils import save_upload_file
+from core.utils import UnspecifiedType
 from gateways.db.exceptions import NotFoundError
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
 
@@ -34,7 +33,7 @@ class NewsService(BaseService):
         return ShowNews.model_validate(news)
 
     async def update_news(self, news_id: int, dto: UpdateNewsDTO) -> ShowNews:
-        photo_url: EllipsisType | str | None = ...
+        photo_url: UnspecifiedType | str | None = ...
         if "photo" in dto.model_fields_set:  # if none is set explicitly
             photo_url = cast(str | None, dto.photo)
         try:

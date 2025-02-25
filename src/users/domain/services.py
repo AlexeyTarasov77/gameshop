@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from logging import Logger
 from typing import cast
@@ -8,6 +9,7 @@ from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 from core.services.base import BaseService
 from core.services import exceptions as exc
 from core.uow import AbstractUnitOfWork
+from core.utils import UnspecifiedType
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from sessions.domain.interfaces import SessionCopierI
@@ -21,7 +23,13 @@ from users.domain.interfaces import (
     TokensRepositoryI,
 )
 from users.models import TokenScopes
-from users.schemas import CreateUserDTO, ShowUser, ShowUserWithRole, UserSignInDTO
+from users.schemas import (
+    CreateUserDTO,
+    ShowUser,
+    ShowUserWithRole,
+    UpdateUserDTO,
+    UserSignInDTO,
+)
 
 
 class UsersService(BaseService):
@@ -41,8 +49,10 @@ class UsersService(BaseService):
         activation_token_ttl: timedelta,
         auth_token_ttl: timedelta,
         password_reset_token_ttl: timedelta,
+        email_verification_token_ttl: timedelta,
         activation_link: str,
         password_reset_link: str,
+        email_verification_link: str,
     ) -> None:
         super().__init__(uow, logger)
         self._password_hasher = password_hasher
@@ -55,6 +65,8 @@ class UsersService(BaseService):
         self._password_reset_link = password_reset_link
         self._activation_token_ttl = activation_token_ttl
         self._password_reset_token_ttl = password_reset_token_ttl
+        self._email_verification_link = email_verification_link
+        self._email_verification_token_ttl = email_verification_token_ttl
         self._auth_token_ttl = auth_token_ttl
         self._email_templates = email_templates
 
@@ -182,18 +194,85 @@ class UsersService(BaseService):
             raise exc.InvalidTokenError()
         self._logger.info("Password succesfully updated for user: %s", token.user_id)
 
-    async def extract_user_id_from_token(self, token: str) -> int:
+    def verify_token_and_get_payload(self, token: str) -> Mapping:
         try:
             token_payload = self._jwt_token_provider.extract_payload(token)
-            user_id = token_payload["uid"]
-            if int(user_id) < 1:
-                raise ValueError()
             token_exp = datetime.fromtimestamp(token_payload["exp"])
-        except (InvalidJwtTokenError, ValueError, KeyError) as e:
+        except (InvalidJwtTokenError, KeyError) as e:
             raise exc.InvalidTokenError() from e
         if token_exp < datetime.now():
             raise exc.ExpiredTokenError()
+        return token_payload
+
+    async def extract_and_validate_user_id_from_token(self, token: str) -> int:
+        payload = self.verify_token_and_get_payload(token)
+        user_id = payload.get("uid", -1)
+        try:
+            if int(user_id) < 1:
+                raise ValueError()
+        except ValueError:  # user_id is not a valid digit or < 1
+            raise exc.InvalidTokenError()
+        async with self._uow as uow:
+            is_valid = await uow.users_repo.check_exists_active(user_id)
+        if not is_valid:
+            self._logger.warning(
+                "User associated with provided auth token does not exist"
+            )
+            raise exc.InvalidTokenError()
         return user_id
+
+    async def update_user(
+        self, dto: UpdateUserDTO, user_id: int
+    ) -> tuple[ShowUser, bool]:
+        photo_url: str | None | UnspecifiedType = ...
+        if "photo_url" in dto.model_fields_set:
+            photo_url = cast(str | None, dto.photo)
+        async with self._uow as uow:
+            user = await uow.users_repo.update_by_id(
+                user_id, username=dto.username, photo_url=photo_url
+            )
+        verification_email_sent = False
+        if dto.email is not None:
+            self._logger.info("Updating user's email for user: %s", user_id)
+            token = self._jwt_token_provider.new_token(
+                {"email": dto.email, "uid": user_id},
+                self._email_verification_token_ttl,
+            )
+            asyncio.create_task(
+                self._mail_provider.send_mail_with_timeout(
+                    "Подтверждение обновления email'a",
+                    self._email_templates.email_verification(
+                        self._email_verification_link % token
+                    ),
+                    dto.email,
+                )
+            )
+            verification_email_sent = True
+        return ShowUser.model_validate(user), verification_email_sent
+
+    async def update_email_confirm(self, curr_user_id: int, token: str) -> ShowUser:
+        payload = self.verify_token_and_get_payload(token)
+        new_email = payload.get("email")
+        user_id_from_token = payload.get("uid")
+        if not (user_id_from_token and new_email):
+            self._logger.info(
+                "update_email_confirm: malformed token. uid: %s, email: %s",
+                user_id_from_token,
+                new_email,
+            )
+            raise exc.InvalidTokenError()
+        if curr_user_id != user_id_from_token:
+            self._logger.warning(
+                "User with id: %s tries to update email of another user: %s",
+                curr_user_id,
+                user_id_from_token,
+            )
+            raise exc.ActionForbiddenError()
+        async with self._uow as uow:
+            user = await uow.users_repo.update_by_id(
+                user_id_from_token, email=new_email
+            )
+        return ShowUser.model_validate(user)
 
     async def activate_user(self, plain_token: str) -> ShowUser:
         self._logger.info("Activating user")

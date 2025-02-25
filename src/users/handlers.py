@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
 from core.dependencies import SessionKeyDep, restrict_content_type
+from core.schemas import require_dto_not_empty
 from core.services.exceptions import UserIsNotActivatedError
 from users.dependencies import (
     UsersServiceDep,
@@ -51,6 +52,29 @@ async def signin(
 ) -> dict[str, str]:
     token = await users_service.signin(dto, session_key)
     return {"token": token}
+
+
+@router.patch(
+    "/update",
+    dependencies=[restrict_content_type("multipart/form-data")],
+)
+async def update_user(
+    dto: t.Annotated[schemas.UpdateUserDTO, Form(media_type="multipart/form-data")],
+    user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
+    users_service: UsersServiceDep,
+):
+    require_dto_not_empty(dto)
+    user, verification_email_sent = await users_service.update_user(dto, user_id)
+    return {"data": user, "verification_email_sent": verification_email_sent}
+
+
+@router.patch("/email-confirm")
+async def update_email_confirm(
+    user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
+    users_service: UsersServiceDep,
+    token: t.Annotated[str, Body(min_length=15, embed=True)],
+) -> schemas.ShowUser:
+    return await users_service.update_email_confirm(user_id, token)
 
 
 @router.patch("/activate")

@@ -1,6 +1,6 @@
-from types import EllipsisType
 import typing as t
 from core.pagination import PaginationParams, PaginationResT
+from core.utils import UnspecifiedType
 from news import schemas
 from news.models import News
 
@@ -14,7 +14,7 @@ class NewsRepositoryI(t.Protocol):
         self,
         news_id: int,
         dto: schemas.UpdateNewsDTO,
-        photo_url: str | None | EllipsisType,
+        photo_url: str | None | UnspecifiedType,
     ) -> News: ...
 
     async def delete_by_id(self, news_id: int) -> None: ...

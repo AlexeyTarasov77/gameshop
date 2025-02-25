@@ -1,4 +1,4 @@
-from types import EllipsisType
+from core.utils import UnspecifiedType
 from gateways.db.repository import PaginationRepository
 from news.models import News
 from news.schemas import UpdateNewsDTO, CreateNewsDTO
@@ -8,7 +8,7 @@ class NewsRepository(PaginationRepository[News]):
     model = News
 
     async def update_by_id(
-        self, news_id: int, dto: UpdateNewsDTO, photo_url: str | None | EllipsisType
+        self, news_id: int, dto: UpdateNewsDTO, photo_url: str | None | UnspecifiedType
     ) -> News:
         data = dto.model_dump(exclude={"photo"}, exclude_unset=True)
         if photo_url is not Ellipsis:

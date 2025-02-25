@@ -4,11 +4,14 @@ from concurrent.futures import ThreadPoolExecutor
 import random
 import string
 from pathlib import Path
+from types import EllipsisType
 from typing import Any
 from config import Config
 
 import aiofiles
 from fastapi import UploadFile
+
+type UnspecifiedType = EllipsisType
 
 
 def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:

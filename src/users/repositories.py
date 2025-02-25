@@ -1,4 +1,5 @@
 from sqlalchemy import select, update
+from core.utils import UnspecifiedType
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
@@ -21,6 +22,27 @@ class UsersRepository(SqlAlchemyRepository[User]):
         return await super().create(
             password_hash=password_hash, photo_url=photo_url, **data
         )
+
+    async def check_exists_active(self, user_id: int) -> bool:
+        stmt = select(1).select_from(self.model).filter_by(is_active=True, id=user_id)
+        res = await self.session.execute(stmt)
+        return bool(res.one_or_none())
+
+    async def update_by_id(
+        self,
+        user_id: int,
+        username: str | None = None,
+        photo_url: str | None | UnspecifiedType = ...,
+        email: str | None = None,
+    ) -> User:
+        data = {}
+        if username is not None:
+            data["username"] = username
+        if photo_url is not ...:
+            data["photo_url"] = photo_url
+        if email is not None:
+            data["email"] = email
+        return await super().update(data, id=user_id)
 
     async def get_by_id(self, user_id: int, is_active: bool | None = None) -> User:
         filter_by = {"id": user_id}

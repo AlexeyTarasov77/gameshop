@@ -37,6 +37,10 @@ class UserAlreadyActivatedError(ServiceError):
     _msg = "User already activated!"
 
 
+class ActionForbiddenError(ServiceError):
+    _msg = "Action forbidden"
+
+
 class CommonServiceError(ServiceError):
     def _generate_msg(self) -> str:
         return self._msg

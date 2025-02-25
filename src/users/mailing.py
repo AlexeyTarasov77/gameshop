@@ -29,6 +29,14 @@ class EmailTemplates:
             f"\t{link}\t"
         )
 
+    def email_verification(self, link: str) -> str:
+        return (
+            "Мы получили запрос на смену email'a\n"
+            "Для того что бы подтвердить смену email'a, перейдите по ссылке ниже:\n"
+            f"\t{link}\n"
+            "Если это были не вы - игнорируйте это сообщение"
+        )
+
 
 class AsyncMailer:
     def __init__(

@@ -25,6 +25,12 @@ class UserSignInDTO(BaseDTO):
     password: str
 
 
+class UpdateUserDTO(BaseDTO):
+    username: str | None = None
+    email: EmailStr | None = None
+    photo: UploadImage | None = None
+
+
 class UpdatePasswordDTO(BaseDTO):
     new_password: PasswordField
     token: str
