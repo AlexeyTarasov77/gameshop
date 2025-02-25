@@ -30,7 +30,7 @@ async def create_order(
     orders_service: OrdersServiceDep,
 ) -> ShowOrder:
     if not (user_id or (dto.user.email and dto.user.name)):
-        raise HTTPException(422, "email and name are required for not authorized user")
+        raise HTTPException(400, "email and name are required for not authorized user")
     return await orders_service.create_order(dto, user_id)
 
 

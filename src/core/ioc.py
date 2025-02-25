@@ -30,6 +30,7 @@ from news.domain.services import NewsService
 from orders.domain.services import OrdersService
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
+    EmailTemplatesI,
     MailProviderI,
     PasswordHasherI,
     StatefullTokenProviderI,
@@ -38,7 +39,7 @@ from users.domain.interfaces import (
 )
 from users.domain.services import UsersService
 from users.hashing import BcryptHasher, SHA256Hasher
-from users.mailing import AsyncMailer
+from users.mailing import AsyncMailer, EmailTemplates
 from users.tokens import JwtTokenProvider, SecureTokenProvider
 
 from config import Config, init_config
@@ -85,6 +86,7 @@ def _init_container() -> punq.Container:
         SqlAlchemyUnitOfWork,
         session_factory=db.session_factory,
     )
+    container.register(EmailTemplatesI, EmailTemplates)
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
     container.register(

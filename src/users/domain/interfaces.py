@@ -5,6 +5,12 @@ from users.models import Token, TokenScopes, User
 from users.schemas import CreateUserDTO
 
 
+class EmailTemplatesI(t.Protocol):
+    def welcome(self, username: str, link: str) -> str: ...
+    def password_reset(self, username: str, link: str) -> str: ...
+    def new_activation_token(self, token: str, link: str) -> str: ...
+
+
 class UsersRepositoryI(t.Protocol):
     async def create_with_hashed_password(
         self, dto: CreateUserDTO, password_hash: bytes, photo_url: str | None

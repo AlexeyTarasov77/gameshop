@@ -30,13 +30,19 @@ class OrdersService(BaseService):
         self._order_details_link = order_details_link
 
     async def create_order(self, dto: CreateOrderDTO, user_id: int | None) -> ShowOrder:
+        self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
         try:
             async with self._uow as uow:
                 cart_products = await uow.products_repo.list_by_ids(
                     [int(item.product_id) for item in dto.cart]
                 )
+                assert len(cart_products) == len(dto.cart)
                 for product in cart_products:
                     if not product.in_stock:
+                        self._logger.warning(
+                            "Attempt to create order with unavailable product %s",
+                            product.id,
+                        )
                         raise UnavailableProductError(product.name)
                 order = await uow.orders_repo.create_from_dto(dto, user_id)
                 user_email: str | None = dto.user.email
@@ -64,26 +70,38 @@ class OrdersService(BaseService):
                 to=user_email,
             )
         )
+        self._logger.info(
+            "Succesfully created order for user: %s. Order id: %s", user_email, order.id
+        )
         return ShowOrder.from_model(order, total=order.total)
 
     async def update_order(self, dto: UpdateOrderDTO, order_id: UUID) -> ShowOrder:
+        self._logger.info("Updating order: %s. Data: %s", order_id, dto)
         try:
             async with self._uow as uow:
                 order = await uow.orders_repo.update_by_id(dto, order_id)
         except NotFoundError:
+            self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return ShowOrder.from_model(order, total=order.total)
 
     async def delete_order(self, order_id: UUID) -> None:
+        self._logger.info("Deleting order: %s", order_id)
         try:
             async with self._uow as uow:
                 await uow.orders_repo.delete_by_id(order_id)
         except NotFoundError:
+            self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
 
     async def list_orders_for_user(
         self, pagination_params: PaginationParams, user_id: int
     ) -> tuple[list[ShowOrderExtended], int]:
+        self._logger.info(
+            "Listing orders for user: %s. Pagination params: %s",
+            user_id,
+            pagination_params,
+        )
         async with self._uow as uow:
             orders, total_records = await uow.orders_repo.list_orders_for_user(
                 pagination_params,
@@ -99,6 +117,9 @@ class OrdersService(BaseService):
     async def list_all_orders(
         self, pagination_params: PaginationParams
     ) -> tuple[list[ShowOrderExtended], int]:
+        self._logger.info(
+            "Listing all orders. Pagination params: %s", pagination_params
+        )
         async with self._uow as uow:
             orders, total_records = await uow.orders_repo.list_all_orders(
                 pagination_params
@@ -111,10 +132,12 @@ class OrdersService(BaseService):
         ], total_records
 
     async def get_order(self, order_id: UUID) -> ShowOrderExtended:
+        self._logger.info("Fetching order by id: %s", order_id)
         try:
             async with self._uow as uow:
                 order = await uow.orders_repo.get_by_id(order_id)
         except NotFoundError:
+            self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return ShowOrderExtended.from_model(
             order, items=order.items, user=order.user, total=order.total

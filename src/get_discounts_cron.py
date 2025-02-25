@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from logging import Logger
 import re
 import asyncio
+import sys
 
 from sqlalchemy import delete
 from core.ioc import Resolve
@@ -12,9 +14,6 @@ from products.models import ProductOnSale
 from returns.maybe import Maybe
 from datetime import datetime
 from pytz import timezone
-
-SALES_URL = "https://www.xbox-now.com/ru/deal-list"
-DISCOUNTS_PARSE_LIMIT = 20
 
 
 @dataclass
@@ -75,11 +74,13 @@ class ParsableProduct:
         )
 
 
-def parse_discounted_products(count: int | None = None) -> list[ParsableProduct]:
+def parse_discounted_products(
+    url: str, count: int | None = None
+) -> list[ParsableProduct]:
     headers = {
         "Accept": "text/html",
     }
-    req = requests.get(SALES_URL, headers)
+    req = requests.get(url, headers)
     soup = BeautifulSoup(req.text, "html.parser")
     maybe_products: Maybe[list[ParsableProduct]] = (
         Maybe.from_optional(soup.find("div", class_="content-wrapper"))
@@ -99,8 +100,19 @@ def parse_discounted_products(count: int | None = None) -> list[ParsableProduct]
 
 
 async def main():
-    discounted_products = parse_discounted_products(DISCOUNTS_PARSE_LIMIT)
+    SALES_URL = "https://www.xbox-now.com/ru/deal-list"
+    logger = Resolve(Logger)
+    try:
+        limit = int(sys.argv[2])
+    except Exception:
+        limit = None
+    logger.info("Parsing up to %s discounts from %s", limit, SALES_URL)
+    discounted_products = parse_discounted_products(SALES_URL, limit)
+    logger.info(
+        "%s discounts succesfully parsed. Loading to db...", len(discounted_products)
+    )
     async with Resolve(SqlAlchemyDatabase).session_factory() as session:
+        logger.debug("Cleaning old discounts...")
         await session.execute(delete(ProductOnSale))
         session.add_all(
             [
@@ -114,7 +126,8 @@ async def main():
             ]
         )
         await session.commit()
-        print("Discounts was sucesfully parsed!")
+        logger.debug("Commiting transaction")
+    logger.info("Discounts were succesfully loaded to db")
 
 
 if __name__ == "__main__":

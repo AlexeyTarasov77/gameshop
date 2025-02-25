@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from config import Config
 from core.ioc import Resolve
 from core.utils import get_upload_dir

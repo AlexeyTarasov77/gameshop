@@ -6,6 +6,30 @@ from pydantic import validate_email
 import aiosmtplib
 
 
+class EmailTemplates:
+    def welcome(self, username: str, link: str) -> str:
+        return (
+            f"Здравствуйте, {username}. Ваш аккаунт был успешно создан."
+            "Для активации аккаунта перейдите по ссылке ниже и подтверждите активацию аккаунта:"
+            f"\t{link}\t"
+        )
+
+    def reset_password(self, username: str, link: str) -> str:
+        return (
+            f"Дорогой {username}, мы получили запрос на сброс пароля вашего аккаунта."
+            f"\nДля обновления пароля следуйте ссылке ниже:"
+            f"\n{link}"
+            "\nЕсли это были не вы - игнорируйте это письмо"
+        )
+
+    def new_activation_token(self, token: str, link: str) -> str:
+        return (
+            f"Новый токен для активации аккаунта: {token}\n"
+            "Перейдите по ссылке ниже для активации аккаунта\n"
+            f"\t{link}\t"
+        )
+
+
 class AsyncMailer:
     def __init__(
         self,
