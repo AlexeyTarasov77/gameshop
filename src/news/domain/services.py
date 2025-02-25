@@ -1,3 +1,4 @@
+from typing import cast
 from core.pagination import PaginationParams
 from types import EllipsisType
 from core.services.base import BaseService
@@ -18,9 +19,10 @@ class NewsService(BaseService):
         return [ShowNews.model_validate(el) for el in news], total_records
 
     async def create_news(self, dto: CreateNewsDTO) -> ShowNews:
-        photo_url = await save_upload_file(dto.photo) if dto.photo else None
         async with self._uow as uow:
-            news = await uow.news_repo.create_with_image(dto, photo_url)
+            news = await uow.news_repo.create_with_image(
+                dto, cast(str | None, dto.photo)
+            )
         return ShowNews.model_validate(news)
 
     async def get_news(self, news_id: int) -> ShowNews:
@@ -33,10 +35,8 @@ class NewsService(BaseService):
 
     async def update_news(self, news_id: int, dto: UpdateNewsDTO) -> ShowNews:
         photo_url: EllipsisType | str | None = ...
-        if dto.photo is not None:
-            photo_url = await save_upload_file(dto.photo)
-        elif "photo" in dto.model_fields_set:  # if none is set explicitly
-            photo_url = dto.photo
+        if "photo" in dto.model_fields_set:  # if none is set explicitly
+            photo_url = cast(str | None, dto.photo)
         try:
             async with self._uow as uow:
                 news = await uow.news_repo.update_by_id(news_id, dto, photo_url)

@@ -15,15 +15,15 @@ wishlist_router = APIRouter(prefix="/wishlist", tags=["wishlist"])
 
 
 def sessions_service_factory(
-    session_id: SessionKeyDep,
+    session_key: SessionKeyDep,
     user_id: t.Annotated[int, Depends(get_optional_user_id)],
     cart_manager_factory: t.Annotated[CartManagerFactoryI, Inject(CartManagerFactoryI)],
     wishlist_manager_factory: t.Annotated[
         WishlistManagerFactoryI, Inject(WishlistManagerFactoryI)
     ],
 ) -> SessionsService:
-    cart_manager = cart_manager_factory.create(session_id, user_id)
-    wishlist_manager = wishlist_manager_factory.create(session_id, user_id)
+    cart_manager = cart_manager_factory.create(session_key, user_id)
+    wishlist_manager = wishlist_manager_factory.create(session_key, user_id)
     return Resolve(
         SessionsService,
         cart_manager=cart_manager,

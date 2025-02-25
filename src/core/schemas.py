@@ -14,7 +14,12 @@ from pydantic import (
     ValidationError,
 )
 
-from core.utils import get_uploaded_file_url, filename_split
+from core.utils import (
+    get_uploaded_file_url,
+    filename_split,
+    run_coroutine_sync,
+    save_upload_file,
+)
 
 
 class BaseDTO(BaseModel):
@@ -30,15 +35,21 @@ def require_dto_not_empty(dto: BaseDTO):
         )
 
 
-def _check_image[T: UploadFile](file: T) -> T:
-    _, extenstions = filename_split(str(file.filename))
-    last_ext = extenstions[-1]
-    acceptable_extensions = ["png", "jpg", "jpeg", "gif"]
-    assert last_ext in acceptable_extensions, (
-        "Provided file is not a valid image. Extension should be one of: "
-        + ", ".join(acceptable_extensions)
-    )
-    return file
+def _check_and_save_image(file: UploadFile) -> str:
+    assert file.filename or file.content_type
+    if file.content_type:
+        assert (
+            file.content_type.split("/")[0] == "image"
+        ), "Provided file is not a valid image"
+    else:
+        _, extenstions = filename_split(str(file.filename))
+        last_ext = extenstions[-1]
+        acceptable_extensions = ["png", "jpg", "jpeg", "gif"]
+        assert last_ext in acceptable_extensions, (
+            "Provided file is not a valid image. Extension should be one of: "
+            + ", ".join(acceptable_extensions)
+        )
+    return run_coroutine_sync(save_upload_file(file))
 
 
 def _parse_int(s: str | int) -> int:
@@ -75,7 +86,7 @@ ImgUrl = Annotated[
     str,
     PlainSerializer(lambda s: get_uploaded_file_url(s) if not _is_valid_url(s) else s),
 ]
-UploadImage = Annotated[UploadFile, AfterValidator(_check_image)]
+UploadImage = Annotated[UploadFile, AfterValidator(_check_and_save_image)]
 _base64int_serializer = PlainSerializer(
     lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
 )

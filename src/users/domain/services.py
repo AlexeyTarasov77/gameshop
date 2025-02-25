@@ -1,13 +1,13 @@
 import asyncio
 from datetime import datetime, timedelta
 from logging import Logger
+from typing import cast
 
 from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 
 from core.services.base import BaseService
 from core.services import exceptions as exc
 from core.uow import AbstractUnitOfWork
-from core.utils import save_upload_file
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from sessions.domain.interfaces import SessionCopierI
@@ -74,7 +74,6 @@ class UsersService(BaseService):
         return plain_token
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
-        photo_url = await save_upload_file(dto.photo) if dto.photo else None
         self._logger.info(
             "Signing up user with email: %s, username: %s", dto.email, dto.username
         )
@@ -82,7 +81,7 @@ class UsersService(BaseService):
         try:
             async with self._uow as uow:
                 user = await uow.users_repo.create_with_hashed_password(
-                    dto, password_hash, photo_url
+                    dto, password_hash, cast(str | None, dto.photo)
                 )
                 # deliberately creating token inside transaction to avoid user creating in case of error
                 plain_token = await self._create_and_save_token(

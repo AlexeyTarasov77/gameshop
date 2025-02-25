@@ -1,3 +1,4 @@
+from typing import cast
 from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
 from core.services.exceptions import (
@@ -27,10 +28,11 @@ class ProductsService(BaseService):
     entity_name = "Product"
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
-        image_url = await save_upload_file(dto.image)
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create_with_image(dto, image_url)
+                product = await uow.products_repo.create_with_image(
+                    dto, cast(str, dto.image)
+                )
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,
@@ -100,11 +102,10 @@ class ProductsService(BaseService):
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO
     ) -> ShowProduct:
-        image_url = await save_upload_file(dto.image) if dto.image else None
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.update_by_id(
-                    product_id, dto, image_url
+                    product_id, dto, cast(str | None, dto.image)
                 )
         except AlreadyExistsError:
             params = {
