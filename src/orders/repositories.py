@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
@@ -48,6 +48,7 @@ class OrdersRepository(PaginationRepository[Order]):
             ._get_pagination_stmt(pagination_params)
             .options(self._get_rels_load_options())
             .filter_by(**filter_by)
+            .order_by(desc(Order.order_date))
         )
 
         res = await self.session.execute(stmt)

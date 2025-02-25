@@ -89,4 +89,4 @@ async def get_user_by_token(
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
     users_service: UsersServiceDep,
 ) -> schemas.ShowUserWithRole:
-    return await users_service.get_user(user_id)
+    return await users_service.get_user_with_role(user_id)

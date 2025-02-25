@@ -25,9 +25,8 @@ class OrdersService(BaseService):
         mail_provider: MailProviderI,
         order_details_link: str,
     ):
-        super().__init__(uow)
+        super().__init__(uow, logger)
         self._mail_provider = mail_provider
-        self._logger = logger
         self._order_details_link = order_details_link
 
     async def create_order(self, dto: CreateOrderDTO, user_id: int | None) -> ShowOrder:
@@ -42,12 +41,13 @@ class OrdersService(BaseService):
                 order = await uow.orders_repo.create_from_dto(dto, user_id)
                 user_email: str | None = dto.user.email
                 if user_id is not None:
-                    user_email = (await uow.users_repo.get_by_id(user_id)).email
+                    user = await uow.users_repo.get_by_id(user_id, is_active=True)
+                    user_email = user.email
                 await uow.order_items_repo.create_many(dto.cart, order.id)
         except NotFoundError:
             # user not found
             self._logger.warning(
-                "OrdersService.create_order: suspicious attempt to create order from unexistent user with valid auth token. user_id from token: %s",
+                "OrdersService.create_order: suspicious attempt to create order from unexistent/inactive user with valid auth token. user_id from token: %s",
                 user_id,
             )
             raise EntityNotFoundError("User", id=user_id)

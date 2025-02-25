@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from logging import Logger
 from typing import Literal
 from products.schemas import ProductInCartDTO, ShowProductWithRelations
 from sessions.domain.interfaces import (
@@ -18,10 +19,11 @@ class SessionsService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
+        logger: Logger,
         cart_manager: CartManagerI,
         wishlist_manager: WishlistManagerI,
     ):
-        super().__init__(uow)
+        super().__init__(uow, logger)
         self._cart_manager = cart_manager
         self._wishlist_manager = wishlist_manager
 

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from collections.abc import Sequence
-from sqlalchemy import and_, not_, or_, select
+from sqlalchemy import and_, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
@@ -20,7 +20,11 @@ class ProductsRepository(PaginationRepository[Product]):
         in_stock: bool | None,
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
-        stmt = super()._get_pagination_stmt(pagination_params)
+        stmt = (
+            super()
+            ._get_pagination_stmt(pagination_params)
+            .order_by(desc(Product.created_at))
+        )
         if query:
             stmt = stmt.where(self.model.name.ilike(f"%{query}%"))
         if category_id is not None:

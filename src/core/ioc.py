@@ -88,7 +88,9 @@ def _init_container() -> punq.Container:
     container.register(ProductsService, ProductsService)
     container.register(NewsService, NewsService)
     container.register(
-        OrdersService, OrdersService, order_details_link=f"{FRONTEND_URL}/orders/%s"
+        OrdersService,
+        OrdersService,
+        order_details_link=f"{FRONTEND_URL}/orderhistory/%s",
     )
     container.register(
         UsersService,

@@ -18,23 +18,29 @@ def app_factory() -> FastAPI:
     cfg = Resolve(Config)
     app = FastAPI(version=cfg.api_version)
     app.include_router(router)
-    HTTPExceptionsMapper(app).setup_handlers()
+    Resolve(HTTPExceptionsMapper, app=app).setup_handlers()
     app.middleware("http")(
         session_middleware(
             max_age=cfg.server.sessions.ttl,
             session_creator=Resolve(SessionCreatorI),
         )
     )
+    allow_origins = [
+        "https://gamebazaar.ru",
+        "http://gamebazaar.ru",
+    ]
+    if cfg.debug:
+        allow_origins.extend(
+            [
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://localhost:3000",
+                "https://127.0.0.1:3000",
+            ]
+        )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-            "https://localhost:3000",
-            "https://127.0.0.1:3000",
-            "https://gamebazaar.ru",
-            "http://gamebazaar.ru",
-        ],
+        allow_origins=allow_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

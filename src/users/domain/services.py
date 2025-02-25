@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
+from logging import Logger
 
 from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
 
@@ -27,6 +28,7 @@ class UsersService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
+        logger: Logger,
         token_hasher: TokenHasherI,
         password_hasher: PasswordHasherI,
         jwt_token_provider: StatelessTokenProviderI,
@@ -39,7 +41,7 @@ class UsersService(BaseService):
         activation_link: str,
         password_reset_link: str,
     ) -> None:
-        super().__init__(uow)
+        super().__init__(uow, logger)
         self._password_hasher = password_hasher
         self._token_hasher = token_hasher
         self._jwt_token_provider = jwt_token_provider
@@ -194,7 +196,7 @@ class UsersService(BaseService):
             )
         )
 
-    async def get_user(self, user_id: int) -> ShowUserWithRole:
+    async def get_user_with_role(self, user_id: int) -> ShowUserWithRole:
         try:
             async with self._uow as uow:
                 user, is_admin = await uow.users_repo.get_by_id_and_check_is_admin(

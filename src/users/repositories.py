@@ -22,8 +22,11 @@ class UsersRepository(SqlAlchemyRepository[User]):
             password_hash=password_hash, photo_url=photo_url, **data
         )
 
-    async def get_by_id(self, user_id: int) -> User:
-        return await super().get_one(id=user_id)
+    async def get_by_id(self, user_id: int, is_active: bool | None = None) -> User:
+        filter_by = {"id": user_id}
+        if is_active is not None:
+            filter_by["is_active"] = is_active
+        return await super().get_one(**filter_by)
 
     async def set_new_password(self, user_id: int, password_hash: bytes) -> None:
         stmt = (

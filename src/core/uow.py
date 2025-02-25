@@ -99,6 +99,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
 
     async def __aenter__(self) -> t.Self:
+        """Instantiating new session and initializing repos"""
         return await super().__aenter__()
 
     def _init_repos(self):
@@ -117,17 +118,18 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self._check_init_repos_correct()
 
     def _check_init_repos_correct(self):
-        for repo_name in self.__annotations__:
-            assert repo_name in self.__dict__
+        for name in self.__annotations__:
+            if name.endswith("_repo"):
+                assert name in self.__dict__
 
     async def __aexit__(self, exc_type, exc_value, _) -> None:
+        """Commits/rollbacks transaction depending on whether exception occured"""
         assert self.session is not None
         try:
             if exc_type is not None:
-                self.logger.error(
+                self.logger.debug(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
                     exc_value,
-                    exc_info=exc_type,
                 )
                 await super().__aexit__(exc_type, exc_value, _)
                 self._handle_exc(exc_value)

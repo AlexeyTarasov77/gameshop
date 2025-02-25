@@ -47,7 +47,6 @@ class _HTTPSessions(BaseModel):
 class _Server(BaseModel):
     host: IPvAnyAddress = Field(default=ip_address("0.0.0.0"))
     port: PORT = Field(default=8000)
-    media_serve_path: str = Field(default="media")
     sessions: _HTTPSessions = Field(default=_HTTPSessions())
 
     @property
