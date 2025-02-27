@@ -24,13 +24,7 @@ async def list_products(
         dto,
         pagination_params,
     )
-    return PaginatedResponse(
-        objects=products,
-        total_records=total_records,
-        total_on_page=len(products),
-        first_page=1,
-        **pagination_params.model_dump(),
-    )
+    return PaginatedResponse.new_response(products, total_records, pagination_params)
 
 
 @router.get("/sales")
@@ -40,13 +34,7 @@ async def get_current_sales(
     sales, total_records = await products_service.get_current_sales(
         pagination_params,
     )
-    return PaginatedResponse(
-        objects=sales,
-        total_records=total_records,
-        total_on_page=len(sales),
-        first_page=1,
-        **pagination_params.model_dump(),
-    )
+    return PaginatedResponse.new_response(sales, total_records, pagination_params)
 
 
 @router.get("/detail/{product_id}")

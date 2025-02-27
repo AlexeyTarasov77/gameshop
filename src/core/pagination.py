@@ -32,3 +32,18 @@ class PaginatedResponse[T: BaseDTO](PaginationParams):
         if self.total_on_page > self.page_size:
             raise ValueError("total_on_page should be <= page_size")
         return self
+
+    @classmethod
+    def new_response(
+        cls,
+        objects: Sequence[T],
+        total_records: int,
+        pagination_params: PaginationParams,
+    ):
+        return cls(
+            objects=objects,
+            total_records=total_records,
+            total_on_page=len(objects),
+            first_page=1,
+            **pagination_params.model_dump(),
+        )

@@ -20,13 +20,7 @@ async def list_news(
     pagination_params: PaginationDep, news_service: NewsServiceDep
 ) -> PaginatedResponse[ShowNews]:
     news, total_records = await news_service.list_news(pagination_params)
-    return PaginatedResponse(
-        objects=news,
-        total_records=total_records,
-        total_on_page=len(news),
-        first_page=1,
-        **pagination_params.model_dump(),
-    )
+    return PaginatedResponse.new_response(news, total_records, pagination_params)
 
 
 @router.post(

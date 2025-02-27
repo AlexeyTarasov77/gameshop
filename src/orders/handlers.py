@@ -57,12 +57,7 @@ async def list_all_orders(
     orders_service: OrdersServiceDep,
 ) -> PaginatedResponse[ShowOrderExtended]:
     orders, total_records = await orders_service.list_all_orders(pagination_params)
-    return PaginatedResponse(
-        objects=orders,
-        total_records=total_records,
-        total_on_page=len(orders),
-        **pagination_params.model_dump(),
-    )
+    return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
 
 @router.get("/list-for-user")
@@ -74,12 +69,7 @@ async def list_orders_for_user(
     orders, total_records = await orders_service.list_orders_for_user(
         pagination_params, user_id
     )
-    return PaginatedResponse(
-        objects=orders,
-        total_records=total_records,
-        total_on_page=len(orders),
-        **pagination_params.model_dump(),
-    )
+    return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
 
 @router.get("/detail/{order_id}")
