@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from enum import StrEnum
 
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
@@ -10,12 +11,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from products import schemas
 
 
+class ProductOnSaleCategory(StrEnum):
+    XBOX = "XBOX"
+    PSN = "PSN"
+
+
 class ProductOnSale(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     name: Mapped[str]
-    price: Mapped[float]
+    base_price: Mapped[float]
+    base_price_currency: Mapped[str]
+    discounted_price: Mapped[float]
+    discounted_price_currency: Mapped[str]
     deal_until: Mapped[datetime | None]
-    photo_url: Mapped[str]
+    image_url: Mapped[str]
+    category: Mapped[ProductOnSaleCategory]
 
 
 class Product(SqlAlchemyBaseModel):

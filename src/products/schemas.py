@@ -2,7 +2,14 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO, ImgUrl, ParseJson, UploadImage
+from core.schemas import (
+    Base64Int,
+    Base64IntOptionalIDParam,
+    BaseDTO,
+    ImgUrl,
+    ParseJson,
+    UploadImage,
+)
 from pydantic import AfterValidator, Field
 
 
@@ -71,6 +78,13 @@ class BaseShowProductDTO(BaseProductDTO):
     updated_at: datetime
     image_url: ImgUrl
     in_stock: bool
+
+
+class ListProductsFilterDTO(BaseDTO):
+    query: str | None = None
+    category_id: Base64IntOptionalIDParam = None
+    discounted: bool | None = None
+    in_stock: bool | None = None
 
 
 class ShowProduct(BaseShowProductDTO):

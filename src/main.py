@@ -28,14 +28,14 @@ def app_factory() -> FastAPI:
     allow_origins = [
         "https://gamebazaar.ru",
         "http://gamebazaar.ru",
+        "https://www.gamebazaar.ru",
+        "http://www.gamebazaar.ru",
     ]
     if cfg.debug:
         allow_origins.extend(
             [
                 "http://localhost:3000",
                 "http://127.0.0.1:3000",
-                "https://localhost:3000",
-                "https://127.0.0.1:3000",
             ]
         )
     app.add_middleware(

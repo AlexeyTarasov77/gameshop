@@ -16,6 +16,7 @@ from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
     CreateProductDTO,
+    ListProductsFilterDTO,
     PlatformDTO,
     ProductOnSaleDTO,
     ShowProduct,
@@ -44,10 +45,7 @@ class ProductsService(BaseService):
 
     async def list_products(
         self,
-        query: str | None,
-        category_id: int | None,
-        discounted: bool | None,
-        in_stock: bool | None,
+        dto: ListProductsFilterDTO,
         pagination_params: PaginationParams,
     ) -> tuple[list[ShowProductWithRelations], int]:
         async with self._uow as uow:
@@ -55,10 +53,7 @@ class ProductsService(BaseService):
                 products,
                 total_records,
             ) = await uow.products_repo.filter_paginated_list(
-                query.strip() if query else None,
-                category_id,
-                discounted,
-                in_stock,
+                dto,
                 pagination_params,
             )
         return [

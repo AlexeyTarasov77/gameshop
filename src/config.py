@@ -1,5 +1,4 @@
 import argparse
-from ipaddress import ip_address
 import os
 import re
 import sys
@@ -12,7 +11,6 @@ from pydantic import (
     BeforeValidator,
     EmailStr,
     Field,
-    IPvAnyAddress,
     PostgresDsn,
     RedisDsn,
 )
@@ -45,7 +43,7 @@ class _HTTPSessions(BaseModel):
 
 
 class _Server(BaseModel):
-    host: IPvAnyAddress = Field(default=ip_address("0.0.0.0"))
+    host: str = Field(default="0.0.0.0")
     port: PORT = Field(default=8000)
     sessions: _HTTPSessions = Field(default=_HTTPSessions())
 

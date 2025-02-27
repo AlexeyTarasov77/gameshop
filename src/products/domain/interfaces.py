@@ -3,7 +3,7 @@ import typing as t
 
 from core.pagination import PaginationParams, PaginationResT
 from products.models import Category, Platform, Product, DeliveryMethod, ProductOnSale
-from products.schemas import CreateProductDTO, UpdateProductDTO
+from products.schemas import CreateProductDTO, ListProductsFilterDTO, UpdateProductDTO
 
 
 class ProductsRepositoryI(t.Protocol):
@@ -19,10 +19,7 @@ class ProductsRepositoryI(t.Protocol):
 
     async def filter_paginated_list(
         self,
-        query: str | None,
-        category_id: int | None,
-        discounted: bool | None,
-        in_stock: bool | None,
+        dto: ListProductsFilterDTO,
         pagination_params: PaginationParams,
     ) -> PaginationResT[Product]: ...
 

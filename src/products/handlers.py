@@ -4,7 +4,6 @@ from core.ioc import Inject
 from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
-from core.schemas import Base64IntOptionalIDParam
 from fastapi import APIRouter, Form, Depends, status
 from products import schemas
 from products.domain.services import ProductsService
@@ -19,16 +18,10 @@ ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    query: str | None = None,
-    category_id: Base64IntOptionalIDParam = None,
-    discounted: bool | None = None,
-    in_stock: bool | None = None,
+    dto: schemas.ListProductsFilterDTO,
 ) -> PaginatedResponse[schemas.ShowProductWithRelations]:
     products, total_records = await products_service.list_products(
-        query,
-        int(category_id) if category_id else None,
-        discounted,
-        in_stock,
+        dto,
         pagination_params,
     )
     return PaginatedResponse(
