@@ -7,6 +7,7 @@ from core.dependencies import PaginationDep, restrict_content_type
 from fastapi import APIRouter, Form, Depends, status
 from products import schemas
 from products.domain.services import ProductsService
+from products.models import ProductOnSaleCategory
 from users.dependencies import require_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -29,9 +30,12 @@ async def list_products(
 
 @router.get("/sales")
 async def get_current_sales(
-    pagination_params: PaginationDep, products_service: ProductsServiceDep
+    pagination_params: PaginationDep,
+    products_service: ProductsServiceDep,
+    category: ProductOnSaleCategory,
 ):
     sales, total_records = await products_service.get_current_sales(
+        category,
         pagination_params,
     )
     return PaginatedResponse.new_response(sales, total_records, pagination_params)

@@ -2,7 +2,14 @@ from collections.abc import Sequence
 import typing as t
 
 from core.pagination import PaginationParams, PaginationResT
-from products.models import Category, Platform, Product, DeliveryMethod, ProductOnSale
+from products.models import (
+    Category,
+    Platform,
+    Product,
+    DeliveryMethod,
+    ProductOnSale,
+    ProductOnSaleCategory,
+)
 from products.schemas import CreateProductDTO, ListProductsFilterDTO, UpdateProductDTO
 
 
@@ -43,6 +50,6 @@ class DeliveryMethodsRepositoryI(t.Protocol):
 
 
 class ProductOnSaleRepositoryI(t.Protocol):
-    async def paginated_list(
-        self, pagination_params: PaginationParams
+    async def list_by_category(
+        self, category: ProductOnSaleCategory, pagination_params: PaginationParams
     ) -> PaginationResT[ProductOnSale]: ...

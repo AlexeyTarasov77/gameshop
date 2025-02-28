@@ -17,6 +17,7 @@ class ProductOnSaleCategory(StrEnum):
 
 
 class ProductOnSale(SqlAlchemyBaseModel):
+    # __table_args__ = (UniqueConstraint("name", "category", "region"),)
     id: Mapped[int_pk_type]
     name: Mapped[str]
     base_price: Mapped[float]
@@ -25,6 +26,9 @@ class ProductOnSale(SqlAlchemyBaseModel):
     discounted_price_currency: Mapped[str]
     deal_until: Mapped[datetime | None]
     image_url: Mapped[str]
+    discount: Mapped[int]
+    region: Mapped[str]
+    with_gp: Mapped[bool | None]  # indicates whether discount is applied to game pass
     category: Mapped[ProductOnSaleCategory]
 
 

@@ -5,7 +5,14 @@ from sqlalchemy import and_, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
-from products.models import Category, Platform, Product, DeliveryMethod, ProductOnSale
+from products.models import (
+    Category,
+    Platform,
+    Product,
+    DeliveryMethod,
+    ProductOnSale,
+    ProductOnSaleCategory,
+)
 from products.schemas import CreateProductDTO, ListProductsFilterDTO, UpdateProductDTO
 
 
@@ -97,6 +104,11 @@ class ProductsRepository(PaginationRepository[Product]):
 
 class ProductOnSaleRepository(PaginationRepository[ProductOnSale]):
     model = ProductOnSale
+
+    async def list_by_category(
+        self, category: ProductOnSaleCategory, pagination_params: PaginationParams
+    ) -> PaginationResT[ProductOnSale]:
+        return await super().paginated_list(pagination_params, category=category)
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):

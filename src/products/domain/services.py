@@ -6,12 +6,12 @@ from core.services.exceptions import (
     EntityNotFoundError,
     EntityOperationRestrictedByRefError,
 )
-from core.utils import save_upload_file
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
     OperationRestrictedByRefError,
 )
+from products.models import ProductOnSaleCategory
 from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
@@ -61,10 +61,11 @@ class ProductsService(BaseService):
         ], total_records
 
     async def get_current_sales(
-        self, pagination_params: PaginationParams
+        self, category: ProductOnSaleCategory, pagination_params: PaginationParams
     ) -> PaginationResT[ProductOnSaleDTO]:
         async with self._uow as uow:
-            products, total_records = await uow.product_on_sale_repo.paginated_list(
+            products, total_records = await uow.product_on_sale_repo.list_by_category(
+                category,
                 pagination_params,
             )
         return [
