@@ -136,6 +136,11 @@ class ShowOrder(BaseDTO):
         )
 
 
+class CreateOrderResDTO(BaseDTO):
+    payment_url: str
+    order: ShowOrder
+
+
 class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
     customer: CustomerWithUserDTO  # type: ignore

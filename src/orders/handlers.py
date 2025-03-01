@@ -9,7 +9,7 @@ from core.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateOrderDTO,
-    ShowOrder,
+    CreateOrderResDTO,
     UpdateOrderDTO,
     ShowOrderExtended,
 )
@@ -28,7 +28,7 @@ async def create_order(
     dto: CreateOrderDTO,
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
     orders_service: OrdersServiceDep,
-) -> ShowOrder:
+) -> CreateOrderResDTO:
     if not (user_id or (dto.user.email and dto.user.name)):
         raise HTTPException(400, "email and name are required for not authorized user")
     return await orders_service.create_order(dto, user_id)

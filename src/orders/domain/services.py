@@ -8,10 +8,12 @@ from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from orders.schemas import (
     CreateOrderDTO,
+    CreateOrderResDTO,
     ShowOrder,
     ShowOrderExtended,
     UpdateOrderDTO,
 )
+from payments.domain.interfaces import AvailablePaymentSystems, PaymentSystemFactoryI
 from users.domain.interfaces import MailProviderI
 
 
@@ -23,13 +25,20 @@ class OrdersService(BaseService):
         uow: AbstractUnitOfWork,
         logger: Logger,
         mail_provider: MailProviderI,
+        payment_system_factory: PaymentSystemFactoryI,
         order_details_link: str,
     ):
         super().__init__(uow, logger)
         self._mail_provider = mail_provider
         self._order_details_link = order_details_link
+        self._payment_system_factory = payment_system_factory
 
-    async def create_order(self, dto: CreateOrderDTO, user_id: int | None) -> ShowOrder:
+    async def create_order(
+        self,
+        dto: CreateOrderDTO,
+        user_id: int | None,
+        selected_payment_system: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH,
+    ) -> CreateOrderResDTO:
         self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
         try:
             async with self._uow as uow:
@@ -57,12 +66,18 @@ class OrdersService(BaseService):
                 user_id,
             )
             raise EntityNotFoundError("User", id=user_id)
+        assert user_email
+        payment_system = self._payment_system_factory.choose_by_name(
+            selected_payment_system
+        )
+        _, payment_url = await payment_system.create_bill(
+            order.id, order.total, user_email
+        )
         email_body = (
             f"Ваш заказ был успешно оформлен и принят в обработку.\n"
             "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"
             f"\t{self._order_details_link % order.id}\t"
         )
-        assert user_email
         asyncio.create_task(
             self._mail_provider.send_mail_with_timeout(
                 "Спасибо за заказ!",
@@ -73,7 +88,10 @@ class OrdersService(BaseService):
         self._logger.info(
             "Succesfully created order for user: %s. Order id: %s", user_email, order.id
         )
-        return ShowOrder.from_model(order, total=order.total)
+        return CreateOrderResDTO(
+            order=ShowOrder.from_model(order, total=order.total),
+            payment_url=payment_url,
+        )
 
     async def update_order(self, dto: UpdateOrderDTO, order_id: UUID) -> ShowOrder:
         self._logger.info("Updating order: %s. Data: %s", order_id, dto)
