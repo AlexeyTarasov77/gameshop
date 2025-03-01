@@ -25,7 +25,7 @@ class UsersRepository(SqlAlchemyRepository[User]):
 
     async def check_exists_active(self, user_id: int) -> bool:
         stmt = select(1).select_from(self.model).filter_by(is_active=True, id=user_id)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return bool(res.one_or_none())
 
     async def update_by_id(
@@ -57,7 +57,7 @@ class UsersRepository(SqlAlchemyRepository[User]):
             .filter_by(id=user_id)
             .returning(User.id)
         )
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         if res.scalar_one_or_none() is None:
             raise NotFoundError()
 
@@ -70,7 +70,7 @@ class UsersRepository(SqlAlchemyRepository[User]):
             .join(Admin, Admin.user_id == User.id, isouter=True)
             .where(User.id == user_id)
         )
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         data = res.one_or_none()
         if data is None:
             raise NotFoundError(f"User with id: {user_id} not found")
@@ -81,8 +81,8 @@ class TokensRepository(SqlAlchemyRepository[Token]):
     model = Token
 
     async def save(self, token: Token) -> None:
-        self.session.add(token)
-        await self.session.flush()
+        self._session.add(token)
+        await self._session.flush()
 
     async def get_by_hash(self, hash: bytes, scope: TokenScopes) -> Token:
         return await super().get_one(hash=hash, scope=scope)
@@ -96,5 +96,5 @@ class AdminsRepository(SqlAlchemyRepository[Admin]):
 
     async def check_exists(self, user_id: int) -> bool:
         stmt = select(1).select_from(self.model).filter_by(user_id=user_id)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())

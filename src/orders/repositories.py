@@ -51,7 +51,7 @@ class OrdersRepository(PaginationRepository[Order]):
             .order_by(desc(Order.order_date))
         )
 
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return super()._split_records_and_count(res.all())
 
     async def list_orders_for_user(
@@ -70,7 +70,7 @@ class OrdersRepository(PaginationRepository[Order]):
             .filter_by(id=order_id)
             .options(self._get_rels_load_options())
         )
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         order = res.scalars().one_or_none()
         if not order:
             raise NotFoundError()

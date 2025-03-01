@@ -8,8 +8,6 @@ from sqlalchemy import ForeignKey, UniqueConstraint, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from products import schemas
-
 
 class ProductOnSaleCategory(StrEnum):
     XBOX = "XBOX"
@@ -90,13 +88,10 @@ class BaseRefModel(SqlAlchemyBaseModel):
         return relationship(Product, back_populates=self.__tablename__)
 
 
-class Category(BaseRefModel):
-    model_schema = schemas.CategoryDTO
+class Category(BaseRefModel): ...
 
 
-class Platform(BaseRefModel):
-    model_schema = schemas.PlatformDTO
+class Platform(BaseRefModel): ...
 
 
-class DeliveryMethod(BaseRefModel):
-    model_schema = schemas.DeliveryMethodDTO
+class DeliveryMethod(BaseRefModel): ...

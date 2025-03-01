@@ -4,10 +4,9 @@ from core.ioc import Inject
 from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
-from fastapi import APIRouter, Form, Depends, status
+from fastapi import APIRouter, Form, Depends, Query, status
 from products import schemas
 from products.domain.services import ProductsService
-from products.models import ProductOnSaleCategory
 from users.dependencies import require_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -19,7 +18,7 @@ ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    dto: schemas.ListProductsFilterDTO,
+    dto: t.Annotated[schemas.ListProductsFilterDTO, Query()],
 ) -> PaginatedResponse[schemas.ShowProductWithRelations]:
     products, total_records = await products_service.list_products(
         dto,
@@ -32,13 +31,29 @@ async def list_products(
 async def get_current_sales(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    category: ProductOnSaleCategory,
+    dto: t.Annotated[schemas.SalesFilterDTO, Query()],
 ):
     sales, total_records = await products_service.get_current_sales(
-        category,
+        dto,
         pagination_params,
     )
     return PaginatedResponse.new_response(sales, total_records, pagination_params)
+
+
+@router.get("/sales/{product_id}")
+async def get_product_on_sale(
+    product_id: EntityIDParam,
+    products_service: ProductsServiceDep,
+) -> schemas.ProductOnSaleDTO:
+    return await products_service.get_product_on_sale(int(product_id))
+
+
+@router.delete("/sales/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product_on_sale(
+    product_id: EntityIDParam,
+    products_service: ProductsServiceDep,
+) -> None:
+    return await products_service.delete_product_on_sale(int(product_id))
 
 
 @router.get("/detail/{product_id}")

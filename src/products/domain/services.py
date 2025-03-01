@@ -11,7 +11,6 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.models import ProductOnSaleCategory
 from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
@@ -19,6 +18,7 @@ from products.schemas import (
     ListProductsFilterDTO,
     PlatformDTO,
     ProductOnSaleDTO,
+    SalesFilterDTO,
     ShowProduct,
     ShowProductWithRelations,
     UpdateProductDTO,
@@ -61,16 +61,34 @@ class ProductsService(BaseService):
         ], total_records
 
     async def get_current_sales(
-        self, category: ProductOnSaleCategory, pagination_params: PaginationParams
+        self, dto: SalesFilterDTO, pagination_params: PaginationParams
     ) -> PaginationResT[ProductOnSaleDTO]:
         async with self._uow as uow:
-            products, total_records = await uow.product_on_sale_repo.list_by_category(
-                category,
+            (
+                products,
+                total_records,
+            ) = await uow.product_on_sale_repo.filter_paginated_list(
+                dto,
                 pagination_params,
             )
         return [
-            ProductOnSaleDTO.model_validate(product) for product in products
+            ProductOnSaleDTO.from_model(product) for product in products
         ], total_records
+
+    async def delete_product_on_sale(self, product_id: int) -> None:
+        try:
+            async with self._uow as uow:
+                await uow.product_on_sale_repo.delete_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
+
+    async def get_product_on_sale(self, product_id: int) -> ProductOnSaleDTO:
+        try:
+            async with self._uow as uow:
+                product = await uow.product_on_sale_repo.get_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
+        return ProductOnSaleDTO.from_model(product)
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:

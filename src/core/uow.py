@@ -58,10 +58,10 @@ class AbstractUnitOfWork[S](abc.ABC):
 
     def __init__(self, session_factory: Callable[[], S]):
         self._session_factory = session_factory
-        self.session: S | None = None
+        self._session: S | None = None
 
     async def __aenter__(self) -> t.Self:
-        self.session = self._session_factory()
+        self._session = self._session_factory()
         self._init_repos()
         return self
 
@@ -72,8 +72,8 @@ class AbstractUnitOfWork[S](abc.ABC):
     def _init_repos(self) -> None: ...
 
     def _register_repo[V: AcceptsSessionI](self, repo_cls: type[V]) -> V:
-        assert self.session
-        return repo_cls(self.session)
+        assert self._session
+        return repo_cls(self._session)
 
     @abc.abstractmethod
     async def commit(self) -> None: ...
@@ -124,7 +124,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
 
     async def __aexit__(self, exc_type, exc_value, _) -> None:
         """Commits/rollbacks transaction depending on whether exception occured"""
-        assert self.session is not None
+        assert self._session is not None
         try:
             if exc_type is not None:
                 self.logger.debug(
@@ -141,12 +141,12 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
             self._handle_exc(e)
         finally:
             self.logger.debug("closing session")
-            await self.session.close()
+            await self._session.close()
 
     async def commit(self) -> None:
-        assert self.session is not None
-        await self.session.commit()
+        assert self._session is not None
+        await self._session.commit()
 
     async def rollback(self) -> None:
-        assert self.session is not None
-        await self.session.rollback()
+        assert self._session is not None
+        await self._session.rollback()

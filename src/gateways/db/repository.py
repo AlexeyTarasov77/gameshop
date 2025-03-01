@@ -38,23 +38,23 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
     model: type[T]
 
     def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+        self._session = session
 
     async def create(self, **values) -> T:
         if not values:
             raise DatabaseError("No data to insert")
         stmt = insert(self.model).values(**values).returning(self.model)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return res.scalars().one()
 
     async def list(self, **filter_by) -> Sequence[T]:
         stmt = select(self.model).filter_by(**filter_by)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return res.scalars().all()
 
     async def get_one(self, **filter_by) -> T:
         stmt = select(self.model).filter_by(**filter_by).limit(1)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         obj = res.scalar_one_or_none()
         if not obj:
             raise NotFoundError()
@@ -69,7 +69,7 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
             .values(**data)
             .returning(self.model)
         )
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         obj = res.scalars().one_or_none()
         if not obj:
             raise NotFoundError()
@@ -77,7 +77,7 @@ class SqlAlchemyRepository[T: SqlAlchemyBaseModel](AbstractRepository[T]):
 
     async def delete(self, **filter_by) -> CursorResult:
         stmt = delete(self.model).filter_by(**filter_by)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return res
 
     async def delete_or_raise_not_found(self, **filter_by) -> None:
@@ -108,5 +108,5 @@ class PaginationRepository[T: SqlAlchemyBaseModel](SqlAlchemyRepository[T]):
         self, pagination_params: PaginationParams, **filter_by
     ) -> PaginationResT[T]:
         stmt = self._get_pagination_stmt(pagination_params).filter_by(**filter_by)
-        res = await self.session.execute(stmt)
+        res = await self._session.execute(stmt)
         return self._split_records_and_count(res.all())
