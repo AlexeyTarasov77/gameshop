@@ -3,6 +3,7 @@ from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
 from orders.schemas import CreateOrderDTO, OrderItemCreateDTO, UpdateOrderDTO
 from orders.models import Order, OrderItem
+from payments.models import AvailablePaymentSystems
 
 
 class OrdersRepositoryI(Protocol):
@@ -10,6 +11,9 @@ class OrdersRepositoryI(Protocol):
         self, dto: CreateOrderDTO, user_id: int | None
     ) -> Order: ...
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order: ...
+    async def update_for_payment(
+        self, bill_id: str, paid_with: AvailablePaymentSystems, order_id: UUID
+    ) -> Order: ...
     async def delete_by_id(self, order_id: UUID) -> None: ...
     async def list_orders_for_user(
         self, pagination_params: PaginationParams, user_id: int

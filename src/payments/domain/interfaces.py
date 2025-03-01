@@ -1,11 +1,8 @@
 from decimal import Decimal
-from enum import StrEnum
 from typing import NamedTuple, Protocol
 from uuid import UUID
 
-
-class AvailablePaymentSystems(StrEnum):
-    PAYPALYCH = "paypalych"
+from payments.models import AvailablePaymentSystems
 
 
 class CreatedBill(NamedTuple):
@@ -17,6 +14,8 @@ class PaymentSystemI(Protocol):
     async def create_bill(
         self, order_id: UUID, order_total: Decimal, customer_email: str
     ) -> CreatedBill: ...
+
+    def is_success(self, status: str) -> bool: ...
 
 
 class PaymentSystemFactoryI(Protocol):

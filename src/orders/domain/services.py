@@ -13,7 +13,7 @@ from orders.schemas import (
     ShowOrderExtended,
     UpdateOrderDTO,
 )
-from payments.domain.interfaces import AvailablePaymentSystems, PaymentSystemFactoryI
+from payments.domain.interfaces import PaymentSystemFactoryI
 from users.domain.interfaces import MailProviderI
 
 
@@ -37,7 +37,6 @@ class OrdersService(BaseService):
         self,
         dto: CreateOrderDTO,
         user_id: int | None,
-        selected_payment_system: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH,
     ) -> CreateOrderResDTO:
         self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
         try:
@@ -68,11 +67,15 @@ class OrdersService(BaseService):
             raise EntityNotFoundError("User", id=user_id)
         assert user_email
         payment_system = self._payment_system_factory.choose_by_name(
-            selected_payment_system
+            dto.selected_system_name
         )
-        _, payment_url = await payment_system.create_bill(
+        self._logger.info(
+            "Creating payment bill for %s payment system", dto.selected_system_name
+        )
+        bill_id, payment_url = await payment_system.create_bill(
             order.id, order.total, user_email
         )
+        self._logger.info("New bill created: %s", bill_id)
         email_body = (
             f"Ваш заказ был успешно оформлен и принят в обработку.\n"
             "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"

@@ -42,6 +42,15 @@ class _HTTPSessions(BaseModel):
     ttl: ParsableTimedelta = Field(default=timedelta(days=5))
 
 
+class _PaypalychPaymentSystem(BaseModel):
+    api_token: str
+    shop_id: str
+
+
+class _Payments(BaseModel):
+    paypalych: _PaypalychPaymentSystem
+
+
 class _Server(BaseModel):
     host: str = Field(default="0.0.0.0")
     port: PORT = Field(default=8000)
@@ -76,6 +85,7 @@ class Config(BaseSettings):
     server: _Server = Field(default=_Server())
     smtp: _SMTP
     tokens: _Tokens
+    payments: _Payments
     pg_dsn: PostgresDsn
     redis_dsn: RedisDsn
 

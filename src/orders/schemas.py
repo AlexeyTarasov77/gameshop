@@ -4,6 +4,7 @@ import re
 from typing import Annotated, Self
 from uuid import UUID
 from pydantic import AfterValidator, EmailStr, Field, field_validator
+from payments.models import AvailablePaymentSystems
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import Order, OrderStatus
@@ -106,6 +107,7 @@ class CustomerWithUserDTO(CustomerDTO):
 class CreateOrderDTO(BaseDTO):
     cart: list[OrderItemCreateDTO]
     user: CustomerDTO
+    selected_system_name: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
 
     @field_validator("cart")
     @classmethod
@@ -116,6 +118,7 @@ class CreateOrderDTO(BaseDTO):
 
 class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
+    bill_id: str | None = None
 
 
 class ShowOrder(BaseDTO):

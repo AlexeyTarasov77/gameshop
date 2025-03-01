@@ -4,12 +4,13 @@ from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
-from orders.models import Order, OrderItem
+from orders.models import Order, OrderItem, OrderStatus
 from orders.schemas import (
     CreateOrderDTO,
     OrderItemCreateDTO,
     UpdateOrderDTO,
 )
+from payments.models import AvailablePaymentSystems
 from products.models import Product
 
 
@@ -31,6 +32,18 @@ class OrdersRepository(PaginationRepository[Order]):
 
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order:
         return await super().update(dto.model_dump(), id=order_id)
+
+    async def update_for_payment(
+        self, bill_id: str, paid_with: AvailablePaymentSystems, order_id: UUID
+    ) -> Order:
+        return await super().update(
+            {
+                "bill_id": bill_id,
+                "paid_with": paid_with,
+                "status": OrderStatus.COMPLETED,
+            },
+            id=order_id,
+        )
 
     async def delete_by_id(self, order_id: UUID) -> None:
         return await super().delete_or_raise_not_found(id=order_id)

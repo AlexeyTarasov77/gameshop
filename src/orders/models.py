@@ -8,6 +8,7 @@ from gateways.db.column_types import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from gateways.db.models import SqlAlchemyBaseModel
+from payments.models import AvailablePaymentSystems
 from products.models import Product
 from users.models import User
 
@@ -42,6 +43,8 @@ class Order(SqlAlchemyBaseModel):
     status: Mapped[OrderStatus] = mapped_column(
         server_default=text(OrderStatus.PENDING.value)
     )
+    bill_id: Mapped[str | None]
+    paid_with: Mapped[AvailablePaymentSystems | None]
 
     @property
     def total(self) -> Decimal:
