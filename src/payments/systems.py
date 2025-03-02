@@ -30,8 +30,8 @@ class PaypalychPaymentSystem:
     ) -> CreatedBill:
         data = {
             "shop_id": self._shop_id,
-            "order_id": order_id,
-            "amount": order_total,
+            "order_id": str(order_id),
+            "amount": str(order_total),
             "payer_email": customer_email,
         }
         resp = await self._client.post(

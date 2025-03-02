@@ -46,7 +46,8 @@ class OrdersService(BaseService):
                 cart_products = await uow.products_repo.list_by_ids(
                     [int(item.product_id) for item in dto.cart]
                 )
-                assert len(cart_products) == len(dto.cart)
+                if len(cart_products) != len(dto.cart):
+                    raise EntityNotFoundError("Some of the supplied products not found")
                 price_mapping: dict[int, Decimal] = {}
                 for product in cart_products:
                     price_mapping[product.id] = product.total_price
@@ -70,6 +71,7 @@ class OrdersService(BaseService):
                     )
                     for item in dto.cart
                 ]
+                order.items = order_items
                 await uow.order_items_repo.save_many(order_items)
         except NotFoundError:
             # user not found
@@ -104,7 +106,6 @@ class OrdersService(BaseService):
         self._logger.info(
             "Succesfully created order for user: %s. Order id: %s", user_email, order.id
         )
-        order.items = order_items
         return CreateOrderResDTO(
             order=ShowOrder.from_model(order, total=order.total),
             payment_url=payment_url,

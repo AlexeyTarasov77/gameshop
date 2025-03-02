@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from core.exception_mappers import AbstractDatabaseExceptionMapper
+from core.services.exceptions import ServiceError
 from gateways.db.exceptions import DatabaseError
 from news.domain.interfaces import NewsRepositoryI
 from news.repositories import NewsRepository
@@ -94,7 +95,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         super().__init__(session_factory)
 
     def _handle_exc(self, exc: Exception) -> t.NoReturn:
-        if isinstance(exc, DatabaseError):
+        if isinstance(exc, (DatabaseError, ServiceError)):
             raise exc
         self.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
 

@@ -7,6 +7,7 @@ import punq
 from fastapi import Depends
 from redis.asyncio import Redis
 from payments.domain.interfaces import PaymentSystemFactoryI
+from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
@@ -111,6 +112,7 @@ def _init_container() -> punq.Container:
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
     container.register(SessionCopierI, SessionCopier)
     container.register(SessionsService)
+    container.register(PaymentsService)
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
