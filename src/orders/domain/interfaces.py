@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
-from orders.schemas import CreateOrderDTO, OrderItemCreateDTO, UpdateOrderDTO
+from orders.schemas import CreateOrderDTO, UpdateOrderDTO
 from orders.models import Order, OrderItem
 from payments.models import AvailablePaymentSystems
 
@@ -25,6 +26,4 @@ class OrdersRepositoryI(Protocol):
 
 
 class OrderItemsRepositoryI(Protocol):
-    async def create_many(
-        self, dto_list: list[OrderItemCreateDTO], order_id: UUID
-    ) -> list[OrderItem]: ...
+    async def save_many(self, entities: Sequence[OrderItem]) -> None: ...

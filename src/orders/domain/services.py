@@ -1,3 +1,4 @@
+from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 import asyncio
@@ -6,6 +7,7 @@ from core.services.base import BaseService
 from core.services.exceptions import EntityNotFoundError, UnavailableProductError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
+from orders.models import OrderItem
 from orders.schemas import (
     CreateOrderDTO,
     CreateOrderResDTO,
@@ -45,7 +47,9 @@ class OrdersService(BaseService):
                     [int(item.product_id) for item in dto.cart]
                 )
                 assert len(cart_products) == len(dto.cart)
+                price_mapping: dict[int, Decimal] = {}
                 for product in cart_products:
+                    price_mapping[product.id] = product.total_price
                     if not product.in_stock:
                         self._logger.warning(
                             "Attempt to create order with unavailable product %s",
@@ -57,7 +61,16 @@ class OrdersService(BaseService):
                 if user_id is not None:
                     user = await uow.users_repo.get_by_id(user_id, is_active=True)
                     user_email = user.email
-                await uow.order_items_repo.create_many(dto.cart, order.id)
+                order_items = [
+                    OrderItem(
+                        order_id=order.id,
+                        price=price_mapping[int(item.product_id)],
+                        product_id=item.product_id,
+                        quantity=item.quantity,
+                    )
+                    for item in dto.cart
+                ]
+                await uow.order_items_repo.save_many(order_items)
         except NotFoundError:
             # user not found
             self._logger.warning(
@@ -91,6 +104,7 @@ class OrdersService(BaseService):
         self._logger.info(
             "Succesfully created order for user: %s. Order id: %s", user_email, order.id
         )
+        order.items = order_items
         return CreateOrderResDTO(
             order=ShowOrder.from_model(order, total=order.total),
             payment_url=payment_url,
