@@ -27,7 +27,7 @@ def check_phone(value: str) -> str:
 
 
 def check_name(value: str) -> str:
-    LETTER_MATCH_PATTERN = re.compile(r"^[а-яА-Яa-zA-Z]+$")
+    LETTER_MATCH_PATTERN = re.compile(r"^([а-яА-Яa-zA-Z]+)(\s[а-яА-Яa-zA-Z]+)?$")
     if not LETTER_MATCH_PATTERN.match(value):
         raise ValueError("Имя может состоять только из букв")
     return value
@@ -44,23 +44,21 @@ CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
 
 
-class _BaseOrderItemDTO(BaseDTO):
-    quantity: int = Field(gt=0)
-    price: Decimal
-
-
-class OrderItemCreateDTO(_BaseOrderItemDTO):
+class OrderItemInCartDTO(BaseDTO):
     product_id: Base64Int
+    quantity: int = Field(gt=0)
 
 
 class OrderItemProduct(BaseDTO):
-    id: int
+    id: Base64Int
     name: str
 
 
-class OrderItemShowDTO(_BaseOrderItemDTO):
-    id: int
+class OrderItemShowDTO(BaseDTO):
+    id: Base64Int
     product: OrderItemProduct
+    price: Decimal
+    quantity: int = Field(gt=0)
     total_price: Decimal
 
 
@@ -104,7 +102,7 @@ class CustomerWithUserDTO(CustomerDTO):
 
 
 class CreateOrderDTO(BaseDTO):
-    cart: list[OrderItemCreateDTO]
+    cart: list[OrderItemInCartDTO]
     user: CustomerDTO
 
     @field_validator("cart")

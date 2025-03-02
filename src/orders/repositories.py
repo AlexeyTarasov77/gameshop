@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from uuid import UUID
 from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectinload
@@ -7,7 +8,6 @@ from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 from orders.models import Order, OrderItem
 from orders.schemas import (
     CreateOrderDTO,
-    OrderItemCreateDTO,
     UpdateOrderDTO,
 )
 from products.models import Product
@@ -80,14 +80,6 @@ class OrdersRepository(PaginationRepository[Order]):
 class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
     model = OrderItem
 
-    async def create_many(
-        self, dto_list: list[OrderItemCreateDTO], order_id: UUID
-    ) -> list[OrderItem]:
-        return [
-            await super().create(
-                **dto.model_dump(exclude={"product_id"}),
-                order_id=order_id,
-                product_id=dto.product_id,
-            )
-            for dto in dto_list
-        ]
+    async def save_many(self, entities: Sequence[OrderItem]) -> None:
+        self._session.add_all(entities)
+        await self._session.flush()
