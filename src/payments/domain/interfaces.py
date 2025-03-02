@@ -17,6 +17,10 @@ class PaymentSystemI(Protocol):
 
     def is_success(self, status: str) -> bool: ...
 
+    def sig_verify(
+        self, sig_value: str, order_id: UUID, order_total: Decimal
+    ) -> bool: ...
+
 
 class PaymentSystemFactoryI(Protocol):
     def choose_by_name(self, name: AvailablePaymentSystems) -> PaymentSystemI: ...

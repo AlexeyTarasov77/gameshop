@@ -105,7 +105,7 @@ class CustomerWithUserDTO(CustomerDTO):
 class CreateOrderDTO(BaseDTO):
     cart: list[OrderItemInCartDTO]
     user: CustomerDTO
-    selected_system_name: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
+    selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
 
     @field_validator("cart")
     @classmethod

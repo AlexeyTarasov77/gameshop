@@ -1,3 +1,4 @@
+from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.services.base import BaseService
@@ -23,12 +24,17 @@ class PaymentsService(BaseService):
         self,
         status: str,
         order_id: UUID,
+        order_total: Decimal,
         bill_id: str,
+        sig: str,
         payment_system_name: AvailablePaymentSystems,
     ):
         payment_system = self._payment_system_factory.choose_by_name(
             payment_system_name
         )
+        is_valid_sig = payment_system.sig_verify(sig, order_id, order_total)
+        if not is_valid_sig:
+            raise ActionForbiddenError("Invalid payload")
         if not payment_system.is_success(status):
             self._logger.warning(
                 "Payment for order %s failed with status: %s. bill_id: %s",

@@ -81,11 +81,9 @@ class OrdersService(BaseService):
             )
             raise EntityNotFoundError("User", id=user_id)
         assert user_email
-        payment_system = self._payment_system_factory.choose_by_name(
-            dto.selected_system_name
-        )
+        payment_system = self._payment_system_factory.choose_by_name(dto.selected_ps)
         self._logger.info(
-            "Creating payment bill for %s payment system", dto.selected_system_name
+            "Creating payment bill for %s payment system", dto.selected_ps
         )
         bill_id, payment_url = await payment_system.create_bill(
             order.id, order.total, user_email

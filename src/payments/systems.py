@@ -1,4 +1,5 @@
 from decimal import Decimal
+from hashlib import md5
 from uuid import UUID
 from httpx import AsyncClient
 
@@ -46,6 +47,14 @@ class PaypalychPaymentSystem:
 
     def is_success(self, status: str) -> bool:
         return status == "SUCCESS"
+
+    def sig_verify(self, sig_value: str, order_id: UUID, order_total: Decimal) -> bool:
+        new_sig = (
+            md5(f"{order_total}:{order_id}:{self._api_token}".encode())
+            .hexdigest()
+            .upper()
+        )
+        return sig_value == new_sig
 
 
 class PaymentSystemFactoryImpl:
