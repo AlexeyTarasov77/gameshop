@@ -55,12 +55,13 @@ def get_container() -> punq.Container:
 
 
 def _init_container() -> punq.Container:
-    FRONTEND_URL = "https://gamebazaar.ru"
     container = punq.Container()
     cfg = init_config()
     logger = setup_logger(
         cfg.debug, (Path().parent.parent / "logs" / "errors.log").as_posix()
     )
+    FRONTEND_DOMAIN = "http://localhost:3000" if cfg.debug else "https://gamebazaar.ru"
+    container.register("FRONTEND_DOMAIN", instance=FRONTEND_DOMAIN)
     redis = init_redis_client(str(cfg.redis_dsn))
     container.register(Logger, instance=logger)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
@@ -95,7 +96,7 @@ def _init_container() -> punq.Container:
     container.register(
         OrdersService,
         OrdersService,
-        order_details_link=f"{FRONTEND_URL}/orderhistory/%s",
+        order_details_link=f"{FRONTEND_DOMAIN}/orderhistory/%s",
     )
     container.register(
         UsersService,
@@ -104,9 +105,9 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.tokens.auth_token_ttl,
         password_reset_token_ttl=cfg.tokens.password_reset_token_ttl,
         email_verification_token_ttl=cfg.tokens.email_verification_token_ttl,
-        activation_link=f"{FRONTEND_URL}/auth/activate?token=%s",
-        password_reset_link=f"{FRONTEND_URL}/auth/password-update?token=%s",
-        email_verification_link=f"{FRONTEND_URL}/auth/verify-email?token=%s",
+        activation_link=f"{FRONTEND_DOMAIN}/auth/activate?token=%s",
+        password_reset_link=f"{FRONTEND_DOMAIN}/auth/password-update?token=%s",
+        email_verification_link=f"{FRONTEND_DOMAIN}/auth/verify-email?token=%s",
     )
     container.register(CartManagerFactoryI, CartManagerFactory)
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
@@ -121,11 +122,11 @@ def _init_container() -> punq.Container:
     return container
 
 
-def Resolve[T](dep: type[T], **kwargs) -> T:
+def Resolve[T](dep: type[T] | str, **kwargs) -> T:
     return t.cast(T, get_container().resolve(dep, **kwargs))
 
 
-def Inject[T](dep: type[T], **kwargs):
+def Inject[T](dep: type[T] | str, **kwargs):
     def resolver() -> T:
         return Resolve(dep, **kwargs)
 

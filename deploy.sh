@@ -14,7 +14,7 @@ else
 fi
 
 
-rsync -aPzc --exclude '.git' --exclude 'media' --exclude '__pycache__' -e 'ssh' "$(pwd)" \
+rsync -aPzc --exclude '.git' --exclude 'media' --exclude '__pycache__' -e 'ssh' "$(pwd)/" \
   "$remote_username@$remote_host:$dest_dir" && \
 	ssh "$remote_username@$remote_host" "cd $dest_dir && docker compose restart web"
 

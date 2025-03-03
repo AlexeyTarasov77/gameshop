@@ -116,7 +116,6 @@ class CreateOrderDTO(BaseDTO):
 
 class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
-    bill_id: str | None = None
 
 
 class ShowOrder(BaseDTO):
