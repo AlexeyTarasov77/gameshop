@@ -1,7 +1,6 @@
 from decimal import Decimal
 from logging import Logger
 from uuid import UUID
-import asyncio
 from core.pagination import PaginationParams
 from core.services.base import BaseService
 from core.services.exceptions import EntityNotFoundError, UnavailableProductError
@@ -28,11 +27,9 @@ class OrdersService(BaseService):
         logger: Logger,
         mail_provider: MailProviderI,
         payment_system_factory: PaymentSystemFactoryI,
-        order_details_link: str,
     ):
         super().__init__(uow, logger)
         self._mail_provider = mail_provider
-        self._order_details_link = order_details_link
         self._payment_system_factory = payment_system_factory
 
     async def create_order(
@@ -58,10 +55,9 @@ class OrdersService(BaseService):
                         )
                         raise UnavailableProductError(product.name)
                 order = await uow.orders_repo.create_from_dto(dto, user_id)
-                user_email: str | None = dto.user.email
-                if user_id is not None:
+                if not dto.user.email and user_id is not None:
                     user = await uow.users_repo.get_by_id(user_id, is_active=True)
-                    user_email = user.email
+                    order.user = user
                 order_items = [
                     OrderItem(
                         order_id=order.id,
@@ -80,29 +76,18 @@ class OrdersService(BaseService):
                 user_id,
             )
             raise EntityNotFoundError("User", id=user_id)
-        assert user_email
         payment_system = self._payment_system_factory.choose_by_name(dto.selected_ps)
         self._logger.info(
             "Creating payment bill for %s payment system", dto.selected_ps
         )
         bill_id, payment_url = await payment_system.create_bill(
-            order.id, order.total, user_email
-        )
-        self._logger.info("New bill created: %s", bill_id)
-        email_body = (
-            f"Ваш заказ был успешно оформлен и принят в обработку.\n"
-            "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"
-            f"\t{self._order_details_link % order.id}\t"
-        )
-        asyncio.create_task(
-            self._mail_provider.send_mail_with_timeout(
-                "Спасибо за заказ!",
-                email_body,
-                to=user_email,
-            )
+            order.id, order.total, order.client_email
         )
         self._logger.info(
-            "Succesfully created order for user: %s. Order id: %s", user_email, order.id
+            "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
+            order.client_email,
+            order.id,
+            bill_id,
         )
         return CreateOrderResDTO(
             order=ShowOrder.from_model(order, total=order.total),

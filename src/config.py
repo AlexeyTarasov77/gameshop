@@ -110,7 +110,7 @@ class Config(BaseSettings):
 
     @property
     def debug(self):
-        return self.mode in ["local", "tests"]
+        return self.mode in ["local", "tests", "prod_test"]
 
 
 def init_config(

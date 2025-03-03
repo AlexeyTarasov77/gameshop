@@ -50,6 +50,14 @@ class Order(SqlAlchemyBaseModel):
     def total(self) -> Decimal:
         return Decimal(sum(item.total_price for item in self.items))
 
+    @property
+    def client_email(self) -> str:
+        email = self.customer_email
+        if not email:
+            assert self.user
+            email = self.user.email
+        return email
+
 
 class OrderItem(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]

@@ -30,14 +30,6 @@ class OrdersRepository(PaginationRepository[Order]):
             user_id=user_id,
         )
 
-    async def get_status(self, order_id: UUID) -> OrderStatus:
-        stmt = select(Order.status).filter_by(id=order_id)
-        res = await self._session.execute(stmt)
-        status = res.scalars().one_or_none()
-        if status is None:
-            raise NotFoundError()
-        return status
-
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order:
         return await super().update(dto.model_dump(), id=order_id)
 

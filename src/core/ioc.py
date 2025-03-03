@@ -6,7 +6,7 @@ from functools import lru_cache
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
-from payments.domain.interfaces import PaymentSystemFactoryI
+from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
 from sessions.domain.interfaces import (
@@ -33,7 +33,7 @@ from news.domain.services import NewsService
 from orders.domain.services import OrdersService
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
-    EmailTemplatesI,
+    UserEmailTemplatesI,
     MailProviderI,
     PasswordHasherI,
     StatefullTokenProviderI,
@@ -90,14 +90,11 @@ def _init_container() -> punq.Container:
         SqlAlchemyUnitOfWork,
         session_factory=db.session_factory,
     )
-    container.register(EmailTemplatesI, EmailTemplates)
-    container.register(ProductsService, ProductsService)
-    container.register(NewsService, NewsService)
-    container.register(
-        OrdersService,
-        OrdersService,
-        order_details_link=f"{FRONTEND_DOMAIN}/orderhistory/%s",
-    )
+    container.register(UserEmailTemplatesI, EmailTemplates)
+    container.register(PaymentEmailTemplatesI, EmailTemplates)
+    container.register(ProductsService)
+    container.register(NewsService)
+    container.register(OrdersService)
     container.register(
         UsersService,
         UsersService,
@@ -105,15 +102,18 @@ def _init_container() -> punq.Container:
         auth_token_ttl=cfg.tokens.auth_token_ttl,
         password_reset_token_ttl=cfg.tokens.password_reset_token_ttl,
         email_verification_token_ttl=cfg.tokens.email_verification_token_ttl,
-        activation_link=f"{FRONTEND_DOMAIN}/auth/activate?token=%s",
-        password_reset_link=f"{FRONTEND_DOMAIN}/auth/password-update?token=%s",
-        email_verification_link=f"{FRONTEND_DOMAIN}/auth/verify-email?token=%s",
+        activation_link_builder=lambda token: f"{FRONTEND_DOMAIN}/auth/activate?token={token}",
+        password_reset_link_builder=lambda token: f"{FRONTEND_DOMAIN}/auth/password-update?token={token}",
+        email_verification_link_builder=lambda token: f"{FRONTEND_DOMAIN}/auth/verify-email?token={token}",
     )
     container.register(CartManagerFactoryI, CartManagerFactory)
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
     container.register(SessionCopierI, SessionCopier)
     container.register(SessionsService)
-    container.register(PaymentsService)
+    container.register(
+        PaymentsService,
+        order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
+    )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl

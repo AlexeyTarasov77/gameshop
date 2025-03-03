@@ -3,7 +3,7 @@ from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
 from orders.schemas import CreateOrderDTO, UpdateOrderDTO
-from orders.models import Order, OrderItem, OrderStatus
+from orders.models import Order, OrderItem
 from payments.models import AvailablePaymentSystems
 
 
@@ -23,8 +23,6 @@ class OrdersRepositoryI(Protocol):
         self, pagination_params: PaginationParams
     ) -> PaginationResT[Order]: ...
     async def get_by_id(self, order_id: UUID) -> Order: ...
-
-    async def get_status(self, order_id: UUID) -> OrderStatus: ...
 
 
 class OrderItemsRepositoryI(Protocol):

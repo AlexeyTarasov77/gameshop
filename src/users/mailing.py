@@ -1,6 +1,7 @@
 import asyncio
 from email.message import EmailMessage
 from logging import Logger
+from uuid import UUID
 from pydantic import validate_email
 
 import aiosmtplib
@@ -35,6 +36,14 @@ class EmailTemplates:
             "Для того что бы подтвердить смену email'a, перейдите по ссылке ниже:\n"
             f"\t{link}\n"
             "Если это были не вы - игнорируйте это сообщение"
+        )
+
+    def order_checkout(self, order_details_link: str, order_id: UUID) -> str:
+        return (
+            "Ваш заказ был успешно оформлен и принят в обработку.\n"
+            f"Уникальный номер вашего заказа: {order_id}\n"
+            "Для просмотра деталей заказа и отслеживания его статуса - перейдите по ссылке ниже\n"
+            f"\t{order_details_link}\t"
         )
 
 

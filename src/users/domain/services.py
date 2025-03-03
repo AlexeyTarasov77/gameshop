@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
 from logging import Logger
 from typing import cast
@@ -14,7 +14,7 @@ from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from sessions.domain.interfaces import SessionCopierI
 from users.domain.interfaces import (
-    EmailTemplatesI,
+    UserEmailTemplatesI,
     MailProviderI,
     PasswordHasherI,
     StatefullTokenProviderI,
@@ -34,12 +34,13 @@ from users.schemas import (
 
 class UsersService(BaseService):
     entity_name = "User"
+    type LinkWithTokenBuilder = Callable[[str], str]
 
     def __init__(
         self,
         uow: AbstractUnitOfWork,
         logger: Logger,
-        email_templates: EmailTemplatesI,
+        email_templates: UserEmailTemplatesI,
         token_hasher: TokenHasherI,
         password_hasher: PasswordHasherI,
         jwt_token_provider: StatelessTokenProviderI,
@@ -50,9 +51,9 @@ class UsersService(BaseService):
         auth_token_ttl: timedelta,
         password_reset_token_ttl: timedelta,
         email_verification_token_ttl: timedelta,
-        activation_link: str,
-        password_reset_link: str,
-        email_verification_link: str,
+        activation_link_builder: LinkWithTokenBuilder,
+        password_reset_link_builder: LinkWithTokenBuilder,
+        email_verification_link_builder: LinkWithTokenBuilder,
     ) -> None:
         super().__init__(uow, logger)
         self._password_hasher = password_hasher
@@ -61,11 +62,11 @@ class UsersService(BaseService):
         self._session_copier = session_copier
         self._statefull_token_provider = statefull_token_provider
         self._mail_provider = mail_provider
-        self._activation_link = activation_link
-        self._password_reset_link = password_reset_link
+        self._activation_link_builder = activation_link_builder
+        self._password_reset_link_builder = password_reset_link_builder
+        self._email_verification_link_builder = email_verification_link_builder
         self._activation_token_ttl = activation_token_ttl
         self._password_reset_token_ttl = password_reset_token_ttl
-        self._email_verification_link = email_verification_link
         self._email_verification_token_ttl = email_verification_token_ttl
         self._auth_token_ttl = auth_token_ttl
         self._email_templates = email_templates
@@ -114,7 +115,7 @@ class UsersService(BaseService):
             self._mail_provider.send_mail_with_timeout(
                 "Аккаунт успешно создан",
                 self._email_templates.welcome(
-                    user.username, self._activation_link % plain_token
+                    user.username, self._activation_link_builder(plain_token)
                 ),
                 user.email,
             )
@@ -167,7 +168,7 @@ class UsersService(BaseService):
             self._mail_provider.send_mail_with_timeout(
                 "Сброс пароля",
                 self._email_templates.password_reset(
-                    user.username, self._password_reset_link % plain_token
+                    user.username, self._password_reset_link_builder(plain_token)
                 ),
                 user.email,
             )
@@ -242,7 +243,7 @@ class UsersService(BaseService):
                 self._mail_provider.send_mail_with_timeout(
                     "Подтверждение обновления email'a",
                     self._email_templates.email_verification(
-                        self._email_verification_link % token
+                        self._email_verification_link_builder(token)
                     ),
                     dto.email,
                 )
@@ -312,7 +313,7 @@ class UsersService(BaseService):
             self._mail_provider.send_mail_with_timeout(
                 "Новый активационный токен",
                 self._email_templates.new_activation_token(
-                    plain_token, self._activation_link % plain_token
+                    plain_token, self._activation_link_builder(plain_token)
                 ),
                 user.email,
             )
