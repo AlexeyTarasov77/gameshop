@@ -112,6 +112,7 @@ def _init_container() -> punq.Container:
     container.register(SessionsService)
     container.register(
         PaymentsService,
+        PaymentsService,
         order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
     )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
