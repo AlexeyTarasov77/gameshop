@@ -12,8 +12,6 @@ from core.schemas import (
 )
 from pydantic import AfterValidator, Field
 
-from products.models import ProductOnSale, ProductOnSaleCategory
-
 
 def _check_datetime[T: datetime](value: T) -> T:
     assert value > datetime.now(
@@ -103,41 +101,3 @@ class ShowProductWithRelations(BaseShowProductDTO):
 
 class ProductInCartDTO(ShowProductWithRelations):
     quantity: int = Field(gt=0)
-
-
-class _ProductOnSalePrice(BaseDTO):
-    currency_code: str
-    value: float
-
-
-class SalesFilterDTO(BaseDTO):
-    category: ProductOnSaleCategory | None = None
-    region: str | None = None
-
-
-class ProductOnSaleDTO(BaseDTO):
-    id: int
-    name: str
-    discount: int
-    base_price: _ProductOnSalePrice
-    discounted_price: _ProductOnSalePrice
-    image_url: str
-    region: str
-    with_gp: bool | None = None
-    deal_until: datetime | None = None
-    category: ProductOnSaleCategory
-
-    @classmethod
-    def from_model(cls, product: ProductOnSale):
-        return cls.model_validate(
-            {
-                **product.dump(),
-                "base_price": _ProductOnSalePrice(
-                    value=product.base_price, currency_code=product.base_price_currency
-                ),
-                "discounted_price": _ProductOnSalePrice(
-                    value=product.discounted_price,
-                    currency_code=product.discounted_price_currency,
-                ),
-            }
-        )

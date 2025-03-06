@@ -27,35 +27,6 @@ async def list_products(
     return PaginatedResponse.new_response(products, total_records, pagination_params)
 
 
-@router.get("/sales")
-async def get_current_sales(
-    pagination_params: PaginationDep,
-    products_service: ProductsServiceDep,
-    dto: t.Annotated[schemas.SalesFilterDTO, Query()],
-):
-    sales, total_records = await products_service.get_current_sales(
-        dto,
-        pagination_params,
-    )
-    return PaginatedResponse.new_response(sales, total_records, pagination_params)
-
-
-@router.get("/sales/{product_id}")
-async def get_product_on_sale(
-    product_id: EntityIDParam,
-    products_service: ProductsServiceDep,
-) -> schemas.ProductOnSaleDTO:
-    return await products_service.get_product_on_sale(int(product_id))
-
-
-@router.delete("/sales/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_product_on_sale(
-    product_id: EntityIDParam,
-    products_service: ProductsServiceDep,
-) -> None:
-    return await products_service.delete_product_on_sale(int(product_id))
-
-
 @router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep

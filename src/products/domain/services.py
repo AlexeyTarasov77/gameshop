@@ -1,5 +1,5 @@
 from typing import cast
-from core.pagination import PaginationParams, PaginationResT
+from core.pagination import PaginationParams
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityAlreadyExistsError,
@@ -17,8 +17,6 @@ from products.schemas import (
     CreateProductDTO,
     ListProductsFilterDTO,
     PlatformDTO,
-    ProductOnSaleDTO,
-    SalesFilterDTO,
     ShowProduct,
     ShowProductWithRelations,
     UpdateProductDTO,
@@ -59,36 +57,6 @@ class ProductsService(BaseService):
         return [
             ShowProductWithRelations.model_validate(product) for product in products
         ], total_records
-
-    async def get_current_sales(
-        self, dto: SalesFilterDTO, pagination_params: PaginationParams
-    ) -> PaginationResT[ProductOnSaleDTO]:
-        async with self._uow as uow:
-            (
-                products,
-                total_records,
-            ) = await uow.product_on_sale_repo.filter_paginated_list(
-                dto,
-                pagination_params,
-            )
-        return [
-            ProductOnSaleDTO.from_model(product) for product in products
-        ], total_records
-
-    async def delete_product_on_sale(self, product_id: int) -> None:
-        try:
-            async with self._uow as uow:
-                await uow.product_on_sale_repo.delete_by_id(product_id)
-        except NotFoundError:
-            raise EntityNotFoundError(self.entity_name, id=product_id)
-
-    async def get_product_on_sale(self, product_id: int) -> ProductOnSaleDTO:
-        try:
-            async with self._uow as uow:
-                product = await uow.product_on_sale_repo.get_by_id(product_id)
-        except NotFoundError:
-            raise EntityNotFoundError(self.entity_name, id=product_id)
-        return ProductOnSaleDTO.from_model(product)
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:

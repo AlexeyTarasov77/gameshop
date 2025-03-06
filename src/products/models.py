@@ -1,33 +1,11 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from enum import StrEnum
 
 from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
 from gateways.db.models import SqlAlchemyBaseModel
 from sqlalchemy import ForeignKey, UniqueConstraint, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-
-class ProductOnSaleCategory(StrEnum):
-    XBOX = "XBOX"
-    PSN = "PSN"
-
-
-class ProductOnSale(SqlAlchemyBaseModel):
-    # __table_args__ = (UniqueConstraint("name", "category", "region"),)
-    id: Mapped[int_pk_type]
-    name: Mapped[str]
-    base_price: Mapped[float]
-    base_price_currency: Mapped[str]
-    discounted_price: Mapped[float]
-    discounted_price_currency: Mapped[str]
-    deal_until: Mapped[datetime | None]
-    image_url: Mapped[str]
-    discount: Mapped[int]
-    region: Mapped[str]
-    with_gp: Mapped[bool | None]  # indicates whether discount is applied to game pass
-    category: Mapped[ProductOnSaleCategory]
 
 
 class Product(SqlAlchemyBaseModel):

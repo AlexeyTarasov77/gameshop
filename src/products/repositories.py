@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from collections.abc import Sequence
-from sqlalchemy import and_, desc, func, not_, or_, select
+from sqlalchemy import and_, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
 
@@ -10,12 +10,10 @@ from products.models import (
     Platform,
     Product,
     DeliveryMethod,
-    ProductOnSale,
 )
 from products.schemas import (
     CreateProductDTO,
     ListProductsFilterDTO,
-    SalesFilterDTO,
     UpdateProductDTO,
 )
 
@@ -104,31 +102,6 @@ class ProductsRepository(PaginationRepository[Product]):
         stmt = select(Product.id).filter_by(id=product_id, in_stock=True)
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
-
-
-class ProductOnSaleRepository(PaginationRepository[ProductOnSale]):
-    model = ProductOnSale
-
-    async def filter_paginated_list(
-        self,
-        dto: SalesFilterDTO,
-        pagination_params: PaginationParams,
-    ) -> PaginationResT[ProductOnSale]:
-        stmt = super()._get_pagination_stmt(pagination_params)
-        if dto.category is not None:
-            stmt = stmt.filter_by(category=dto.category)
-        if dto.region is not None:
-            stmt = stmt.where(
-                func.lower(ProductOnSale.region) == func.lower(dto.region)
-            )
-        res = await self._session.execute(stmt)
-        return super()._split_records_and_count(res.all())
-
-    async def delete_by_id(self, product_id: int) -> None:
-        return await super().delete_or_raise_not_found(id=product_id)
-
-    async def get_by_id(self, product_id: int) -> ProductOnSale:
-        return await super().get_one(id=product_id)
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):
