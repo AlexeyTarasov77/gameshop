@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, replace
-from typing import Self
+from typing import Any, Self
 from uuid import UUID, uuid4
 from enum import StrEnum, auto
 from gamesparser.models import Price as ParsedPrice, ParsedItem
@@ -112,3 +112,8 @@ class ProductOnSale(ParsedItem):
     id: UUID = field(default_factory=uuid4)
     prices: dict[str, CombinedPrice]  # type: ignore
     category: ProductOnSaleCategory
+
+    def as_json_serializable(self) -> dict[str, Any]:
+        res = super().as_json_serializable()
+        res["id"] = str(res["id"])
+        return res

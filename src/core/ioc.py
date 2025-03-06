@@ -9,6 +9,8 @@ from redis.asyncio import Redis
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
+from sales.domain.services import SalesService
+from sales.repositories import SalesRepository
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,
@@ -110,6 +112,7 @@ def _init_container() -> punq.Container:
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
     container.register(SessionCopierI, SessionCopier)
     container.register(SessionsService)
+    container.register(SalesService, SalesService, sales_repo=SalesRepository(redis))
     container.register(
         PaymentsService,
         PaymentsService,

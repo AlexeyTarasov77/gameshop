@@ -4,10 +4,10 @@ from dataclasses import replace
 from logging import Logger
 from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
-from parse_sales_cron import PSN_PARSE_REGIONS
 from sales.domain.interfaces import SalesRepositoryI
 from sales.models import (
     XBOX_PARSE_REGIONS,
+    PSN_PARSE_REGIONS,
     PriceUnit,
     ProductOnSale,
     ProductOnSaleCategory,
@@ -27,9 +27,8 @@ class AbstractPriceCalculator(ABC):
 
 class XboxPriceCalculator(AbstractPriceCalculator):
     def __post_init__(self):
-        assert (
-            self._initial_price.currency_code.lower() == "usd"
-        ), "expected usd currency"
+        curr = self._initial_price.currency_code.lower()
+        assert curr == "usd", f"Expected currency: usd, got: {curr}"
 
     def _compute_for_usa(self) -> PriceUnit:
         new_price = round(self._initial_price * 0.75, 2)
@@ -129,6 +128,8 @@ class PsnPriceCalculator(AbstractPriceCalculator):
 
 
 class SalesService(BaseService):
+    entity_name = "Product on sale"
+
     def __init__(
         self, uow: AbstractUnitOfWork, logger: Logger, sales_repo: SalesRepositoryI
     ) -> None:
