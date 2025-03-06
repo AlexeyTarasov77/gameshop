@@ -1,45 +1,51 @@
 from collections.abc import Sequence
-from decimal import Decimal
-from copy import copy
-from enum import StrEnum, auto
+from dataclasses import asdict
 from logging import Logger
 import time
 import asyncio
 import sys
-from gamesparser.models import ParsedPriceByRegion, Price
 from httpx import AsyncClient
-from redis.asyncio import Redis
 from core.ioc import Resolve
 from gamesparser import ParsedItem, PsnParser, XboxParser
 
-from sales.models import ProductOnSaleCategory
+from sales.domain.services import SalesService
+from sales.models import (
+    PSN_PARSE_REGIONS,
+    XBOX_PARSE_REGIONS,
+    CombinedPrice,
+    PriceUnit,
+    ProductOnSale,
+    ProductOnSaleCategory,
+)
 
 
-async def load_to_db(psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]):
-    redis_conn = Resolve(Redis)
-    key = "sales"
-    await redis_conn.json().set(key, "$", [])
-    psn_data = []
-    for item in psn_sales:
-        data = {**item.as_json_serializable(), "category": ProductOnSaleCategory.PSN}
-        # compute new price
-        psn_data.append(data)
+def parsed_to_domain_model(
+    item: ParsedItem, category: ProductOnSaleCategory
+) -> ProductOnSale:
+    casted_prices = {}
+    for region, price in item.prices.items():
+        casted_prices[region] = CombinedPrice(
+            PriceUnit(**asdict(price.base_price)),
+            PriceUnit(**asdict(price.discounted_price)),
+        )
 
-    xbox_data = []
-    for item in xbox_sales:
-        for region_code, regional_price in item.prices.items():
-            check_price_currency(regional_price, "usd")
-            calculator = XboxPriceCalculator(regional_price.discounted_price)
-            new_price = calculator.compute_for_region(region_code)
-            item.prices[region_code].discounted_price = new_price
-            item.prices[region_code].base_price = _recalc_base_price(
-                new_price, item.discount
-            )
-        data = item.as_json_serializable()
-        data["category"] = ProductOnSaleCategory.XBOX
-        xbox_data.append(data)
+    return ProductOnSale(
+        **asdict(item),
+        category=category,
+        prices=casted_prices,
+    )
 
-    await redis_conn.json().arrappend(key, "$", *(psn_data + xbox_data))  # type: ignore
+
+async def load_parsed(
+    psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
+):
+    sales: list[ProductOnSale] = []
+    for product in psn_sales:
+        sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.PSN))
+    for product in xbox_sales:
+        sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.XBOX))
+    service = Resolve(SalesService)
+    await service.load_sales(sales)
 
 
 async def main():
@@ -62,7 +68,7 @@ async def main():
             round(time.perf_counter() - t1, 1),
         )
     logger.info("Loading sales to db...")
-    await load_to_db(psn_sales, xbox_sales)
+    await load_parsed(psn_sales, xbox_sales)
     logger.info("Sales succesfully loaded")
 
 
