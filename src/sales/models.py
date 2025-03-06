@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Self
 from uuid import UUID, uuid4
 from enum import StrEnum, auto
@@ -29,6 +29,11 @@ class PriceUnit(ParsedPrice):
     def _get_value(self, other: float | Self) -> float:
         return other.value if isinstance(other, PriceUnit) else other
 
+    def __add__(self, other: float | Self) -> Self:
+        return replace(self, value=self._get_value(other))
+
+    __radd__ = __add__
+
     def __mul__(self, other: float | Self):
         return self.__class__(
             value=self.value * self._get_value(other), currency_code=self.currency_code
@@ -53,6 +58,11 @@ class PriceUnit(ParsedPrice):
 
     def __le__(self, other: float | Self) -> bool:
         return self.value <= self._get_value(other)
+
+    def __round__(self, ndigits=0) -> Self:
+        return self.__class__(
+            value=round(self.value, ndigits), currency_code=self.currency_code
+        )
 
 
 @dataclass
@@ -87,7 +97,7 @@ class CombinedPrice:
     def discounted_price(self, new_value: float | PriceUnit):
         discount = (self.base_price - self.discounted_price) / (self.base_price / 100)
         recalculated_base_price = round(
-            ((self.discounted_price * 100) / (100 - discount)).value, 2
+            (self.discounted_price * 100) / (100 - discount), 2
         )
         self.base_price = recalculated_base_price
         self.base_price.currency_code = self.discounted_price.currency_code
