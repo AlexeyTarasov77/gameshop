@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import replace
 from logging import Logger
+from core.pagination import PaginationParams
 from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
 from sales.domain.interfaces import CurrencyConverterI, SalesRepositoryI
@@ -12,6 +13,7 @@ from sales.models import (
     ProductOnSale,
     ProductOnSaleCategory,
 )
+from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
 
 
 class AbstractPriceCalculator(ABC):
@@ -142,4 +144,20 @@ class SalesService(BaseService):
                 )
                 combined_price.discounted_price = converted_price
         await self._sales_repo.delete_all()
-        await self._sales_repo.create_many(sales)
+        await self._sales_repo.create_many(
+            [ProductOnSaleDTO.model_validate(item) for item in sales]
+        )
+
+    async def get_current_sales(
+        self,
+        dto: SalesFilterDTO,
+        pagination_params: PaginationParams,
+    ) -> tuple[Sequence[ProductOnSaleDTO], int]:
+        (
+            items,
+            total_records,
+        ) = await self._sales_repo.filter_paginated_list(
+            dto,
+            pagination_params,
+        )
+        return [ProductOnSaleDTO.model_validate(item) for item in items], total_records

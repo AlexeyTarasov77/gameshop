@@ -6,27 +6,13 @@ from core.schemas import (
     Base64Int,
     Base64IntOptionalIDParam,
     BaseDTO,
+    DateTimeAfterNow,
     ImgUrl,
     ParseJson,
+    ProductDiscount,
     UploadImage,
 )
-from pydantic import AfterValidator, Field
-
-
-def _check_datetime[T: datetime](value: T) -> T:
-    assert value > datetime.now(
-        value.tzinfo
-    ), "Value should be greater than current datetime"
-    return value
-
-
-def _check_discount[T: int](value: T) -> T:
-    assert 0 <= value <= 100, "Discount should be between 0 and 100"
-    return value
-
-
-DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
-ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
+from pydantic import Field
 
 
 class CategoryDTO(BaseDTO):

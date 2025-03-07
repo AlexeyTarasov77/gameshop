@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query
 
 from core.dependencies import PaginationDep
 from core.ioc import Inject
+from core.pagination import PaginatedResponse
 from sales.domain.services import SalesService
 from sales.schemas import SalesFilterDTO
 
@@ -13,17 +14,19 @@ router = APIRouter(prefix="/sales", tags=["sales", "products"])
 SalesServiceDep = Annotated[SalesService, Inject(SalesService)]
 
 
-# @router.get("/sales")
-# async def get_current_sales(
-#     pagination_params: PaginationDep,
-#     sales_service: SalesServiceDep,
-#     dto: Annotated[SalesFilterDTO, Query()],
-# ):
-#     sales, total_records = await sales_service.get_current_sales(
-#         dto,
-#         pagination_params,
-#     )
-#     return PaginatedResponse.new_response(sales, total_records, pagination_params)
+@router.get("/")
+async def get_current_sales(
+    pagination_params: PaginationDep,
+    sales_service: SalesServiceDep,
+    dto: Annotated[SalesFilterDTO, Query()],
+):
+    sales, total_records = await sales_service.get_current_sales(
+        dto,
+        pagination_params,
+    )
+    return PaginatedResponse.new_response(sales, total_records, pagination_params)
+
+
 #
 #
 # @router.get("/sales/{product_id}")
