@@ -478,7 +478,7 @@ description = ""
 optional = false
 python-versions = ">=3.12,<4.0"
 files = [
-    {file = "gamesparser-0.1.0-py3-none-any.whl", hash = "sha256:3c44c2fd0b6fd563efc7a2b170e8f2275eb159cfb94a8af7b24d7c236efe1a1e"},
+    {file = "gamesparser-0.1.0-py3-none-any.whl", hash = "sha256:6c887da2b90e892db2b1d20af54c3a38b49abdace489d26ee9c1ce96d378aef6"},
 ]
 
 [package.dependencies]

@@ -21,16 +21,23 @@ class ProductOnSaleCategory(StrEnum):
     PSN = "PSN"
 
 
+class Currencies(StrEnum):
+    UAH = auto()
+    USD = auto()
+    TL = auto()
+    RUB = auto()
+
+
 class PriceUnit(ParsedPrice):
     def add_percent(self, percent: int):
-        new_value = round(self.value + self.value / 100 * percent, 2)
+        new_value = self.value + self.value / 100 * percent
         self.value = new_value
 
     def _get_value(self, other: float | Self) -> float:
         return other.value if isinstance(other, PriceUnit) else other
 
     def __add__(self, other: float | Self) -> Self:
-        return replace(self, value=self._get_value(other))
+        return replace(self, value=self.value + self._get_value(other))
 
     __radd__ = __add__
 
@@ -58,6 +65,15 @@ class PriceUnit(ParsedPrice):
 
     def __le__(self, other: float | Self) -> bool:
         return self.value <= self._get_value(other)
+
+    def __lt__(self, other: float | Self) -> bool:
+        return self.value < self._get_value(other)
+
+    def __gt__(self, other: float | Self) -> bool:
+        return self.value > self._get_value(other)
+
+    def __ge__(self, other: float | Self) -> bool:
+        return self.value >= self._get_value(other)
 
     def __round__(self, ndigits=0) -> Self:
         return self.__class__(
@@ -95,12 +111,11 @@ class CombinedPrice:
 
     @discounted_price.setter
     def discounted_price(self, new_value: float | PriceUnit):
-        discount = (self.base_price - self.discounted_price) / (self.base_price / 100)
-        recalculated_base_price = round(
-            (self.discounted_price * 100) / (100 - discount), 2
-        )
+        discount = (self.base_price - self.discounted_price).value // (
+            self.base_price / 100
+        ).value
+        recalculated_base_price = (new_value * 100) / (100 - discount)
         self.base_price = recalculated_base_price
-        self.base_price.currency_code = self.discounted_price.currency_code
         if isinstance(new_value, PriceUnit):
             self._discounted_price = new_value
         else:

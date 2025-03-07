@@ -4,10 +4,10 @@ from dataclasses import replace
 from logging import Logger
 from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
-from sales.domain.interfaces import SalesRepositoryI
+from sales.domain.interfaces import CurrencyConverterI, SalesRepositoryI
 from sales.models import (
     XBOX_PARSE_REGIONS,
-    PSN_PARSE_REGIONS,
+    Currencies,
     PriceUnit,
     ProductOnSale,
     ProductOnSaleCategory,
@@ -28,10 +28,10 @@ class AbstractPriceCalculator(ABC):
 class XboxPriceCalculator(AbstractPriceCalculator):
     def __post_init__(self):
         curr = self._initial_price.currency_code.lower()
-        assert curr == "usd", f"Expected currency: usd, got: {curr}"
+        assert curr == Currencies.USD, f"Expected currency: usd, got: {curr}"
 
     def _compute_for_usa(self) -> PriceUnit:
-        new_price = round(self._initial_price * 0.75, 2)
+        new_price = self._initial_price * 0.75
         if new_price <= 2.99:
             new_price.add_percent(70)
         elif new_price <= 4.99:
@@ -53,7 +53,7 @@ class XboxPriceCalculator(AbstractPriceCalculator):
         return new_price
 
     def _compute_for_tr(self) -> PriceUnit:
-        new_price = replace(self._initial_price)  # make a object copy
+        new_price = replace(self._initial_price)  # make an object copy
         if new_price <= 0.99:
             new_price.add_percent(200)
         elif new_price <= 1.99:
@@ -94,7 +94,10 @@ class XboxPriceCalculator(AbstractPriceCalculator):
             addend = 12
         else:
             addend = 14
-        return self._initial_price + addend
+        new_price = self._initial_price
+        if self._initial_price > 0.2:
+            new_price = self._initial_price * 1.7 / 1.1
+        return new_price + addend
 
     def compute_for_region(self, region_code: str) -> PriceUnit:
         match region_code.lower():
@@ -108,44 +111,35 @@ class XboxPriceCalculator(AbstractPriceCalculator):
                 raise ValueError("Unsupported region: %s" % region_code)
 
 
-class PsnPriceCalculator(AbstractPriceCalculator):
-    def _compute_for_ua(self) -> PriceUnit:
-        assert self._initial_price.currency_code.lower() == "uah"
-        return self._initial_price * 3.2
-
-    def _compute_for_tr(self) -> PriceUnit:
-        assert self._initial_price.currency_code.lower() == "tl"
-        return self._initial_price * 3.2
-
-    def compute_for_region(self, region_code: str) -> PriceUnit:
-        match region_code.lower():
-            case PSN_PARSE_REGIONS.UA:
-                return self._compute_for_ua()
-            case PSN_PARSE_REGIONS.TR:
-                return self._compute_for_tr()
-            case _:
-                raise ValueError("Unsupported region: %s" % region_code)
-
-
 class SalesService(BaseService):
     entity_name = "Product on sale"
 
     def __init__(
-        self, uow: AbstractUnitOfWork, logger: Logger, sales_repo: SalesRepositoryI
+        self,
+        uow: AbstractUnitOfWork,
+        logger: Logger,
+        sales_repo: SalesRepositoryI,
+        currency_converter: CurrencyConverterI,
     ) -> None:
         super().__init__(uow, logger)
         self._sales_repo = sales_repo
+        self._currency_converter = currency_converter
 
     async def load_new_sales(self, sales: Sequence[ProductOnSale]):
         for item in sales:
-            calculator_cls: type[AbstractPriceCalculator] = (
+            calculator_cls: type[AbstractPriceCalculator] | None = (
                 XboxPriceCalculator
                 if item.category == ProductOnSaleCategory.XBOX
-                else PsnPriceCalculator
+                else None
             )
             for region, combined_price in item.prices.items():
-                calculator = calculator_cls(combined_price.discounted_price)
-                new_price = calculator.compute_for_region(region)
-                combined_price.discounted_price = new_price
+                calculated = combined_price.discounted_price
+                if calculator_cls:
+                    calculator = calculator_cls(combined_price.discounted_price)
+                    calculated = calculator.compute_for_region(region)
+                converted_price = await self._currency_converter.convert_to_rub(
+                    calculated
+                )
+                combined_price.discounted_price = converted_price
         await self._sales_repo.delete_all()
         await self._sales_repo.create_many(sales)
