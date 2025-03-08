@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from core.schemas import BaseDTO, ProductDiscount
+from core.schemas import BaseDTO, ProductDiscount, RoundedFloat
 from sales.models import Currencies, ProductOnSaleCategory
 
 
@@ -12,7 +12,7 @@ class SalesFilterDTO(BaseDTO):
 
 class PriceUnitDTO(BaseDTO):
     currency_code: Currencies
-    value: float
+    value: RoundedFloat
 
 
 class CombinedPriceDTO(BaseDTO):

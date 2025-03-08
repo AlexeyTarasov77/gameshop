@@ -1,10 +1,11 @@
 import asyncio
 from collections.abc import Sequence
 from typing import Any
+from uuid import UUID
 from redis.asyncio import Redis
 
 from core.pagination import PaginationParams, PaginationResT
-from gateways.db.exceptions import DatabaseError
+from gateways.db.exceptions import DatabaseError, NotFoundError
 from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
 
 
@@ -55,3 +56,21 @@ class SalesRepository:
         assert isinstance(items, list)
         offset = pagination_params.calc_offset()
         return items[offset : offset + pagination_params.page_size], total
+
+    def _find_by_id_query(self, product_id: UUID) -> str:
+        return f'$[?(@.id == "{product_id}")]'
+
+    async def delete_by_id(self, product_id: UUID) -> None:
+        success: int | None = await self._db.json().delete(
+            self._key, self._find_by_id_query(product_id)
+        )
+        self._assert_not_none(success)
+        if not success:
+            raise NotFoundError()
+
+    async def get_by_id(self, product_id: UUID) -> dict[str, Any]:
+        res = await self._db.json().get(self._key, self._find_by_id_query(product_id))
+        self._assert_not_none(res)
+        if not res:
+            raise NotFoundError()
+        return res[0]

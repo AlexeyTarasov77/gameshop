@@ -12,7 +12,9 @@ from pydantic import (
     HttpUrl,
     PlainSerializer,
     AnyHttpUrl,
+    SerializerFunctionWrapHandler,
     ValidationError,
+    WrapSerializer,
 )
 
 from core.utils import (
@@ -93,6 +95,11 @@ def _is_valid_url(s: str) -> bool:
     return True
 
 
+def float_ser_wrap(v: float, nxt: SerializerFunctionWrapHandler) -> str:
+    return str(nxt(round(v, 2)))
+
+
+RoundedFloat = Annotated[float, WrapSerializer(float_ser_wrap, when_used="json")]
 ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[

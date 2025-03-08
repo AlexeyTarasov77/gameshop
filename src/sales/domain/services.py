@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import replace
 from logging import Logger
+from uuid import UUID
 from core.pagination import PaginationParams
 from core.services.base import BaseService
+from core.services.exceptions import EntityNotFoundError
 from core.uow import AbstractUnitOfWork
+from gateways.db.exceptions import NotFoundError
 from sales.domain.interfaces import CurrencyConverterI, SalesRepositoryI
 from sales.models import (
     XBOX_PARSE_REGIONS,
@@ -147,6 +150,19 @@ class SalesService(BaseService):
         await self._sales_repo.create_many(
             [ProductOnSaleDTO.model_validate(item) for item in sales]
         )
+
+    async def get_product_on_sale(self, product_id: UUID) -> ProductOnSaleDTO:
+        try:
+            product = await self._sales_repo.get_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
+        return ProductOnSaleDTO.model_validate(product)
+
+    async def delete_product_on_sale(self, product_id: UUID) -> None:
+        try:
+            await self._sales_repo.delete_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
 
     async def get_current_sales(
         self,
