@@ -52,10 +52,10 @@ async def main() -> None:
     cfg = Resolve(Config)
     logger = Resolve(Logger)
     db = Resolve(SqlAlchemyDatabase)
-    redis_client = Resolve(Redis)
+    r = Resolve(Redis)
     logger.info("Pinging database...")
     done_tasks, _ = await asyncio.wait(
-        [asyncio.create_task(redis_client.ping()), asyncio.create_task(db.ping())],
+        [asyncio.create_task(r.ping()), asyncio.create_task(db.ping())],
         timeout=3,
     )
     [await task for task in done_tasks]

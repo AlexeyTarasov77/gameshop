@@ -1,27 +1,29 @@
 from dataclasses import dataclass, field, replace
 from typing import Any, Self
 from uuid import UUID, uuid4
-from enum import StrEnum, auto
+from enum import auto
 from gamesparser.models import Price as ParsedPrice, ParsedItem
 
+from core.utils import CIEnum
 
-class PSN_PARSE_REGIONS(StrEnum):
+
+class PSN_PARSE_REGIONS(CIEnum):
     UA = auto()
     TR = auto()
 
 
-class XBOX_PARSE_REGIONS(StrEnum):
+class XBOX_PARSE_REGIONS(CIEnum):
     US = auto()
     AR = auto()
     TR = auto()
 
 
-class ProductOnSaleCategory(StrEnum):
-    XBOX = "XBOX"
-    PSN = "PSN"
+class ProductOnSaleCategory(CIEnum):
+    XBOX = auto()
+    PSN = auto()
 
 
-class Currencies(StrEnum):
+class Currencies(CIEnum):
     UAH = auto()
     USD = auto()
     TL = auto()

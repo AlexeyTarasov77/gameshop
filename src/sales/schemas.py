@@ -1,7 +1,8 @@
 from datetime import datetime
 from uuid import UUID
+
 from core.schemas import BaseDTO, ProductDiscount
-from sales.models import CombinedPrice, Currencies, ProductOnSaleCategory
+from sales.models import Currencies, ProductOnSaleCategory
 
 
 class SalesFilterDTO(BaseDTO):
@@ -10,9 +11,7 @@ class SalesFilterDTO(BaseDTO):
 
 
 class PriceUnitDTO(BaseDTO):
-    currency_code: (
-        Currencies  # Annotated[Currencies, AfterValidator(lambda value: value.lower())]
-    )
+    currency_code: Currencies
     value: float
 
 

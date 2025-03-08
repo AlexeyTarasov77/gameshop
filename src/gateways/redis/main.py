@@ -13,11 +13,12 @@ class RedisJSONEncoder(JSONEncoder):
 
 
 def init_redis_client(dsn: str) -> redis.Redis:
-    instance = redis.from_url(dsn)
-    old_json = instance.json
+    r = redis.from_url(dsn)
+    old_json = r.json
 
     def _json_monkeypatch(encoder=RedisJSONEncoder(), decoder=JSONDecoder()) -> JSON:
         return old_json(encoder, decoder)
 
-    instance.json = _json_monkeypatch
-    return instance
+    r.json = _json_monkeypatch
+
+    return r

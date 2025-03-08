@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
+from enum import StrEnum
 import random
 import string
 from pathlib import Path
@@ -12,6 +13,15 @@ import aiofiles
 from fastapi import UploadFile
 
 type UnspecifiedType = EllipsisType
+
+
+class CIEnum(StrEnum):
+    """Adds support for caseinsensitive member lookup.
+    Note that member name should be equal to it's value to work as expected"""
+
+    @classmethod
+    def _missing_(cls, value: Any):
+        return isinstance(value, str) and cls.__members__.get(value.upper())
 
 
 def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
