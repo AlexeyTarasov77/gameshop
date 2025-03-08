@@ -18,7 +18,7 @@ ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    dto: t.Annotated[schemas.ListProductsFilterDTO, Query()],
+    dto: t.Annotated[schemas.ListProductsFilterDTO, Query()] = {},  # type: ignore
 ) -> PaginatedResponse[schemas.ShowProductWithRelations]:
     products, total_records = await products_service.list_products(
         dto,

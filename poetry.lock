@@ -476,9 +476,10 @@ name = "gamesparser"
 version = "0.1.0"
 description = ""
 optional = false
-python-versions = ">=3.12,<4.0"
+python-versions = "<4.0,>=3.12"
 files = [
-    {file = "gamesparser-0.1.0-py3-none-any.whl", hash = "sha256:6c887da2b90e892db2b1d20af54c3a38b49abdace489d26ee9c1ce96d378aef6"},
+    {file = "gamesparser-0.1.0-py3-none-any.whl", hash = "sha256:c754e12c7d8c37ba3a262f335870a79006d253d2b46c7ba6d34b27f345dd54cc"},
+    {file = "gamesparser-0.1.0.tar.gz", hash = "sha256:dae4a42ed9842d23fd7686754aca9d2e769e058347f1ca0338c53108ec35c719"},
 ]
 
 [package.dependencies]
@@ -486,10 +487,6 @@ beautifulsoup4 = ">=4.13.3,<5.0.0"
 httpx = ">=0.28.1,<0.29.0"
 pytz = ">=2025.1,<2026.0"
 returns = ">=0.24.0,<0.25.0"
-
-[package.source]
-type = "file"
-url = "../../parsing/gamesparser/dist/gamesparser-0.1.0-py3-none-any.whl"
 
 [[package]]
 name = "greenlet"
@@ -1632,4 +1629,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "11ceedfae6c55e942e602b92d5a835ac0161434f69e76e79614b558ac8fb0094"
+content-hash = "7a5bf352d48b6378cf7fd4bc11732d60ab6777194254dc0061fefb652489a7da"

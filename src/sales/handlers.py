@@ -18,7 +18,7 @@ SalesServiceDep = Annotated[SalesService, Inject(SalesService)]
 async def get_current_sales(
     pagination_params: PaginationDep,
     sales_service: SalesServiceDep,
-    dto: Annotated[SalesFilterDTO, Query()],
+    dto: Annotated[SalesFilterDTO, Query()] = {},  # type: ignore
 ) -> PaginatedResponse[ProductOnSaleDTO]:
     sales, total_records = await sales_service.get_current_sales(
         dto,
