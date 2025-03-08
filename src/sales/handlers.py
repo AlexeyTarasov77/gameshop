@@ -1,12 +1,15 @@
 from typing import Annotated
 from uuid import UUID
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from core.dependencies import PaginationDep
 from core.ioc import Inject
 from core.pagination import PaginatedResponse
+from sales.domain.interfaces import ExchangeRatesMapping
 from sales.domain.services import SalesService
-from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
+from sales.models import Currencies
+from sales.schemas import ExchangeRateDTO, ProductOnSaleDTO, SalesFilterDTO
+from users.dependencies import require_admin
 
 
 router = APIRouter(prefix="/sales", tags=["sales", "products"])
@@ -35,7 +38,28 @@ async def get_product_on_sale(
     return await sales_service.get_product_on_sale(product_id)
 
 
-@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/exchange-rates/set",
+    dependencies=[Depends(require_admin)],
+)
+async def set_exchange_rate(dto: ExchangeRateDTO, sales_service: SalesServiceDep):
+    await sales_service.set_exchange_rate(dto)
+    return {"success": True}
+
+
+@router.get(
+    "/exchange-rates/get",
+    dependencies=[Depends(require_admin)],
+)
+async def get_exchange_rates(sales_service: SalesServiceDep) -> ExchangeRatesMapping:
+    return await sales_service.get_exchange_rates()
+
+
+@router.delete(
+    "/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_admin)],
+)
 async def delete_product_on_sale(
     product_id: UUID,
     sales_service: SalesServiceDep,

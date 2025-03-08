@@ -8,7 +8,11 @@ from core.services.base import BaseService
 from core.services.exceptions import EntityNotFoundError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
-from sales.domain.interfaces import CurrencyConverterI, SalesRepositoryI
+from sales.domain.interfaces import (
+    CurrencyConverterI,
+    ExchangeRatesMapping,
+    SalesRepositoryI,
+)
 from sales.models import (
     XBOX_PARSE_REGIONS,
     Currencies,
@@ -16,7 +20,7 @@ from sales.models import (
     ProductOnSale,
     ProductOnSaleCategory,
 )
-from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
+from sales.schemas import ExchangeRateDTO, ProductOnSaleDTO, SalesFilterDTO
 
 
 class AbstractPriceCalculator(ABC):
@@ -150,6 +154,12 @@ class SalesService(BaseService):
         await self._sales_repo.create_many(
             [ProductOnSaleDTO.model_validate(item) for item in sales]
         )
+
+    async def set_exchange_rate(self, dto: ExchangeRateDTO) -> None:
+        await self._currency_converter.set_rub_exchange_rate(dto)
+
+    async def get_exchange_rates(self) -> ExchangeRatesMapping:
+        return await self._currency_converter.get_rub_exchange_rates()
 
     async def get_product_on_sale(self, product_id: UUID) -> ProductOnSaleDTO:
         try:

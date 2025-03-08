@@ -21,6 +21,11 @@ class RegionalPriceDTO(BaseDTO):
     discounted_price: PriceUnitDTO
 
 
+class ExchangeRateDTO(BaseDTO):
+    rate_for: Currencies
+    value: float
+
+
 class ProductOnSaleDTO(BaseDTO):
     id: UUID
     name: str
