@@ -15,7 +15,8 @@ class PriceUnitDTO(BaseDTO):
     value: RoundedFloat
 
 
-class CombinedPriceDTO(BaseDTO):
+class RegionalPriceDTO(BaseDTO):
+    region: str
     base_price: PriceUnitDTO
     discounted_price: PriceUnitDTO
 
@@ -27,5 +28,5 @@ class ProductOnSaleDTO(BaseDTO):
     image_url: str
     with_gp: bool | None = None
     deal_until: datetime | None = None
-    prices: dict[str, CombinedPriceDTO]  # type: ignore
+    prices: list[RegionalPriceDTO]  # type: ignore
     category: ProductOnSaleCategory

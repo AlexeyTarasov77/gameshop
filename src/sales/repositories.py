@@ -1,19 +1,26 @@
 import asyncio
+import json
 import time
 from collections.abc import AsyncGenerator, Sequence
+
+from redis.commands.search.query import Query
+from gateways.redis.main import indexes
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
 
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import DatabaseError, NotFoundError
+from sales.models import ProductOnSale
 from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
+from sales import APP_LABEL
 
 
 class SalesRepository:
     def __init__(self, redis: Redis):
         self._db = redis
-        self._prefix = "sales_item:"
+        self._prefix = indexes[APP_LABEL].for_prefix
+        self._idx = indexes[APP_LABEL].name
         self._key = "sales"
 
     def _assert_not_none(self, res):
@@ -60,20 +67,23 @@ class SalesRepository:
         self,
         dto: SalesFilterDTO,
         pagination_params: PaginationParams,
-    ) -> PaginationResT[dict[str, Any]]:
-        filter_cond = self._build_filter_condition(dto)
-        query = (
-            f"$[?({filter_cond})]" if filter_cond else "$"
-        )  # $[?(@.prices.tr && @.category=="PSN")
-        res, total = await asyncio.gather(
-            self._db.json().get(self._key, query),
-            self._db.json().arrlen(self._key),  # type: ignore
+    ) -> PaginationResT[ProductOnSale]:
+        conditions: list[str] = []
+        if dto.category is not None:
+            conditions.append("@category:{%s}" % dto.category)
+        if dto.region is not None:
+            conditions.append("@price_regions:{%s}" % dto.region)
+        res = await self._db.ft(self._idx).search(  # type: ignore
+            Query(" ".join(conditions) or "*").paging(
+                pagination_params.calc_offset(), pagination_params.page_size
+            )
         )
-        self._assert_not_none(res)
-        items = res[0] if query == "$" else res
-        assert isinstance(items, list)
-        offset = pagination_params.calc_offset()
-        return items[offset : offset + pagination_params.page_size], total
+        products = []
+        for doc in res.docs:
+            product_id = UUID(doc.id[len(self._prefix) :])
+            other_fields = json.loads(doc.json)
+            products.append(ProductOnSale(id=product_id, **other_fields))
+        return products, res.total
 
     def _find_by_id_query(self, product_id: UUID) -> str:
         return f'$[?(@.id == "{product_id}")]'

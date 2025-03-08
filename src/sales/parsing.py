@@ -17,7 +17,7 @@ from sales.domain.services import SalesService
 from sales.models import (
     PSN_PARSE_REGIONS,
     XBOX_PARSE_REGIONS,
-    CombinedPrice,
+    RegionalPrice,
     PriceUnit,
     ProductOnSale,
     ProductOnSaleCategory,
@@ -27,11 +27,14 @@ from sales.models import (
 def parsed_to_domain_model(
     item: ParsedItem, category: ProductOnSaleCategory
 ) -> ProductOnSale:
-    casted_prices = {}
+    casted_prices = []
     for region, price in item.prices.items():
-        casted_prices[region] = CombinedPrice(
-            PriceUnit(**asdict(price.base_price)),
-            PriceUnit(**asdict(price.discounted_price)),
+        casted_prices.append(
+            RegionalPrice(
+                region,
+                PriceUnit(**asdict(price.base_price)),
+                PriceUnit(**asdict(price.discounted_price)),
+            )
         )
     item_dict = asdict(item)
     item_dict.pop("prices")

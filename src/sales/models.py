@@ -84,7 +84,8 @@ class PriceUnit(ParsedPrice):
 
 
 @dataclass
-class CombinedPrice:
+class RegionalPrice:
+    region: str
     _base_price: PriceUnit
     _discounted_price: PriceUnit
 
@@ -127,7 +128,7 @@ class CombinedPrice:
 @dataclass(kw_only=True)
 class ProductOnSale(ParsedItem):
     id: UUID = field(default_factory=uuid4)
-    prices: dict[str, CombinedPrice]  # type: ignore
+    prices: list[RegionalPrice]  # type: ignore
     category: ProductOnSaleCategory
 
     def as_json_serializable(self) -> dict[str, Any]:

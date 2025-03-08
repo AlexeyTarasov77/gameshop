@@ -137,15 +137,15 @@ class SalesService(BaseService):
                 if item.category == ProductOnSaleCategory.XBOX
                 else None
             )
-            for region, combined_price in item.prices.items():
-                calculated = combined_price.discounted_price
+            for regional_price in item.prices:
+                calculated = regional_price.discounted_price
                 if calculator_cls:
-                    calculator = calculator_cls(combined_price.discounted_price)
-                    calculated = calculator.compute_for_region(region)
+                    calculator = calculator_cls(regional_price.discounted_price)
+                    calculated = calculator.compute_for_region(regional_price.region)
                 converted_price = await self._currency_converter.convert_to_rub(
                     calculated
                 )
-                combined_price.discounted_price = converted_price
+                regional_price.discounted_price = converted_price
         await self._sales_repo.delete_all()
         await self._sales_repo.create_many(
             [ProductOnSaleDTO.model_validate(item) for item in sales]
