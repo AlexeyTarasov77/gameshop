@@ -6,6 +6,8 @@ import asyncio
 import sys
 from pathlib import Path
 
+from redis.asyncio import Redis
+
 sys.path.append((Path() / "src").absolute().as_posix())
 from httpx import AsyncClient
 from core.ioc import Resolve
@@ -50,6 +52,7 @@ async def load_parsed(
         sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.XBOX))
     service = Resolve(SalesService)
     await service.load_new_sales(sales)
+    await Resolve(Redis).aclose()  # type: ignore
 
 
 async def main():

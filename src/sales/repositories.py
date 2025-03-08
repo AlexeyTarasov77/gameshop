@@ -1,5 +1,6 @@
 import asyncio
-from collections.abc import Sequence
+import time
+from collections.abc import AsyncGenerator, Sequence
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
@@ -12,6 +13,7 @@ from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
 class SalesRepository:
     def __init__(self, redis: Redis):
         self._db = redis
+        self._prefix = "sales_item:"
         self._key = "sales"
 
     def _assert_not_none(self, res):
@@ -20,14 +22,30 @@ class SalesRepository:
                 "Redis query failed! Value under key is not a valid json array"
             )
 
+    async def _scan_keys(self, count: int = 100) -> AsyncGenerator[list[str]]:
+        cur: int | None = None
+        match = self._prefix + "*"
+        while cur != 0:
+            cur, keys = await self._db.scan(cur or 0, match, count)
+            time.sleep(1)
+            yield keys
+
     async def delete_all(self):
-        await self._db.json().set(self._key, "$", [])
+        coros = [
+            asyncio.gather(*[self._db.delete(key) for key in key_list])
+            async for key_list in self._scan_keys()
+        ]
+        await asyncio.gather(*coros)
 
     async def create_many(self, sales: Sequence[ProductOnSaleDTO]):
-        res = await self._db.json().arrappend(
-            self._key, "$", *[item.model_dump() for item in sales]
-        )  # type: ignore
-        self._assert_not_none(res)
+        coros = [
+            self._db.json().set(
+                self._prefix + str(item.id), "$", item.model_dump(exclude={"id"})
+            )
+            for item in sales
+        ]
+        res = await asyncio.gather(*coros)
+        assert all(res)
 
     def _build_filter_condition(self, dto: SalesFilterDTO) -> str:
         conditions: list[str] = []
