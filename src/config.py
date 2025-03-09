@@ -78,12 +78,22 @@ class _Tokens(BaseModel):
     email_verification_token_ttl: ParsableTimedelta
 
 
+class _SteamAPIClient(BaseModel):
+    auth_email: str
+    auth_password: str
+
+
+class _ClientsConfig(BaseModel):
+    steam_api: _SteamAPIClient
+
+
 class Config(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
     api_version: str = "1.0.0"
     mode: t.Literal["local", "prod", "tests"]
     server: _Server = Field(default=_Server())
     smtp: _SMTP
+    clients: _ClientsConfig
     tokens: _Tokens
     payments: _Payments
     pg_dsn: PostgresDsn
