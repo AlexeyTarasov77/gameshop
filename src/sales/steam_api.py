@@ -4,7 +4,7 @@ from core.utils import JWTAuth
 from sales.schemas import ExchangeRatesMappingDTO
 
 
-class SteamAPIClientImpl:
+class NSGiftsSteamAPIClient:
     def __init__(
         self,
         client: AsyncClient,

@@ -1,18 +1,22 @@
+from logging import Logger
 from typing import cast
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityAlreadyExistsError,
     EntityNotFoundError,
     EntityOperationRestrictedByRefError,
 )
+from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
     OperationRestrictedByRefError,
 )
+from products.domain.interfaces import ProductsAPIClient
 from products.schemas import (
     CategoryDTO,
+    ProductFromAPIDTO,
     DeliveryMethodDTO,
     CreateProductDTO,
     ListProductsFilterDTO,
@@ -25,6 +29,12 @@ from products.schemas import (
 
 class ProductsService(BaseService):
     entity_name = "Product"
+
+    def __init__(
+        self, uow: AbstractUnitOfWork, logger: Logger, api_client: ProductsAPIClient
+    ) -> None:
+        super().__init__(uow, logger)
+        self._api_client = api_client
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         try:
@@ -57,6 +67,11 @@ class ProductsService(BaseService):
         return [
             ShowProductWithRelations.model_validate(product) for product in products
         ], total_records
+
+    async def list_products_from_api(
+        self, pagination_params: PaginationParams
+    ) -> PaginationResT[ProductFromAPIDTO]:
+        return await self._api_client.get_paginated(pagination_params)
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:

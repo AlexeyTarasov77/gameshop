@@ -27,6 +27,16 @@ async def list_products(
     return PaginatedResponse.new_response(products, total_records, pagination_params)
 
 
+@router.get("/external")
+async def list_product_from_api(
+    pagination_params: PaginationDep, products_service: ProductsServiceDep
+):
+    products, total_records = await products_service.list_products_from_api(
+        pagination_params,
+    )
+    return PaginatedResponse.new_response(products, total_records, pagination_params)
+
+
 @router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep

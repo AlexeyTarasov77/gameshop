@@ -21,6 +21,14 @@ class CategoryDTO(BaseDTO):
     url: str | None = None
 
 
+class ProductFromAPIDTO(BaseDTO):
+    id: Base64Int
+    name: str
+    description: str
+    price_rub: str
+    image_url: str
+
+
 class PlatformDTO(CategoryDTO): ...
 
 

@@ -11,8 +11,15 @@ from products.models import (
 from products.schemas import (
     CreateProductDTO,
     ListProductsFilterDTO,
+    ProductFromAPIDTO,
     UpdateProductDTO,
 )
+
+
+class ProductsAPIClient(t.Protocol):
+    async def get_paginated(
+        self, pagination_params: PaginationParams
+    ) -> PaginationResT[ProductFromAPIDTO]: ...
 
 
 class ProductsRepositoryI(t.Protocol):

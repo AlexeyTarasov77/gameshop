@@ -10,11 +10,13 @@ from redis.asyncio import Redis
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
+from products.domain.interfaces import ProductsAPIClient
+from products.external_api import GamesForFarmAPIClient
 from sales.currencies import CurrencyConverter
 from sales.domain.interfaces import CurrencyConverterI, SteamAPIClientI
 from sales.domain.services import SalesService
 from sales.repositories import SalesRepository
-from sales.steam_api import SteamAPIClientImpl
+from sales.steam_api import NSGiftsSteamAPIClient
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,
@@ -127,12 +129,13 @@ def _init_container() -> punq.Container:
     )
     container.register(
         SteamAPIClientI,
-        SteamAPIClientImpl,
+        NSGiftsSteamAPIClient,
         steam_api_auth_email=cfg.clients.steam_api.auth_email,
         steam_api_auth_password=cfg.clients.steam_api.auth_password,
         scope=punq.Scope.singleton,
     )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
+    container.register(ProductsAPIClient, GamesForFarmAPIClient)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )
