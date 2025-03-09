@@ -62,6 +62,17 @@ def get_container() -> punq.Container:
     return _init_container()
 
 
+class SupportsAsyncClose(t.Protocol):
+    async def aclose(self): ...
+
+
+cleanup_list: list[SupportsAsyncClose] = []
+
+
+def register_for_cleanup(obj: SupportsAsyncClose):
+    cleanup_list.append(obj)
+
+
 def _init_container() -> punq.Container:
     container = punq.Container()
     cfg = init_config()
@@ -72,6 +83,8 @@ def _init_container() -> punq.Container:
     container.register("FRONTEND_DOMAIN", instance=FRONTEND_DOMAIN)
     redis = init_redis_client(str(cfg.redis_dsn))
     httpx_client = AsyncClient()
+    register_for_cleanup(redis)  # type: ignore
+    register_for_cleanup(httpx_client)
     container.register(Logger, instance=logger)
     container.register(AsyncClient, instance=httpx_client)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
