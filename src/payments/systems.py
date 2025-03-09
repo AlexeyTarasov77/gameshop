@@ -20,10 +20,10 @@ class PaymentFailedError(Exception):
 
 
 class PaypalychPaymentSystem:
-    def __init__(self, api_token: str, shop_id: str):
+    def __init__(self, api_token: str, shop_id: str, client: AsyncClient):
         self._api_token = api_token
         self._shop_id = shop_id
-        self._client = AsyncClient()
+        self._client = client
         self._base_url = "https://pal24.pro/api/v1"
 
     async def create_bill(
@@ -58,10 +58,10 @@ class PaypalychPaymentSystem:
 
 
 class PaymentSystemFactoryImpl:
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: Config, client: AsyncClient):
         self._systems_mapping = {
             AvailablePaymentSystems.PAYPALYCH: PaypalychPaymentSystem(
-                cfg.payments.paypalych.api_token, cfg.payments.paypalych.shop_id
+                cfg.payments.paypalych.api_token, cfg.payments.paypalych.shop_id, client
             )
         }
 

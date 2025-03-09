@@ -23,13 +23,6 @@ class ProductOnSaleCategory(CIEnum):
     PSN = auto()
 
 
-class Currencies(CIEnum):
-    UAH = auto()
-    USD = auto()
-    TL = auto()
-    RUB = auto()
-
-
 class PriceUnit(ParsedPrice):
     def add_percent(self, percent: int):
         new_value = self.value + self.value / 100 * percent

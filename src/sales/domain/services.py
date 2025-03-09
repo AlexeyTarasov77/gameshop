@@ -10,17 +10,21 @@ from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from sales.domain.interfaces import (
     CurrencyConverterI,
-    ExchangeRatesMapping,
     SalesRepositoryI,
+    SteamAPIClientI,
 )
 from sales.models import (
     XBOX_PARSE_REGIONS,
-    Currencies,
     PriceUnit,
     ProductOnSale,
     ProductOnSaleCategory,
 )
-from sales.schemas import ExchangeRateDTO, ProductOnSaleDTO, SalesFilterDTO
+from sales.schemas import (
+    SetExchangeRateDTO,
+    ProductOnSaleDTO,
+    SalesFilterDTO,
+    ExchangeRatesMappingDTO,
+)
 
 
 class AbstractPriceCalculator(ABC):
@@ -37,7 +41,7 @@ class AbstractPriceCalculator(ABC):
 class XboxPriceCalculator(AbstractPriceCalculator):
     def __post_init__(self):
         curr = self._initial_price.currency_code.lower()
-        assert curr == Currencies.USD, f"Expected currency: usd, got: {curr}"
+        assert curr == "usd", f"Expected currency: usd, got: {curr}"
 
     def _compute_for_usa(self) -> PriceUnit:
         new_price = self._initial_price * 0.75
@@ -129,10 +133,12 @@ class SalesService(BaseService):
         logger: Logger,
         sales_repo: SalesRepositoryI,
         currency_converter: CurrencyConverterI,
+        steam_api: SteamAPIClientI,
     ) -> None:
         super().__init__(uow, logger)
         self._sales_repo = sales_repo
         self._currency_converter = currency_converter
+        self._steam_api = steam_api
 
     async def load_new_sales(self, sales: Sequence[ProductOnSale]):
         for item in sales:
@@ -155,10 +161,13 @@ class SalesService(BaseService):
             [ProductOnSaleDTO.model_validate(item) for item in sales]
         )
 
-    async def set_exchange_rate(self, dto: ExchangeRateDTO) -> None:
+    async def get_steam_exchange_rates(self) -> ExchangeRatesMappingDTO:
+        return await self._steam_api.get_currency_rates()
+
+    async def set_exchange_rate(self, dto: SetExchangeRateDTO) -> None:
         await self._currency_converter.set_rub_exchange_rate(dto)
 
-    async def get_exchange_rates(self) -> ExchangeRatesMapping:
+    async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_rub_exchange_rates()
 
     async def get_product_on_sale(self, product_id: UUID) -> ProductOnSaleDTO:

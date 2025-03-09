@@ -1,7 +1,7 @@
 from redis.asyncio import Redis
-from sales.domain.interfaces import ExchangeRatesMapping
-from sales.models import Currencies, PriceUnit
-from sales.schemas import ExchangeRateDTO
+from sales.schemas import ExchangeRatesMappingDTO
+from sales.models import PriceUnit
+from sales.schemas import SetExchangeRateDTO
 
 
 class CurrencyConverter:
@@ -9,19 +9,20 @@ class CurrencyConverter:
         self._db = redis
         self._key = "rub_exchange_rates"
 
-    async def get_rub_exchange_rates(self) -> ExchangeRatesMapping:
-        res: ExchangeRatesMapping = await self._db.hgetall(self._key)
-        return res
+    async def get_rub_exchange_rates(self) -> ExchangeRatesMappingDTO:
+        res = await self._db.hgetall(self._key)
+        return ExchangeRatesMappingDTO.model_validate(
+            {"rub/" + curr: rate for curr, rate in res.items()}
+        )
 
-    async def set_rub_exchange_rate(self, dto: ExchangeRateDTO):
-        await self._db.hset(self._key, dto.rate_for, dto.value)
+    async def set_rub_exchange_rate(self, dto: SetExchangeRateDTO):
+        await self._db.hset(self._key, dto.to, dto.value)
 
     async def convert_to_rub(self, price: PriceUnit) -> PriceUnit:
         curr = price.currency_code.lower()
-        assert curr in Currencies, "Unknown currency: %s" % price.currency_code
         exchange_rate = await self._db.hget(self._key, curr)
         if exchange_rate is None:
             raise ValueError("Exchange rate for currency %s wasn't found" % curr)
         converted = round(price * float(exchange_rate), 2)
-        converted.currency_code = Currencies.RUB
+        converted.currency_code = "RUB"
         return converted

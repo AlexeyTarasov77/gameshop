@@ -473,13 +473,13 @@ standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "htt
 
 [[package]]
 name = "gamesparser"
-version = "0.1.0"
+version = "0.1.2"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.12"
 files = [
-    {file = "gamesparser-0.1.0-py3-none-any.whl", hash = "sha256:c754e12c7d8c37ba3a262f335870a79006d253d2b46c7ba6d34b27f345dd54cc"},
-    {file = "gamesparser-0.1.0.tar.gz", hash = "sha256:dae4a42ed9842d23fd7686754aca9d2e769e058347f1ca0338c53108ec35c719"},
+    {file = "gamesparser-0.1.2-py3-none-any.whl", hash = "sha256:de9f339f3aee09b50c88323bd7d5b66d56ef57211e56075a74d4ba5209b67160"},
+    {file = "gamesparser-0.1.2.tar.gz", hash = "sha256:18987f4009e278e59d7e0f1c6b2448d4512f350aba84d1cd98ff5f879dd1e301"},
 ]
 
 [package.dependencies]
@@ -934,6 +934,17 @@ files = [
 ]
 
 [[package]]
+name = "pycountry"
+version = "24.6.1"
+description = "ISO country, subdivision, language, currency and script definitions and their translations"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pycountry-24.6.1-py3-none-any.whl", hash = "sha256:f1a4fb391cd7214f8eefd39556d740adcc233c778a27f8942c8dca351d6ce06f"},
+    {file = "pycountry-24.6.1.tar.gz", hash = "sha256:b61b3faccea67f87d10c1f2b0fc0be714409e8fcdcc1315613174f6466c10221"},
+]
+
+[[package]]
 name = "pycparser"
 version = "2.22"
 description = "C parser in Python"
@@ -1076,6 +1087,29 @@ files = [
 
 [package.dependencies]
 typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
+
+[[package]]
+name = "pydantic-extra-types"
+version = "2.10.2"
+description = "Extra Pydantic types."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pydantic_extra_types-2.10.2-py3-none-any.whl", hash = "sha256:9eccd55a2b7935cea25f0a67f6ff763d55d80c41d86b887d88915412ccf5b7fa"},
+    {file = "pydantic_extra_types-2.10.2.tar.gz", hash = "sha256:934d59ab7a02ff788759c3a97bc896f5cfdc91e62e4f88ea4669067a73f14b98"},
+]
+
+[package.dependencies]
+pydantic = ">=2.5.2"
+typing-extensions = "*"
+
+[package.extras]
+all = ["pendulum (>=3.0.0,<4.0.0)", "phonenumbers (>=8,<9)", "pycountry (>=23)", "python-ulid (>=1,<2)", "python-ulid (>=1,<4)", "pytz (>=2024.1)", "semver (>=3.0.2)", "semver (>=3.0.2,<3.1.0)", "tzdata (>=2024.1)"]
+pendulum = ["pendulum (>=3.0.0,<4.0.0)"]
+phonenumbers = ["phonenumbers (>=8,<9)"]
+pycountry = ["pycountry (>=23)"]
+python-ulid = ["python-ulid (>=1,<2)", "python-ulid (>=1,<4)"]
+semver = ["semver (>=3.0.2)"]
 
 [[package]]
 name = "pydantic-settings"
@@ -1629,4 +1663,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "7a5bf352d48b6378cf7fd4bc11732d60ab6777194254dc0061fefb652489a7da"
+content-hash = "b19ec650c322a9897544a03024d71e48c18f9c4e9dfa79d22b20af59d8f475bf"

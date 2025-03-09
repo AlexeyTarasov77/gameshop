@@ -1,8 +1,9 @@
 from datetime import datetime
 from uuid import UUID
-
-from core.schemas import BaseDTO, ProductDiscount, RoundedFloat
-from sales.models import Currencies, ProductOnSaleCategory
+from pydantic_extra_types.currency_code import Currency
+from pydantic import Field, RootModel
+from core.schemas import BaseDTO, ExchangeRate, ProductDiscount, RoundedFloat
+from sales.models import ProductOnSaleCategory
 
 
 class SalesFilterDTO(BaseDTO):
@@ -11,7 +12,7 @@ class SalesFilterDTO(BaseDTO):
 
 
 class PriceUnitDTO(BaseDTO):
-    currency_code: Currencies
+    currency_code: Currency
     value: RoundedFloat
 
 
@@ -21,8 +22,12 @@ class RegionalPriceDTO(BaseDTO):
     discounted_price: PriceUnitDTO
 
 
-class ExchangeRateDTO(BaseDTO):
-    rate_for: Currencies
+ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
+
+
+class SetExchangeRateDTO(BaseDTO):
+    from_: Currency = Field(default=Currency("RUB"))
+    to: Currency
     value: float
 
 

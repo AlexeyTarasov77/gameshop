@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends, Query, status
 from core.dependencies import PaginationDep
 from core.ioc import Inject
 from core.pagination import PaginatedResponse
-from sales.domain.interfaces import ExchangeRatesMapping
+from sales.domain.interfaces import ExchangeRatesMappingDTO
 from sales.domain.services import SalesService
-from sales.models import Currencies
-from sales.schemas import ExchangeRateDTO, ProductOnSaleDTO, SalesFilterDTO
+from sales.schemas import SetExchangeRateDTO, ProductOnSaleDTO, SalesFilterDTO
 from users.dependencies import require_admin
 
 
@@ -38,11 +37,18 @@ async def get_product_on_sale(
     return await sales_service.get_product_on_sale(product_id)
 
 
+@router.get("/exchange-rates/steam")
+async def get_steam_exchange_rates(
+    sales_service: SalesServiceDep,
+) -> ExchangeRatesMappingDTO:
+    return await sales_service.get_steam_exchange_rates()
+
+
 @router.post(
     "/exchange-rates/set",
     dependencies=[Depends(require_admin)],
 )
-async def set_exchange_rate(dto: ExchangeRateDTO, sales_service: SalesServiceDep):
+async def set_exchange_rate(dto: SetExchangeRateDTO, sales_service: SalesServiceDep):
     await sales_service.set_exchange_rate(dto)
     return {"success": True}
 
@@ -51,7 +57,7 @@ async def set_exchange_rate(dto: ExchangeRateDTO, sales_service: SalesServiceDep
     "/exchange-rates/get",
     dependencies=[Depends(require_admin)],
 )
-async def get_exchange_rates(sales_service: SalesServiceDep) -> ExchangeRatesMapping:
+async def get_exchange_rates(sales_service: SalesServiceDep) -> ExchangeRatesMappingDTO:
     return await sales_service.get_exchange_rates()
 
 
