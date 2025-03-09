@@ -3,6 +3,7 @@ from logging import Logger
 import typing as t
 from functools import lru_cache
 
+from httpx import AsyncClient
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
@@ -10,9 +11,10 @@ from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFact
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
 from sales.currencies import CurrencyConverter
-from sales.domain.interfaces import CurrencyConverterI
+from sales.domain.interfaces import CurrencyConverterI, SteamAPIClientI
 from sales.domain.services import SalesService
 from sales.repositories import SalesRepository
+from sales.steam_api import SteamAPIClientImpl
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,
@@ -67,7 +69,9 @@ def _init_container() -> punq.Container:
     FRONTEND_DOMAIN = "http://localhost:3000" if cfg.debug else "https://gamebazaar.ru"
     container.register("FRONTEND_DOMAIN", instance=FRONTEND_DOMAIN)
     redis = init_redis_client(str(cfg.redis_dsn))
+    httpx_client = AsyncClient()
     container.register(Logger, instance=logger)
+    container.register(AsyncClient, instance=httpx_client)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
     container.register(RedisSessionManager, RedisSessionManager)
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
@@ -120,6 +124,13 @@ def _init_container() -> punq.Container:
         PaymentsService,
         PaymentsService,
         order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
+    )
+    container.register(
+        SteamAPIClientI,
+        SteamAPIClientImpl,
+        steam_api_auth_email=cfg.clients.steam_api.auth_email,
+        steam_api_auth_password=cfg.clients.steam_api.auth_password,
+        scope=punq.Scope.singleton,
     )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
     container.register(

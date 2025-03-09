@@ -13,9 +13,11 @@ from pydantic import (
     PlainSerializer,
     AnyHttpUrl,
     SerializerFunctionWrapHandler,
+    TypeAdapter,
     ValidationError,
     WrapSerializer,
 )
+from pydantic_extra_types.currency_code import Currency
 
 from core.utils import (
     get_uploaded_file_url,
@@ -99,7 +101,16 @@ def float_ser_wrap(v: float, nxt: SerializerFunctionWrapHandler) -> str:
     return str(nxt(round(v, 2)))
 
 
+def check_currency(v: str) -> str:
+    from_, to = v.split("/")
+    curr_ta = TypeAdapter(Currency)
+    curr_ta.validate_python(from_)
+    curr_ta.validate_python(to)
+    return v
+
+
 RoundedFloat = Annotated[float, WrapSerializer(float_ser_wrap, when_used="json")]
+ExchangeRate = Annotated[str, AfterValidator(check_currency)]
 ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[
