@@ -73,6 +73,12 @@ class ProductsService(BaseService):
     ) -> PaginationResT[ProductFromAPIDTO]:
         return await self._api_client.get_paginated(pagination_params)
 
+    async def get_product_from_api(self, product_id: int) -> ProductFromAPIDTO:
+        try:
+            return await self._api_client.get_by_id(product_id)
+        except NotFoundError:
+            raise EntityNotFoundError(self.entity_name, id=product_id)
+
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:
             async with self._uow as uow:

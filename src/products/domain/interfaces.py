@@ -21,6 +21,8 @@ class ProductsAPIClient(t.Protocol):
         self, pagination_params: PaginationParams
     ) -> PaginationResT[ProductFromAPIDTO]: ...
 
+    async def get_by_id(self, product_id: int) -> ProductFromAPIDTO: ...
+
 
 class ProductsRepositoryI(t.Protocol):
     async def create_with_image(
