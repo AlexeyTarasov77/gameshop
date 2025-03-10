@@ -27,7 +27,6 @@ async def lifespan(app: FastAPI):
     [await task for task in done_tasks]
     logger.info("Database is ready!")
     yield
-    print("cleaning up", cleanup_list)
     await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
 
 

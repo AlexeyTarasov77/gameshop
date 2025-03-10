@@ -1,4 +1,5 @@
 import json
+from hashlib import md5
 from httpx import AsyncClient
 from redis.asyncio import Redis
 from core.pagination import PaginationParams, PaginationResT
@@ -11,14 +12,18 @@ class GamesForFarmAPIClient:
         self._url = "https://gamesforfarm.com/api?key=GamesInStock_Gamesforfarm"
         self._client = client
         self._cache = redis
-        self._cache_key = "cache:goods"
+        self._cache_prefix = "cache:goods:"
 
-    async def _fetch_goods(self) -> dict[str, dict]:
-        cached_goods = await self._cache.get(self._cache_key)
+    async def _fetch_goods_with_caching(self, *args, **kwargs) -> dict[str, dict]:
+        cache_key = (
+            self._cache_prefix
+            + md5(str(args).encode() + str(kwargs).encode()).hexdigest()
+        )
+        cached_goods = await self._cache.get(cache_key)
         if cached_goods:
             return json.loads(cached_goods)["goods"]
         resp = await self._client.get(self._url)
-        await self._cache.set(self._cache_key, resp.content)
+        await self._cache.set(cache_key, resp.content, ex=60 * 5)
         return resp.json()["goods"]
 
     def _good_to_dto(self, good: dict) -> ProductFromAPIDTO:
@@ -33,7 +38,7 @@ class GamesForFarmAPIClient:
     async def get_paginated(
         self, pagination_params: PaginationParams
     ) -> PaginationResT[ProductFromAPIDTO]:
-        data = await self._fetch_goods()
+        data = await self._fetch_goods_with_caching(pagination_params)
         goods = list(data.values())
         total = len(goods)
         filtered = [good for good in goods if "bundle" not in good["name"].lower()]
@@ -42,7 +47,7 @@ class GamesForFarmAPIClient:
         return [self._good_to_dto(good) for good in paginated_goods], total
 
     async def get_by_id(self, product_id: int) -> ProductFromAPIDTO:
-        data = await self._fetch_goods()
+        data = await self._fetch_goods_with_caching(product_id)
         good = data.get(str(product_id), None)
         if good is None:
             raise NotFoundError()
