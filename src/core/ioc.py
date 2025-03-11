@@ -7,6 +7,7 @@ from httpx import AsyncClient
 import punq
 from fastapi import Depends
 from redis.asyncio import Redis
+from mailing.domain.services import MailingService
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
@@ -42,7 +43,6 @@ from orders.domain.services import OrdersService
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
     UserEmailTemplatesI,
-    MailProviderI,
     PasswordHasherI,
     StatefullTokenProviderI,
     TokenHasherI,
@@ -50,9 +50,8 @@ from users.domain.interfaces import (
 )
 from users.domain.services import UsersService
 from users.hashing import BcryptHasher, SHA256Hasher
-from users.mailing import AsyncMailer, EmailTemplates
 from users.tokens import JwtTokenProvider, SecureTokenProvider
-
+from mailing.templates import EmailTemplates
 from config import Config, init_config
 from core.uow import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 
@@ -105,7 +104,7 @@ def _init_container() -> punq.Container:
         signing_alg=cfg.tokens.alg,
     )
     container.register(StatefullTokenProviderI, SecureTokenProvider)
-    container.register(MailProviderI, AsyncMailer, **cfg.smtp.model_dump())
+    container.register(MailingService, MailingService, **cfg.smtp.model_dump())
     container.register(SqlAlchemyDatabase, instance=db)
     container.register(Config, instance=cfg)
     container.register(

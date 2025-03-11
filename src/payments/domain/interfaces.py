@@ -23,7 +23,7 @@ class PaymentSystemI(Protocol):
 
 
 class PaymentEmailTemplatesI(Protocol):
-    def order_checkout(self, order_details_link: str, order_id: UUID) -> str: ...
+    async def order_checkout(self, order_details_link: str, order_id: UUID) -> str: ...
 
 
 class PaymentSystemFactoryI(Protocol):

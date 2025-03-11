@@ -5,13 +5,13 @@ from uuid import UUID
 from core.services.base import BaseService
 from core.services.exceptions import ActionForbiddenError
 from core.uow import AbstractUnitOfWork
+from mailing.domain.services import MailingService
 from orders.models import OrderStatus
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
     PaymentEmailTemplatesI,
     PaymentSystemFactoryI,
 )
-from users.domain.interfaces import MailProviderI
 
 
 class PaymentsService(BaseService):
@@ -22,12 +22,12 @@ class PaymentsService(BaseService):
         uow: AbstractUnitOfWork,
         logger: Logger,
         payment_system_factory: PaymentSystemFactoryI,
-        mail_provider: MailProviderI,
+        mailing_service: MailingService,
         email_templates: PaymentEmailTemplatesI,
         order_details_link_builder: Callable[[UUID], str],
     ) -> None:
         super().__init__(uow, logger)
-        self._mail_provider = mail_provider
+        self._mailing_service = mailing_service
         self._payment_system_factory = payment_system_factory
         self._email_templates = email_templates
         self._order_details_link_builder = order_details_link_builder
@@ -63,13 +63,13 @@ class PaymentsService(BaseService):
                 payment_system_name,
                 order_id,
             )
-
+        email_body = await self._email_templates.order_checkout(
+            self._order_details_link_builder(order_id), order_id
+        )
         asyncio.create_task(
-            self._mail_provider.send_mail_with_timeout(
+            self._mailing_service.send_mail(
                 "Спасибо за заказ!",
-                self._email_templates.order_checkout(
-                    self._order_details_link_builder(order_id), order_id
-                ),
+                email_body,
                 to=order.client_email,
             )
         )

@@ -15,7 +15,6 @@ from orders.schemas import (
     UpdateOrderDTO,
 )
 from payments.domain.interfaces import PaymentSystemFactoryI
-from users.domain.interfaces import MailProviderI
 
 
 class OrdersService(BaseService):
@@ -25,11 +24,9 @@ class OrdersService(BaseService):
         self,
         uow: AbstractUnitOfWork,
         logger: Logger,
-        mail_provider: MailProviderI,
         payment_system_factory: PaymentSystemFactoryI,
     ):
         super().__init__(uow, logger)
-        self._mail_provider = mail_provider
         self._payment_system_factory = payment_system_factory
 
     async def create_order(

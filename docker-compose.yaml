@@ -28,7 +28,7 @@ services:
     build: 
       dockerfile: Dockerfile.parser
     volumes: 
-      - ./src/get_discounts_cron.py:/app/src/get_discounts_cron.py
+      - ./src/sales/parsing.py:/app/src/sales/parsing.py
     depends_on:
       postgres:
         condition: service_healthy

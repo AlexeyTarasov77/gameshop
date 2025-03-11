@@ -12,10 +12,10 @@ from core.uow import AbstractUnitOfWork
 from core.utils import UnspecifiedType
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
+from mailing.domain.services import MailingService
 from sessions.domain.interfaces import SessionCopierI
 from users.domain.interfaces import (
     UserEmailTemplatesI,
-    MailProviderI,
     PasswordHasherI,
     StatefullTokenProviderI,
     TokenHasherI,
@@ -45,7 +45,7 @@ class UsersService(BaseService):
         password_hasher: PasswordHasherI,
         jwt_token_provider: StatelessTokenProviderI,
         statefull_token_provider: StatefullTokenProviderI,
-        mail_provider: MailProviderI,
+        mailing_service: MailingService,
         session_copier: SessionCopierI,
         activation_token_ttl: timedelta,
         auth_token_ttl: timedelta,
@@ -61,7 +61,7 @@ class UsersService(BaseService):
         self._jwt_token_provider = jwt_token_provider
         self._session_copier = session_copier
         self._statefull_token_provider = statefull_token_provider
-        self._mail_provider = mail_provider
+        self._mailing_service = mailing_service
         self._activation_link_builder = activation_link_builder
         self._password_reset_link_builder = password_reset_link_builder
         self._email_verification_link_builder = email_verification_link_builder
@@ -111,12 +111,13 @@ class UsersService(BaseService):
                     self._logger.info("Existent user is not activated")
                     error = exc.UserIsNotActivatedError()
             raise error
+        email_body = await self._email_templates.signup(
+            user.username, self._activation_link_builder(plain_token)
+        )
         asyncio.create_task(
-            self._mail_provider.send_mail_with_timeout(
+            self._mailing_service.send_mail(
                 "Аккаунт успешно создан",
-                self._email_templates.welcome(
-                    user.username, self._activation_link_builder(plain_token)
-                ),
+                email_body,
                 user.email,
             )
         )
@@ -164,12 +165,13 @@ class UsersService(BaseService):
         except NotFoundError:
             self._logger.info("User not found. Email: %s", user_email)
             raise exc.EntityNotFoundError(self.entity_name, email=user_email)
+        email_body = await self._email_templates.password_reset(
+            user.username, self._password_reset_link_builder(plain_token)
+        )
         asyncio.create_task(
-            self._mail_provider.send_mail_with_timeout(
+            self._mailing_service.send_mail(
                 "Сброс пароля",
-                self._email_templates.password_reset(
-                    user.username, self._password_reset_link_builder(plain_token)
-                ),
+                email_body,
                 user.email,
             )
         )
@@ -239,12 +241,13 @@ class UsersService(BaseService):
                 {"email": dto.email, "uid": user_id},
                 self._email_verification_token_ttl,
             )
+            email_body = await self._email_templates.email_verification(
+                self._email_verification_link_builder(token)
+            )
             asyncio.create_task(
-                self._mail_provider.send_mail_with_timeout(
+                self._mailing_service.send_mail(
                     "Подтверждение обновления email'a",
-                    self._email_templates.email_verification(
-                        self._email_verification_link_builder(token)
-                    ),
+                    email_body,
                     dto.email,
                 )
             )
@@ -309,12 +312,13 @@ class UsersService(BaseService):
             raise exc.EntityNotFoundError(self.entity_name, email=email)
         if user.is_active:
             raise exc.UserAlreadyActivatedError()
+        email_body = await self._email_templates.new_activation_token(
+            plain_token, self._activation_link_builder(plain_token)
+        )
         asyncio.create_task(
-            self._mail_provider.send_mail_with_timeout(
+            self._mailing_service.send_mail(
                 "Новый активационный токен",
-                self._email_templates.new_activation_token(
-                    plain_token, self._activation_link_builder(plain_token)
-                ),
+                email_body,
                 user.email,
             )
         )

@@ -20,5 +20,5 @@ COPY . .
 
 ENTRYPOINT [ "poetry", "run" ]
 
-CMD ["sh", "-c", "python src/get_discounts_cron.py"]
+CMD ["sh", "-c", "python src/sales/parsing.py"]
 
