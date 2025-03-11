@@ -144,16 +144,16 @@ class SalesService(BaseService):
         for item in sales:
             calculator_cls: type[AbstractPriceCalculator] | None = (
                 XboxPriceCalculator
-                if item.category == ProductOnSaleCategory.XBOX
+                if item.category.lower() == ProductOnSaleCategory.XBOX
                 else None
             )
             for regional_price in item.prices:
-                calculated = regional_price.discounted_price
+                new_price = regional_price.discounted_price
                 if calculator_cls:
                     calculator = calculator_cls(regional_price.discounted_price)
-                    calculated = calculator.compute_for_region(regional_price.region)
+                    new_price = calculator.compute_for_region(regional_price.region)
                 converted_price = await self._currency_converter.convert_to_rub(
-                    calculated
+                    new_price
                 )
                 regional_price.discounted_price = converted_price
         await self._sales_repo.delete_all()

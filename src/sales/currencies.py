@@ -12,11 +12,11 @@ class CurrencyConverter:
     async def get_rub_exchange_rates(self) -> ExchangeRatesMappingDTO:
         res = await self._db.hgetall(self._key)
         return ExchangeRatesMappingDTO.model_validate(
-            {"rub/" + curr: rate for curr, rate in res.items()}
+            {"rub/" + curr.lower(): rate for curr, rate in res.items()}
         )
 
     async def set_rub_exchange_rate(self, dto: SetExchangeRateDTO):
-        await self._db.hset(self._key, dto.to, dto.value)
+        await self._db.hset(self._key, dto.to.lower(), dto.value)
 
     async def convert_to_rub(self, price: PriceUnit) -> PriceUnit:
         curr = price.currency_code.lower()

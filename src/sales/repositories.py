@@ -37,12 +37,13 @@ class SalesRepository:
         await asyncio.gather(*coros)
 
     async def create_many(self, sales: Sequence[ProductOnSaleDTO]):
-        coros = [
-            self._db.json().set(
+        async def coro(item, i):
+            print("CREATING", i)
+            await self._db.json().set(
                 self._prefix + str(item.id), "$", item.model_dump(exclude={"id"})
             )
-            for item in sales
-        ]
+
+        coros = [coro(item, i) for i, item in enumerate(sales)]
         res = await asyncio.gather(*coros)
         assert all(res)
 

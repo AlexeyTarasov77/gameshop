@@ -26,7 +26,7 @@ ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
 
 
 class SetExchangeRateDTO(BaseDTO):
-    from_: Currency = Field(default=Currency("RUB"))
+    from_: Currency = Field(default=Currency("RUB"), alias="from")
     to: Currency
     value: float
 

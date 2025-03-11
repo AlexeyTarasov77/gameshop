@@ -6,9 +6,8 @@ import asyncio
 import sys
 from pathlib import Path
 
-from gateways.db import RedisClient
-
 sys.path.append((Path() / "src").absolute().as_posix())
+from gateways.db import RedisClient
 from httpx import AsyncClient
 from core.ioc import Resolve
 from gamesparser import ParsedItem, PsnParser, XboxParser
@@ -48,14 +47,16 @@ def parsed_to_domain_model(
 async def load_parsed(
     psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
 ):
-    sales: list[ProductOnSale] = []
-    for product in psn_sales:
-        sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.PSN))
-    for product in xbox_sales:
-        sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.XBOX))
-    service = Resolve(SalesService)
-    await service.load_new_sales(sales)
-    await Resolve(RedisClient).aclose()  # type: ignore
+    try:
+        sales: list[ProductOnSale] = []
+        for product in psn_sales:
+            sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.PSN))
+        for product in xbox_sales:
+            sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.XBOX))
+        service = Resolve(SalesService)
+        await service.load_new_sales(sales)
+    finally:
+        await Resolve(RedisClient).aclose()  # type: ignore
 
 
 async def main():
