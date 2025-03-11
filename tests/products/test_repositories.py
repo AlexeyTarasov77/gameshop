@@ -4,7 +4,7 @@ from unittest.mock import Mock, NonCallableMock, create_autospec, patch
 import pytest
 from sqlalchemy import Select, inspect, not_, or_, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
+from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 
 from products.models import Product
 from products.repositories import ProductsRepository

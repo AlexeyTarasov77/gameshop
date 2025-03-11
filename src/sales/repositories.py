@@ -4,22 +4,21 @@ import time
 from collections.abc import AsyncGenerator, Sequence
 
 from redis.commands.search.query import Query
-from gateways.redis.main import indexes
 from uuid import UUID
-from redis.asyncio import Redis
 
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
+from gateways.db.redis_gateway import AvailableIndexes
+from gateways.db import RedisClient
 from sales.models import ProductOnSale
 from sales.schemas import ProductOnSaleDTO, SalesFilterDTO
-from sales import APP_LABEL
 
 
 class SalesRepository:
-    def __init__(self, redis: Redis):
+    def __init__(self, redis: RedisClient):
         self._db = redis
-        self._prefix = indexes[APP_LABEL].for_prefix
-        self._idx = indexes[APP_LABEL].name
+        self._prefix = AvailableIndexes.SALES_IDX.value.for_prefix
+        self._idx = AvailableIndexes.SALES_IDX.value.name
         self._key = "sales"
 
     async def _scan_keys(self, count: int = 100) -> AsyncGenerator[list[str]]:

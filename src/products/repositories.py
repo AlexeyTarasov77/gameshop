@@ -3,7 +3,7 @@ from datetime import datetime
 from collections.abc import Sequence
 from sqlalchemy import and_, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
-from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
+from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 
 from products.models import (
     Category,

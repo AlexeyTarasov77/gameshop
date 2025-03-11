@@ -13,13 +13,13 @@ from core.ioc import Resolve
 from core.router import router as core_router
 from faker import Faker
 from fastapi.testclient import TestClient
-from gateways.db.main import SqlAlchemyDatabase
+from gateways.db.main import SqlAlchemyClient
 from main import app_factory
 
 from config import Config
 
 cfg = Resolve(Config)
-db = Resolve(SqlAlchemyDatabase)
+db = Resolve(SqlAlchemyClient)
 client = TestClient(app_factory())
 client.base_url = URL(f"http://{cfg.server.host}:{cfg.server.port}{core_router.prefix}")
 fake = Faker()

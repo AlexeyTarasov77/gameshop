@@ -1,7 +1,6 @@
 import asyncio
 from logging import Logger
-from redis.asyncio import Redis
-
+from gateways.db import RedisClient, SqlAlchemyClient
 from sessions.sessions import SessionCreatorI, session_middleware
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve, cleanup_list
@@ -10,22 +9,22 @@ import uvicorn
 from core.router import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from gateways.db.main import SqlAlchemyDatabase
 from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger = Resolve(Logger)
-    db = Resolve(SqlAlchemyDatabase)
-    r = Resolve(Redis)
+    db = Resolve(SqlAlchemyClient)
+    redis_client = Resolve(RedisClient)
     logger.info("Pinging database...")
     done_tasks, _ = await asyncio.wait(
-        [asyncio.create_task(r.ping()), asyncio.create_task(db.ping())],
+        [asyncio.create_task(redis_client.ping()), asyncio.create_task(db.ping())],
         timeout=3,
     )
     [await task for task in done_tasks]
-    logger.info("Database is ready!")
+    await redis_client.setup()
+    logger.info("Gateways are ready to accept connections!")
     yield
     await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
 

@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from config import init_config
-from gateways.db.models import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from products.models import *
 from users.models import *
 from news.models import *

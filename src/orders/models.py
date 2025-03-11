@@ -4,10 +4,10 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
 from enum import Enum
 from sqlalchemy import CheckConstraint, ForeignKey, text
-from gateways.db.column_types import int_pk_type, created_at_type
+from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, relationship, mapped_column
-from gateways.db.models import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from payments.models import AvailablePaymentSystems
 from products.models import Product
 from users.models import User

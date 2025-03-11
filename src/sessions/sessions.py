@@ -1,11 +1,11 @@
 from datetime import timedelta
 from typing import Protocol
 from fastapi import Request, Response
-from redis.asyncio import Redis
 from secrets import token_urlsafe
 from starlette.middleware.base import DispatchFunction, RequestResponseEndpoint
 
 from gateways.db.exceptions import NotFoundError
+from gateways.db import RedisClient
 
 
 class SessionCreatorI(Protocol):
@@ -13,7 +13,7 @@ class SessionCreatorI(Protocol):
 
 
 class RedisSessionCreator:
-    def __init__(self, ttl: timedelta, storage: Redis):
+    def __init__(self, ttl: timedelta, storage: RedisClient):
         self.ttl = ttl
         self.storage = storage
         self.prefix = "sessions"
@@ -30,7 +30,7 @@ class RedisSessionCreator:
 
 
 class RedisSessionManager:
-    def __init__(self, db: Redis, session_key: str):
+    def __init__(self, db: RedisClient, session_key: str):
         self._db = db
         self._prefix = "sessions"
         self.session_key = session_key

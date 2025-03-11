@@ -1,5 +1,5 @@
 from core.utils import UnspecifiedType
-from gateways.db.repository import PaginationRepository
+from gateways.db.sqlalchemy_gateway import PaginationRepository
 from news.models import News
 from news.schemas import UpdateNewsDTO, CreateNewsDTO
 

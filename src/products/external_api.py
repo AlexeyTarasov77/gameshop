@@ -1,14 +1,14 @@
 import json
 from hashlib import md5
 from httpx import AsyncClient
-from redis.asyncio import Redis
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
+from gateways.db import RedisClient
 from products.schemas import ProductFromAPIDTO
 
 
 class GamesForFarmAPIClient:
-    def __init__(self, client: AsyncClient, redis: Redis) -> None:
+    def __init__(self, client: AsyncClient, redis: RedisClient) -> None:
         self._url = "https://gamesforfarm.com/api?key=GamesInStock_Gamesforfarm"
         self._client = client
         self._cache = redis

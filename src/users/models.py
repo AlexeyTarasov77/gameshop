@@ -2,8 +2,8 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
-from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
-from gateways.db.models import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from sqlalchemy.dialects.postgresql import BYTEA, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

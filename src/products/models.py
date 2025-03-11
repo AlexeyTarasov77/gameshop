@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
-from gateways.db.column_types import created_at_type, int_pk_type, updated_at_type
-from gateways.db.models import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from sqlalchemy import ForeignKey, UniqueConstraint, text
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship

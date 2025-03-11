@@ -5,7 +5,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 
-class SqlAlchemyDatabase:
+class SqlAlchemyClient:
     async def ping(self) -> None:
         try:
             async with self._engine.begin() as conn:

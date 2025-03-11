@@ -3,7 +3,7 @@ import asyncio
 from collections.abc import Mapping, Sequence
 from logging import Logger
 
-from redis.asyncio import Redis
+from gateways.db import RedisClient
 from sessions.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
@@ -14,7 +14,7 @@ from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
 class AbstractManagerFactory[T](ABC):
-    def __init__(self, db: Redis):
+    def __init__(self, db: RedisClient):
         self._db = db
 
     @abstractmethod
@@ -39,7 +39,7 @@ class WishlistManagerFactory(AbstractManagerFactory[WishlistManagerI]):
 
 
 class SessionCopier:
-    def __init__(self, db: Redis, logger: Logger):
+    def __init__(self, db: RedisClient, logger: Logger):
         self._db = db
         self._logger = logger
 
@@ -72,14 +72,14 @@ class SessionCopier:
 
 
 class _BaseUserManager:
-    def __init__(self, db: Redis, user_id: int, key_ending: str):
+    def __init__(self, db: RedisClient, user_id: int, key_ending: str):
         self._user_id = user_id
         self._db = db
         self._key = f"users:{user_id}:{key_ending}"
 
 
 class UserCartManager(_BaseUserManager):
-    def __init__(self, db: Redis, user_id: int):
+    def __init__(self, db: RedisClient, user_id: int):
         super().__init__(db, user_id, "cart")
 
     async def load(self, data: Mapping[int, int]):
@@ -156,7 +156,7 @@ class CartSessionManager(RedisSessionManager):
 
 
 class UserWishlistManager(_BaseUserManager):
-    def __init__(self, db: Redis, user_id: int):
+    def __init__(self, db: RedisClient, user_id: int):
         super().__init__(db, user_id, "wishlist")
 
     async def load(self, product_ids: Sequence[int]):

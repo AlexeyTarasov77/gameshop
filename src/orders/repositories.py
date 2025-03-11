@@ -4,7 +4,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import PaginationRepository, SqlAlchemyRepository
+from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 from orders.models import Order, OrderItem, OrderStatus
 from orders.schemas import (
     CreateOrderDTO,

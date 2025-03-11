@@ -4,8 +4,8 @@ from decimal import Decimal
 from typing import Any
 import random
 import asyncio
-from gateways.db.main import SqlAlchemyDatabase
-from gateways.db.models import SqlAlchemyBaseModel
+from gateways.db import SqlAlchemyClient
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from faker import Faker
 from news.models import News
 from products.models import Category, Platform, Product, DeliveryMethod
@@ -18,7 +18,7 @@ import os
 fake = Faker()
 default_dsn = "postgresql+psycopg://postgres:postgres@localhost:5432/gameshop"
 dsn = os.environ.get("DB_DSN") or default_dsn
-db = SqlAlchemyDatabase(dsn, PostgresExceptionsMapper)
+db = SqlAlchemyClient(dsn, PostgresExceptionsMapper)
 
 
 def _call_optional(func: Callable[..., Any]):

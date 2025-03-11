@@ -1,11 +1,11 @@
-from redis.asyncio import Redis
 from sales.schemas import ExchangeRatesMappingDTO
+from gateways.db import RedisClient
 from sales.models import PriceUnit
 from sales.schemas import SetExchangeRateDTO
 
 
 class CurrencyConverter:
-    def __init__(self, redis: Redis) -> None:
+    def __init__(self, redis: RedisClient) -> None:
         self._db = redis
         self._key = "rub_exchange_rates"
 

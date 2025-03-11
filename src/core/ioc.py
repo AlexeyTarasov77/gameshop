@@ -6,7 +6,6 @@ from functools import lru_cache
 from httpx import AsyncClient
 import punq
 from fastapi import Depends
-from redis.asyncio import Redis
 from mailing.domain.services import MailingService
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
@@ -36,8 +35,7 @@ from core.exception_mappers import (
     PostgresExceptionsMapper,
 )
 from sessions.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
-from gateways.db.main import SqlAlchemyDatabase
-from gateways.redis.main import init_redis_client
+from gateways.db import SqlAlchemyClient, RedisClient
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
 from products.domain.services import ProductsService
@@ -80,17 +78,17 @@ def _init_container() -> punq.Container:
     )
     FRONTEND_DOMAIN = "http://localhost:3000" if cfg.debug else "https://gamebazaar.ru"
     container.register("FRONTEND_DOMAIN", instance=FRONTEND_DOMAIN)
-    redis = init_redis_client(str(cfg.redis_dsn))
+    redis_client = RedisClient.from_url(str(cfg.redis_dsn))
     httpx_client = AsyncClient()
-    register_for_cleanup(redis)  # type: ignore
+    register_for_cleanup(redis_client)  # type: ignore
     register_for_cleanup(httpx_client)
     container.register(Logger, instance=logger)
     container.register(AsyncClient, instance=httpx_client)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
     container.register(RedisSessionManager, RedisSessionManager)
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
-    container.register(Redis, instance=redis)
-    db = SqlAlchemyDatabase(
+    container.register(RedisClient, instance=redis_client)
+    db = SqlAlchemyClient(
         str(cfg.pg_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
@@ -105,7 +103,7 @@ def _init_container() -> punq.Container:
     )
     container.register(StatefullTokenProviderI, SecureTokenProvider)
     container.register(MailingService, MailingService, **cfg.smtp.model_dump())
-    container.register(SqlAlchemyDatabase, instance=db)
+    container.register(SqlAlchemyClient, instance=db)
     container.register(Config, instance=cfg)
     container.register(
         AbstractUnitOfWork,
@@ -133,7 +131,9 @@ def _init_container() -> punq.Container:
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(SessionsService)
-    container.register(SalesService, SalesService, sales_repo=SalesRepository(redis))
+    container.register(
+        SalesService, SalesService, sales_repo=SalesRepository(redis_client)
+    )
     container.register(
         PaymentsService,
         PaymentsService,

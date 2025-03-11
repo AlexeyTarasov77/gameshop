@@ -1,7 +1,7 @@
 from sqlalchemy import select, update
 from core.utils import UnspecifiedType
 from gateways.db.exceptions import NotFoundError
-from gateways.db.repository import SqlAlchemyRepository
+from gateways.db.sqlalchemy_gateway import SqlAlchemyRepository
 from users.schemas import CreateUserDTO
 from users.models import Admin, Token, TokenScopes, User
 

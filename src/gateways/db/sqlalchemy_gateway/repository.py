@@ -5,7 +5,7 @@ from typing import Sequence
 
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import DatabaseError, NotFoundError
-from gateways.db.models import SqlAlchemyBaseModel
+from .models import SqlAlchemyBaseModel
 from sqlalchemy import CursorResult, Row, delete, insert, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
