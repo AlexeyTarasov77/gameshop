@@ -63,25 +63,27 @@ async def main():
     logger = Resolve(Logger)
     client = Resolve(AsyncClient)
     try:
-        limit = int(sys.argv[1])
-    except Exception:
-        limit = None
-    logger.info("Start parsing up to %s sales...", limit)
-    psn_parser = PsnParser([el.value for el in PSN_PARSE_REGIONS], client, limit)
-    xbox_parser = XboxParser([el.value for el in XBOX_PARSE_REGIONS], client, limit)
-    t1 = time.perf_counter()
-    psn_sales, xbox_sales = await asyncio.gather(
-        psn_parser.parse(), xbox_parser.parse()
-    )
-    logger.info(
-        "%s sales succesfully parsed, which took: %s seconds",
-        len(psn_sales) + len(xbox_sales),
-        round(time.perf_counter() - t1, 1),
-    )
-    logger.info("Loading sales to db...")
-    await load_parsed(psn_sales, xbox_sales)
-    logger.info("Sales succesfully loaded")
-    await client.aclose()
+        try:
+            limit = int(sys.argv[1])
+        except Exception:
+            limit = None
+        logger.info("Start parsing up to %s sales...", limit)
+        psn_parser = PsnParser([el.value for el in PSN_PARSE_REGIONS], client, limit)
+        xbox_parser = XboxParser([el.value for el in XBOX_PARSE_REGIONS], client, limit)
+        t1 = time.perf_counter()
+        psn_sales, xbox_sales = await asyncio.gather(
+            psn_parser.parse(), xbox_parser.parse()
+        )
+        logger.info(
+            "%s sales succesfully parsed, which took: %s seconds",
+            len(psn_sales) + len(xbox_sales),
+            round(time.perf_counter() - t1, 1),
+        )
+        logger.info("Loading sales to db...")
+        await load_parsed(psn_sales, xbox_sales)
+        logger.info("Sales succesfully loaded")
+    finally:
+        await client.aclose()
 
 
 if __name__ == "__main__":

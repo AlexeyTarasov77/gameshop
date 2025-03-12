@@ -98,7 +98,7 @@ def _is_valid_url(s: str) -> bool:
 
 
 def float_ser_wrap(v: float, nxt: SerializerFunctionWrapHandler) -> str:
-    return str(nxt(round(v, 2)))
+    return str(nxt(round(v)))
 
 
 def check_currency(v: str) -> str:

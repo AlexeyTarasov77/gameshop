@@ -1,4 +1,5 @@
 import asyncio
+import resource
 import json
 import time
 from collections.abc import AsyncGenerator, Sequence
@@ -20,6 +21,10 @@ class SalesRepository:
         self._prefix = AvailableIndexes.SALES_IDX.value.for_prefix
         self._idx = AvailableIndexes.SALES_IDX.value.name
         self._key = "sales"
+        _, max_concurrent_cons = resource.getrlimit(resource.RLIMIT_NOFILE)
+        resource.setrlimit(
+            resource.RLIMIT_NOFILE, (max_concurrent_cons, max_concurrent_cons)
+        )
 
     async def _scan_keys(self, count: int = 100) -> AsyncGenerator[list[str]]:
         cur: int | None = None
@@ -37,13 +42,12 @@ class SalesRepository:
         await asyncio.gather(*coros)
 
     async def create_many(self, sales: Sequence[ProductOnSaleDTO]):
-        async def coro(item, i):
-            print("CREATING", i)
-            await self._db.json().set(
+        coros = [
+            self._db.json().set(
                 self._prefix + str(item.id), "$", item.model_dump(exclude={"id"})
             )
-
-        coros = [coro(item, i) for i, item in enumerate(sales)]
+            for item in sales
+        ]
         res = await asyncio.gather(*coros)
         assert all(res)
 
