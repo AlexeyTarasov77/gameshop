@@ -10,7 +10,7 @@ from mailing.domain.services import MailingService
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
-from products.domain.interfaces import SteamAPIClientI, CurrencyConverterI
+from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
 from products.integrations.steam_api import GamesForFarmAPIClient
 from products.currencies import CurrencyConverter
 from sales.steam_api import NSGiftsSteamAPIClient
@@ -128,9 +128,6 @@ def _init_container() -> punq.Container:
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(SessionsService)
-    # container.register(
-    #     SalesService, SalesService, sales_repo=SalesRepository(redis_client)
-    # )
     container.register(
         PaymentsService,
         PaymentsService,
@@ -144,7 +141,7 @@ def _init_container() -> punq.Container:
         scope=punq.Scope.singleton,
     )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
-    container.register(SteamAPIClientI, GamesForFarmAPIClient)
+    container.register(GamesForFarmAPIClient, GamesForFarmAPIClient)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )

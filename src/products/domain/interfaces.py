@@ -4,10 +4,7 @@ import typing as t
 
 from core.pagination import PaginationParams, PaginationResT
 from products.models import (
-    Category,
-    Platform,
     Product,
-    DeliveryMethod,
     ProductCategory,
 )
 from products.schemas import (
@@ -15,24 +12,19 @@ from products.schemas import (
     ExchangeRatesMappingDTO,
     ListProductsFilterDTO,
     PriceUnitDTO,
-    ProductFromAPIDTO,
     UpdateProductDTO,
 )
 from sales.schemas import SetExchangeRateDTO
-
-
-class SteamAPIClientI(t.Protocol):
-    async def get_paginated_products(
-        self, pagination_params: PaginationParams
-    ) -> PaginationResT[ProductFromAPIDTO]: ...
-
-    async def get_product_by_id(self, product_id: int) -> ProductFromAPIDTO: ...
 
 
 class CurrencyConverterI(t.Protocol):
     async def convert_to_rub(self, price: PriceUnitDTO) -> Decimal: ...
     async def set_exchange_rate(self, dto: SetExchangeRateDTO): ...
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO: ...
+
+
+class SteamAPIClientI(t.Protocol):
+    async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
 
 
 class ProductsRepositoryI(t.Protocol):
@@ -61,15 +53,3 @@ class ProductsRepositoryI(t.Protocol):
     async def save_many(self, products: Sequence[Product]): ...
 
     async def delete_for_categories(self, categories: Sequence[ProductCategory]): ...
-
-
-class PlatformsRepositoryI(t.Protocol):
-    async def list(self) -> Sequence[Platform]: ...
-
-
-class CategoriesRepositoryI(t.Protocol):
-    async def list(self) -> Sequence[Category]: ...
-
-
-class DeliveryMethodsRepositoryI(t.Protocol):
-    async def list(self) -> Sequence[DeliveryMethod]: ...

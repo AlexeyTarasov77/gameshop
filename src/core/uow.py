@@ -15,18 +15,8 @@ from orders.domain.interfaces import (
     OrdersRepositoryI,
 )
 from orders.repositories import OrderItemsRepository, OrdersRepository
-from products.domain.interfaces import (
-    DeliveryMethodsRepositoryI,
-    PlatformsRepositoryI,
-    CategoriesRepositoryI,
-    ProductsRepositoryI,
-)
-from products.repositories import (
-    CategoriesRepository,
-    DeliveryMethodsRepository,
-    PlatformsRepository,
-    ProductsRepository,
-)
+from products.domain.interfaces import ProductsRepositoryI
+from products.repositories import ProductsRepository
 from users.domain.interfaces import (
     AdminsRepositoryI,
     TokensRepositoryI,
@@ -45,9 +35,6 @@ class AbstractUnitOfWork[S](abc.ABC):
     news_repo: NewsRepositoryI
     products_repo: ProductsRepositoryI
     admins_repo: AdminsRepositoryI
-    delivery_methods_repo: DeliveryMethodsRepositoryI
-    platforms_repo: PlatformsRepositoryI
-    categories_repo: CategoriesRepositoryI
     users_repo: UsersRepositoryI
     tokens_repo: TokensRepositoryI
     orders_repo: OrdersRepositoryI
@@ -105,9 +92,6 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self.admins_repo = self._register_repo(AdminsRepository)
         self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
-        self.platforms_repo = self._register_repo(PlatformsRepository)
-        self.categories_repo = self._register_repo(CategoriesRepository)
-        self.delivery_methods_repo = self._register_repo(DeliveryMethodsRepository)
         self.products_repo = self._register_repo(ProductsRepository)
         self.orders_repo = self._register_repo(OrdersRepository)
         self.order_items_repo = self._register_repo(OrderItemsRepository)
@@ -130,13 +114,11 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
                 await super().__aexit__(exc_type, exc_value, _)
                 self._handle_exc(exc_value)
 
-            self.logger.debug("commiting")
             await self.commit()
         except SQLAlchemyError as e:
             self.logger.error("Exception during commiting/rollbacking trx", exc_info=e)
             self._handle_exc(e)
         finally:
-            self.logger.debug("closing session")
             await self._session.close()
 
     async def commit(self) -> None:

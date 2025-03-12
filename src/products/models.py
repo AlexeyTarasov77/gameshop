@@ -6,7 +6,6 @@ from sqlalchemy.dialects.postgresql import ENUM
 from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enum import auto
@@ -17,6 +16,7 @@ from core.utils import CIEnum
 class ProductPlatform(CIEnum):
     XBOX = auto()
     PSN = auto()
+    STEAM = auto()
 
 
 class ProductCategory(CIEnum):
@@ -47,15 +47,15 @@ class XboxParseRegions(CIEnum):
 
     # @discounted_price.setter
     # def discounted_price(self, new_value: float | PriceUnit):
-    #     discount = (self.base_price - self.discounted_price).value // (
-    #         self.base_price / 100
-    #     ).value
-    #     recalculated_base_price = (new_value * 100) / (100 - discount)
-    #     self.base_price = recalculated_base_price
-    #     if isinstance(new_value, PriceUnit):
-    #         self._discounted_price = new_value
-    #     else:
-    #         self._discounted_price.value = new_value
+    # discount = (self.base_price - self.discounted_price).value // (
+    #     self.base_price / 100
+    # ).value
+    # recalculated_base_price = (new_value * 100) / (100 - discount)
+    # self.base_price = recalculated_base_price
+    # if isinstance(new_value, PriceUnit):
+    #     self._discounted_price = new_value
+    # else:
+    #     self._discounted_price.value = new_value
     #
 
 
@@ -65,24 +65,6 @@ class Product(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str] = mapped_column(server_default="")
-    # category_id: Mapped[int] = mapped_column(
-    #     ForeignKey("category.id", ondelete="CASCADE")
-    # )
-    # platform_id: Mapped[int] = mapped_column(
-    #     ForeignKey("platform.id", ondelete="CASCADE")
-    # )
-    # delivery_method_id: Mapped[int] = mapped_column(
-    #     ForeignKey("delivery_method.id", ondelete="CASCADE")
-    # )
-    # category: Mapped["Category"] = relationship(
-    #     back_populates="products", lazy="joined"
-    # )
-    # platform: Mapped["Platform"] = relationship(
-    #     back_populates="products", lazy="joined"
-    # )
-    # delivery_method: Mapped["DeliveryMethod"] = relationship(
-    #     back_populates="products", lazy="joined"
-    # )
     category: Mapped[ProductCategory] = mapped_column(ENUM(ProductCategory))
     delivery_method: Mapped[ProductDeliveryMethod] = mapped_column(
         ENUM(ProductDeliveryMethod)
@@ -110,6 +92,9 @@ class Product(SqlAlchemyBaseModel):
 
 
 class RegionalPrice(SqlAlchemyBaseModel):
+    __allow_unmapped__ = True
+    discounted_price: Decimal  # calculated dynamically from base_price and discount
+
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="CASCADE"), primary_key=True
     )
@@ -128,22 +113,6 @@ class RegionalPrice(SqlAlchemyBaseModel):
         )
         return total.quantize(Decimal("0.01"), ROUND_HALF_UP)
 
-
-class BaseRefModel(SqlAlchemyBaseModel):
-    __abstract__ = True
-    id: Mapped[int_pk_type]
-    name: Mapped[str]
-    url: Mapped[str] = mapped_column(unique=True)
-
-    # @declared_attr
-    # def products(self):
-    #     return relationship(Product, back_populates=self.__tablename__)
-
-
-class Category(BaseRefModel): ...
-
-
-class Platform(BaseRefModel): ...
-
-
-class DeliveryMethod(BaseRefModel): ...
+    def calc_discounted_price(self, discount: int):
+        self.discounted_price = self.base_price - self.base_price / 100 * discount
+        return self.discounted_price

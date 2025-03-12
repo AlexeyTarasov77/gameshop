@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import typing as t
 
 from core.ioc import Inject
@@ -25,23 +26,6 @@ async def list_products(
         pagination_params,
     )
     return PaginatedResponse.new_response(products, total_records, pagination_params)
-
-
-@router.get("/external")
-async def list_product_from_api(
-    pagination_params: PaginationDep, products_service: ProductsServiceDep
-):
-    products, total_records = await products_service.list_products_from_api(
-        pagination_params,
-    )
-    return PaginatedResponse.new_response(products, total_records, pagination_params)
-
-
-@router.get("/external/{product_id}")
-async def get_product_from_api(
-    product_id: EntityIDParam, products_service: ProductsServiceDep
-) -> schemas.ProductFromAPIDTO:
-    return await products_service.get_product_from_api(int(product_id))
 
 
 @router.get("/detail/{product_id}")
@@ -97,19 +81,19 @@ async def delete_product(
 @router.get("/platforms")
 async def platforms_list(
     products_service: ProductsServiceDep,
-) -> list[schemas.PlatformDTO]:
+) -> Sequence[schemas.PlatformDTO]:
     return await products_service.platforms_list()
 
 
 @router.get("/categories")
 async def categories_list(
     products_service: ProductsServiceDep,
-) -> list[schemas.CategoryDTO]:
+) -> Sequence[schemas.CategoryDTO]:
     return await products_service.categories_list()
 
 
 @router.get("/delivery-methods")
 async def delivery_methods_list(
     products_service: ProductsServiceDep,
-) -> list[schemas.DeliveryMethodDTO]:
+) -> Sequence[schemas.DeliveryMethodDTO]:
     return await products_service.delivery_methods_list()

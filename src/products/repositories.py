@@ -3,13 +3,10 @@ from datetime import datetime
 from collections.abc import Sequence
 from sqlalchemy import and_, delete, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
-from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
+from gateways.db.sqlalchemy_gateway import PaginationRepository
 
 from products.models import (
-    Category,
-    Platform,
     Product,
-    DeliveryMethod,
     ProductCategory,
 )
 from products.schemas import (
@@ -111,15 +108,3 @@ class ProductsRepository(PaginationRepository[Product]):
     async def delete_for_categories(self, categories: Sequence[ProductCategory]):
         stmt = delete(Product).where(Product.category.in_(categories))
         await self._session.execute(stmt)
-
-
-class PlatformsRepository(SqlAlchemyRepository[Platform]):
-    model = Platform
-
-
-class CategoriesRepository(SqlAlchemyRepository[Category]):
-    model = Category
-
-
-class DeliveryMethodsRepository(SqlAlchemyRepository[DeliveryMethod]):
-    model = DeliveryMethod

@@ -16,7 +16,7 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import SteamAPIClientI, CurrencyConverterI
+from products.domain.interfaces import CurrencyConverterI
 from products.models import (
     Product,
     ProductCategory,
@@ -27,14 +27,14 @@ from products.models import (
 )
 from products.schemas import (
     CategoryDTO,
-    ProductForLoadDTO,
-    ProductFromAPIDTO,
     DeliveryMethodDTO,
     CreateProductDTO,
     ListProductsFilterDTO,
     PlatformDTO,
+    SalesDTO,
     ShowProduct,
     ShowProductWithRelations,
+    SteamItemDTO,
     UpdateProductDTO,
 )
 
@@ -140,14 +140,12 @@ class ProductsService(BaseService):
         self,
         uow: AbstractUnitOfWork,
         logger: Logger,
-        steam_api: SteamAPIClientI,
         currency_converter: CurrencyConverterI,
     ) -> None:
         super().__init__(uow, logger)
-        self._api_client = steam_api
         self._currency_converter = currency_converter
 
-    async def load_new_sales(self, products: Sequence[ProductForLoadDTO]):
+    async def load_new_sales(self, products: Sequence[SalesDTO]):
         products_for_save: list[Product] = []
         for item in products:
             calculated_prices: list[RegionalPrice] = []
@@ -190,6 +188,20 @@ class ProductsService(BaseService):
             )
             await uow.products_repo.save_many(products_for_save)
 
+    async def load_new_steam_items(self, items: Sequence[SteamItemDTO]):
+        products_for_save = [
+            Product(
+                **item.model_dump(),
+                categor=ProductCategory.STEAM_KEYS,
+                delivery_method=ProductDeliveryMethod.KEY,
+                platform=ProductPlatform.STEAM,
+            )
+            for item in items
+        ]
+        async with self._uow as uow:
+            await uow.products_repo.delete_for_categories([ProductCategory.STEAM_KEYS])
+            await uow.products_repo.save_many(products_for_save)
+
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         try:
             async with self._uow as uow:
@@ -209,7 +221,7 @@ class ProductsService(BaseService):
         self,
         dto: ListProductsFilterDTO,
         pagination_params: PaginationParams,
-    ) -> tuple[list[ShowProductWithRelations], int]:
+    ) -> PaginationResT[ShowProductWithRelations]:
         async with self._uow as uow:
             (
                 products,
@@ -218,20 +230,14 @@ class ProductsService(BaseService):
                 dto,
                 pagination_params,
             )
-        return [
-            ShowProductWithRelations.model_validate(product) for product in products
-        ], total_records
-
-    async def list_products_from_api(
-        self, pagination_params: PaginationParams
-    ) -> PaginationResT[ProductFromAPIDTO]:
-        return await self._api_client.get_paginated_products(pagination_params)
-
-    async def get_product_from_api(self, product_id: int) -> ProductFromAPIDTO:
-        try:
-            return await self._api_client.get_product_by_id(product_id)
-        except NotFoundError:
-            raise EntityNotFoundError(self.entity_name, id=product_id)
+        dtos: list[ShowProductWithRelations] = []
+        for product in products:
+            [
+                regional_price.calc_discounted_price(product.discount)
+                for regional_price in product.prices
+            ]
+            dtos.append(ShowProductWithRelations.model_validate(product))
+        return dtos, total_records
 
     async def get_product(self, product_id: int) -> ShowProductWithRelations:
         try:
@@ -241,20 +247,17 @@ class ProductsService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProductWithRelations.model_validate(product)
 
-    async def platforms_list(self) -> list[PlatformDTO]:
-        async with self._uow as uow:
-            platforms = await uow.platforms_repo.list()
-        return [PlatformDTO.model_validate(platform) for platform in platforms]
+    async def platforms_list(self) -> Sequence[PlatformDTO]:
+        return [PlatformDTO(name=platform) for platform in ProductPlatform]
 
-    async def categories_list(self) -> list[CategoryDTO]:
-        async with self._uow as uow:
-            categories = await uow.categories_repo.list()
-        return [CategoryDTO.model_validate(category) for category in categories]
+    async def categories_list(self) -> Sequence[CategoryDTO]:
+        return [CategoryDTO(name=category) for category in ProductCategory]
 
-    async def delivery_methods_list(self) -> list[DeliveryMethodDTO]:
-        async with self._uow as uow:
-            delivery_methods = await uow.delivery_methods_repo.list()
-        return [DeliveryMethodDTO.model_validate(method) for method in delivery_methods]
+    async def delivery_methods_list(self) -> Sequence[DeliveryMethodDTO]:
+        return [
+            DeliveryMethodDTO(name=delivery_method)
+            for delivery_method in ProductDeliveryMethod
+        ]
 
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO

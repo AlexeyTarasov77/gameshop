@@ -4,17 +4,13 @@ from logging import Logger
 import time
 import asyncio
 import sys
-from pathlib import Path
 
-sys.path.append((Path() / "src").absolute().as_posix())
+from products.schemas import SalesDTO
 
 from products.domain.services import ProductsService
 from products.models import ProductPlatform
-from products.schemas import ProductForLoadDTO
 
-from gateways.db import RedisClient
 from httpx import AsyncClient
-from core.ioc import Resolve
 from gamesparser import ParsedItem, PsnParser, XboxParser
 
 from sales.models import (
@@ -23,57 +19,57 @@ from sales.models import (
 )
 
 
-def parsed_to_dto(product: ParsedItem, platform: ProductPlatform) -> ProductForLoadDTO:
-    return ProductForLoadDTO.model_validate(
-        {
-            **asdict(product),
-            "platform": platform,
-            "prices": {k: v.base_price for k, v in product.prices.items()},
-        }
-    )
+class SalesParser:
+    def __init__(
+        self, logger: Logger, client: AsyncClient, products_service: ProductsService
+    ):
+        self._logger = logger
+        self._client = client
+        self._service = products_service
 
+    def parsed_to_dto(self, product: ParsedItem, platform: ProductPlatform) -> SalesDTO:
+        return SalesDTO.model_validate(
+            {
+                **asdict(product),
+                "platform": platform,
+                "prices": {k: v.base_price for k, v in product.prices.items()},
+            }
+        )
 
-async def load_parsed(
-    psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
-):
-    try:
-        sales: list[ProductForLoadDTO] = []
+    async def load_parsed(
+        self, psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
+    ):
+        sales: list[SalesDTO] = []
         for product in psn_sales:
-            sales.append(parsed_to_dto(product, ProductPlatform.PSN))
+            sales.append(self.parsed_to_dto(product, ProductPlatform.PSN))
         for product in xbox_sales:
-            sales.append(parsed_to_dto(product, ProductPlatform.XBOX))
-        service = Resolve(ProductsService)
-        await service.load_new_sales(sales)
-    finally:
-        await Resolve(RedisClient).aclose()  # type: ignore
+            sales.append(self.parsed_to_dto(product, ProductPlatform.XBOX))
+        await self._service.load_new_sales(sales)
 
-
-async def main():
-    logger = Resolve(Logger)
-    client = Resolve(AsyncClient)
-    try:
+    async def parse_and_save(self, limit: int | None):
         try:
             limit = int(sys.argv[1])
         except Exception:
             limit = None
-        logger.info("Start parsing up to %s sales...", limit)
-        psn_parser = PsnParser([el.value for el in PsnParseRegions], client, limit)
-        xbox_parser = XboxParser([el.value for el in XboxParseRegions], client, limit)
+        self._logger.info(
+            "Start parsing%ssales..."
+            % (f" up to {limit} " if limit is not None else " ")
+        )
+        psn_parser = PsnParser(
+            [el.value for el in PsnParseRegions], self._client, limit
+        )
+        xbox_parser = XboxParser(
+            [el.value for el in XboxParseRegions], self._client, limit
+        )
         t1 = time.perf_counter()
         psn_sales, xbox_sales = await asyncio.gather(
             psn_parser.parse(), xbox_parser.parse()
         )
-        logger.info(
+        self._logger.info(
             "%s sales succesfully parsed, which took: %s seconds",
             len(psn_sales) + len(xbox_sales),
             round(time.perf_counter() - t1, 1),
         )
-        logger.info("Loading sales to db...")
-        await load_parsed(psn_sales, xbox_sales)
-        logger.info("Sales succesfully loaded")
-    finally:
-        await client.aclose()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        self._logger.info("Loading sales to db...")
+        await self.load_parsed(psn_sales, xbox_sales)
+        self._logger.info("Sales succesfully loaded")
