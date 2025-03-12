@@ -165,8 +165,8 @@ class TestProductsRepo:
             if discounted is not None:
                 base_cond = and_(
                     or_(
-                        Product.discount_valid_to.is_(None),
-                        Product.discount_valid_to >= datetime.now(),
+                        Product.deal_until.is_(None),
+                        Product.deal_until >= datetime.now(),
                     ),
                     Product.discount > 0,
                 )

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, replace
-from typing import Any, Self
+from typing import Self
 from uuid import UUID, uuid4
 from enum import auto
 from gamesparser.models import Price as ParsedPrice, ParsedItem
@@ -7,12 +7,12 @@ from gamesparser.models import Price as ParsedPrice, ParsedItem
 from core.utils import CIEnum
 
 
-class PSN_PARSE_REGIONS(CIEnum):
+class PsnParseRegions(CIEnum):
     UA = auto()
     TR = auto()
 
 
-class XBOX_PARSE_REGIONS(CIEnum):
+class XboxParseRegions(CIEnum):
     US = auto()
     AR = auto()
     TR = auto()
@@ -123,8 +123,3 @@ class ProductOnSale(ParsedItem):
     id: UUID = field(default_factory=uuid4)
     prices: list[RegionalPrice]  # type: ignore
     category: ProductOnSaleCategory
-
-    def as_json_serializable(self) -> dict[str, Any]:
-        res = super().as_json_serializable()
-        res["id"] = str(res["id"])
-        return res

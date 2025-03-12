@@ -51,6 +51,14 @@ class RedisClient(Redis):
             ),
         )
 
+    @classmethod
+    def from_url(
+        cls,
+        url: str,
+        **kwargs,
+    ) -> Redis:
+        return super().from_url(url, decode_responses=True, **kwargs)
+
     def json(self, encoder=RedisJSONEncoder(), decoder=JSONDecoder()) -> JSON:
         return super().json(encoder, decoder)
 

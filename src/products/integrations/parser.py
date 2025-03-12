@@ -7,40 +7,29 @@ import sys
 from pathlib import Path
 
 sys.path.append((Path() / "src").absolute().as_posix())
+
+from products.domain.services import ProductsService
+from products.models import ProductPlatform
+from products.schemas import ProductForLoadDTO
+
 from gateways.db import RedisClient
 from httpx import AsyncClient
 from core.ioc import Resolve
 from gamesparser import ParsedItem, PsnParser, XboxParser
 
-from sales.domain.services import SalesService
 from sales.models import (
     PsnParseRegions,
     XboxParseRegions,
-    RegionalPrice,
-    PriceUnit,
-    ProductOnSale,
-    ProductOnSaleCategory,
 )
 
 
-def parsed_to_domain_model(
-    item: ParsedItem, category: ProductOnSaleCategory
-) -> ProductOnSale:
-    casted_prices = []
-    for region, price in item.prices.items():
-        casted_prices.append(
-            RegionalPrice(
-                region,
-                PriceUnit(**asdict(price.base_price)),
-                PriceUnit(**asdict(price.discounted_price)),
-            )
-        )
-    item_dict = asdict(item)
-    item_dict.pop("prices")
-    return ProductOnSale(
-        **item_dict,
-        category=category,
-        prices=casted_prices,
+def parsed_to_dto(product: ParsedItem, platform: ProductPlatform) -> ProductForLoadDTO:
+    return ProductForLoadDTO.model_validate(
+        {
+            **asdict(product),
+            "platform": platform,
+            "prices": {k: v.base_price for k, v in product.prices.items()},
+        }
     )
 
 
@@ -48,12 +37,12 @@ async def load_parsed(
     psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
 ):
     try:
-        sales: list[ProductOnSale] = []
+        sales: list[ProductForLoadDTO] = []
         for product in psn_sales:
-            sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.PSN))
+            sales.append(parsed_to_dto(product, ProductPlatform.PSN))
         for product in xbox_sales:
-            sales.append(parsed_to_domain_model(product, ProductOnSaleCategory.XBOX))
-        service = Resolve(SalesService)
+            sales.append(parsed_to_dto(product, ProductPlatform.XBOX))
+        service = Resolve(ProductsService)
         await service.load_new_sales(sales)
     finally:
         await Resolve(RedisClient).aclose()  # type: ignore

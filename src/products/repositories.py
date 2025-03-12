@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from collections.abc import Sequence
-from sqlalchemy import and_, desc, not_, or_, select
+from sqlalchemy import and_, delete, desc, not_, or_, select
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 
@@ -10,6 +10,7 @@ from products.models import (
     Platform,
     Product,
     DeliveryMethod,
+    ProductCategory,
 )
 from products.schemas import (
     CreateProductDTO,
@@ -38,8 +39,8 @@ class ProductsRepository(PaginationRepository[Product]):
         if dto.discounted is not None:
             base_cond = and_(
                 or_(
-                    self.model.discount_valid_to.is_(None),
-                    self.model.discount_valid_to >= datetime.now(),
+                    self.model.deal_until.is_(None),
+                    self.model.deal_until >= datetime.now(),
                 ),
                 self.model.discount > 0,
             )
@@ -102,6 +103,14 @@ class ProductsRepository(PaginationRepository[Product]):
         stmt = select(Product.id).filter_by(id=product_id, in_stock=True)
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
+
+    async def save_many(self, products: Sequence[Product]):
+        self._session.add_all(products)
+        await self._session.flush()
+
+    async def delete_for_categories(self, categories: Sequence[ProductCategory]):
+        stmt = delete(Product).where(Product.category.in_(categories))
+        await self._session.execute(stmt)
 
 
 class PlatformsRepository(SqlAlchemyRepository[Platform]):

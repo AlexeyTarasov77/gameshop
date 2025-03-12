@@ -14,7 +14,7 @@ from sales.domain.interfaces import (
     SteamAPIClientI,
 )
 from sales.models import (
-    XBOX_PARSE_REGIONS,
+    XboxParseRegions,
     PriceUnit,
     ProductOnSale,
     ProductOnSaleCategory,
@@ -114,11 +114,11 @@ class XboxPriceCalculator(AbstractPriceCalculator):
 
     def compute_for_region(self, region_code: str) -> PriceUnit:
         match region_code.lower():
-            case XBOX_PARSE_REGIONS.US:
+            case XboxParseRegions.US:
                 return self._compute_for_usa()
-            case XBOX_PARSE_REGIONS.TR:
+            case XboxParseRegions.TR:
                 return self._compute_for_tr()
-            case XBOX_PARSE_REGIONS.AR:
+            case XboxParseRegions.AR:
                 return self._compute_for_ar()
             case _:
                 raise ValueError("Unsupported region: %s" % region_code)

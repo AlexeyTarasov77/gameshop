@@ -1,4 +1,4 @@
-from core.exception_mappers import AbstractDatabaseExceptionMapper
+from gateways.db.exceptions import AbstractDatabaseExceptionMapper
 from gateways.db.exceptions import DBConnectionError
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError

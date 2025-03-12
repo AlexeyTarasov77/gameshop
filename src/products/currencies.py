@@ -1,6 +1,7 @@
+from decimal import Decimal
+from products.schemas import PriceUnitDTO
 from sales.schemas import ExchangeRatesMappingDTO
 from gateways.db import RedisClient
-from sales.models import PriceUnit
 from sales.schemas import SetExchangeRateDTO
 
 
@@ -18,11 +19,9 @@ class CurrencyConverter:
     async def set_rub_exchange_rate(self, dto: SetExchangeRateDTO):
         await self._db.hset(self._key, dto.to.lower(), dto.value)
 
-    async def convert_to_rub(self, price: PriceUnit) -> PriceUnit:
+    async def convert_to_rub(self, price: PriceUnitDTO) -> Decimal:
         curr = price.currency_code.lower()
         exchange_rate = await self._db.hget(self._key, curr)
         if exchange_rate is None:
             raise ValueError("Exchange rate for currency %s wasn't found" % curr)
-        converted = round(price * float(exchange_rate), 2)
-        converted.currency_code = "RUB"
-        return converted
+        return price.value * Decimal(exchange_rate)

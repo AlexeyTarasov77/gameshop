@@ -4,8 +4,6 @@ import abc
 import typing as t
 
 from fastapi.responses import JSONResponse
-import gateways.db.exceptions as db_exc
-from psycopg import errors as pg_exc
 from core.services import exceptions as service_exc
 
 
@@ -65,29 +63,3 @@ class HTTPExceptionsMapper:
         for exc_class in self._EXCEPTION_MAPPING:
             self._app.add_exception_handler(exc_class, self._handle)
         self._app.add_exception_handler(Exception, self._handle)
-
-
-class AbstractDatabaseExceptionMapper[K: Exception](
-    AbstractExceptionMapper[K, db_exc.DatabaseError]
-): ...
-
-
-class PostgresExceptionsMapper(AbstractDatabaseExceptionMapper[pg_exc.Error]):
-    EXCEPTION_MAPPING: Mapping[type[pg_exc.Error], type[db_exc.DatabaseError]] = {
-        pg_exc.NoData: db_exc.NotFoundError,
-        pg_exc.UniqueViolation: db_exc.AlreadyExistsError,
-    }
-
-    def get_default_exc(self) -> type[db_exc.DatabaseError]:
-        return db_exc.DatabaseError
-
-    def map(self, exc: pg_exc.Error) -> type[db_exc.DatabaseError]:
-        if isinstance(exc, pg_exc.ForeignKeyViolation):
-            if "is still referenced" in str(exc):
-                return db_exc.OperationRestrictedByRefError
-            return db_exc.RelatedResourceNotFoundError
-        return super().map(exc)
-
-    def map_and_init(self, exc: pg_exc.Error) -> db_exc.DatabaseError:
-        mapped_exc_cls = super().map(exc)
-        return mapped_exc_cls(str(exc))

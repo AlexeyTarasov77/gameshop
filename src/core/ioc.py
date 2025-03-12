@@ -10,12 +10,9 @@ from mailing.domain.services import MailingService
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
-from products.domain.interfaces import ProductsAPIClient
-from products.external_api import GamesForFarmAPIClient
-from sales.currencies import CurrencyConverter
-from sales.domain.interfaces import CurrencyConverterI, SteamAPIClientI
-from sales.domain.services import SalesService
-from sales.repositories import SalesRepository
+from products.domain.interfaces import SteamAPIClientI, CurrencyConverterI
+from products.integrations.steam_api import GamesForFarmAPIClient
+from products.currencies import CurrencyConverter
 from sales.steam_api import NSGiftsSteamAPIClient
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
@@ -29,9 +26,9 @@ from sessions.repositories import (
     WishlistManagerFactory,
 )
 from core.logger import setup_logger
-from core.exception_mappers import (
+from core.exception_mappers import HTTPExceptionsMapper
+from gateways.db.exceptions import (
     AbstractDatabaseExceptionMapper,
-    HTTPExceptionsMapper,
     PostgresExceptionsMapper,
 )
 from sessions.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
@@ -131,9 +128,9 @@ def _init_container() -> punq.Container:
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(SessionsService)
-    container.register(
-        SalesService, SalesService, sales_repo=SalesRepository(redis_client)
-    )
+    # container.register(
+    #     SalesService, SalesService, sales_repo=SalesRepository(redis_client)
+    # )
     container.register(
         PaymentsService,
         PaymentsService,
@@ -147,7 +144,7 @@ def _init_container() -> punq.Container:
         scope=punq.Scope.singleton,
     )
     container.register(PaymentSystemFactoryI, PaymentSystemFactoryImpl)
-    container.register(ProductsAPIClient, GamesForFarmAPIClient)
+    container.register(SteamAPIClientI, GamesForFarmAPIClient)
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )

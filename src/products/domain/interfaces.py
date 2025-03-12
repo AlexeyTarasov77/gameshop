@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from decimal import Decimal
 import typing as t
 
 from core.pagination import PaginationParams, PaginationResT
@@ -7,21 +8,31 @@ from products.models import (
     Platform,
     Product,
     DeliveryMethod,
+    ProductCategory,
 )
 from products.schemas import (
     CreateProductDTO,
+    ExchangeRatesMappingDTO,
     ListProductsFilterDTO,
+    PriceUnitDTO,
     ProductFromAPIDTO,
     UpdateProductDTO,
 )
+from sales.schemas import SetExchangeRateDTO
 
 
-class ProductsAPIClient(t.Protocol):
-    async def get_paginated(
+class SteamAPIClientI(t.Protocol):
+    async def get_paginated_products(
         self, pagination_params: PaginationParams
     ) -> PaginationResT[ProductFromAPIDTO]: ...
 
-    async def get_by_id(self, product_id: int) -> ProductFromAPIDTO: ...
+    async def get_product_by_id(self, product_id: int) -> ProductFromAPIDTO: ...
+
+
+class CurrencyConverterI(t.Protocol):
+    async def convert_to_rub(self, price: PriceUnitDTO) -> Decimal: ...
+    async def set_exchange_rate(self, dto: SetExchangeRateDTO): ...
+    async def get_exchange_rates(self) -> ExchangeRatesMappingDTO: ...
 
 
 class ProductsRepositoryI(t.Protocol):
@@ -46,6 +57,10 @@ class ProductsRepositoryI(t.Protocol):
     async def check_in_stock(self, product_id: int) -> bool: ...
 
     async def list_by_ids(self, ids: Sequence[int]) -> Sequence[Product]: ...
+
+    async def save_many(self, products: Sequence[Product]): ...
+
+    async def delete_for_categories(self, categories: Sequence[ProductCategory]): ...
 
 
 class PlatformsRepositoryI(t.Protocol):

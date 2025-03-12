@@ -2,23 +2,36 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
+from pydantic_extra_types.currency_code import Currency
+
 from core.schemas import (
     Base64Int,
     Base64IntOptionalIDParam,
     BaseDTO,
     DateTimeAfterNow,
+    ExchangeRate,
     ImgUrl,
     ParseJson,
     ProductDiscount,
     UploadImage,
 )
-from pydantic import Field
+from pydantic import Field, RootModel
+
+from products.models import PsnParseRegions, XboxParseRegions, ProductPlatform
+
+ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
 
 
 class CategoryDTO(BaseDTO):
     id: Base64Int = Field(gt=0)
     name: str | None = None
     url: str | None = None
+
+
+class RegionalPriceDTO(BaseDTO):
+    id: Base64Int
+    base_price: Decimal
+    region_code: str | None
 
 
 class ProductFromAPIDTO(BaseDTO):
@@ -37,8 +50,7 @@ class DeliveryMethodDTO(CategoryDTO): ...
 
 class BaseProductDTO(BaseDTO):
     name: str = Field(min_length=3)
-    description: str = Field(min_length=10)
-    regular_price: Decimal = Field(ge=0)
+    description: str
     discount: ProductDiscount
 
 
@@ -46,6 +58,7 @@ class CreateProductDTO(BaseProductDTO):
     category: Annotated[CategoryDTO, ParseJson]
     platform: Annotated[PlatformDTO, ParseJson]
     delivery_method: Annotated[DeliveryMethodDTO, ParseJson]
+    prices: Annotated[list[RegionalPriceDTO], ParseJson]
     discount_valid_to: DateTimeAfterNow | None = None
     image: UploadImage
 
@@ -66,12 +79,26 @@ class UpdateProductDTO(BaseDTO):
 class BaseShowProductDTO(BaseProductDTO):
     id: Base64Int
     discount_valid_to: datetime | None
-    total_price: Decimal
     total_discount: int
     created_at: datetime
     updated_at: datetime
     image_url: ImgUrl
     in_stock: bool
+
+
+class PriceUnitDTO(BaseDTO):
+    currency_code: Currency
+    value: Decimal
+
+
+class ProductForLoadDTO(BaseDTO):
+    name: str
+    platform: ProductPlatform
+    discount: int
+    prices: dict[XboxParseRegions | PsnParseRegions, PriceUnitDTO]
+    image_url: str
+    with_gp: bool | None = None
+    deal_until: datetime | None = None
 
 
 class ListProductsFilterDTO(BaseDTO):
@@ -91,6 +118,7 @@ class ShowProductWithRelations(BaseShowProductDTO):
     category: CategoryDTO
     platform: PlatformDTO
     delivery_method: DeliveryMethodDTO
+    prices: list[RegionalPriceDTO]
 
 
 class ProductInCartDTO(ShowProductWithRelations):

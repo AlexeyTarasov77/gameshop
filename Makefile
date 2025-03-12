@@ -31,4 +31,4 @@ api/deploy/test:
 	bash scripts/deploy.sh test
 
 api/parse-sales:
-	MODE=$(MODE) poetry run python src/sales/parsing.py $(limit)
+	MODE=$(MODE) poetry run python src/products/integrations/parser.py $(limit)
