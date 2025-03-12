@@ -30,6 +30,12 @@ from products.models import (
 ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
 
 
+class SetExchangeRateDTO(BaseDTO):
+    from_: Currency = Field(default=Currency("RUB"), alias="from")
+    to: Currency
+    value: float
+
+
 class _BaseContentTypeDTO[T: Enum](BaseDTO):
     name: T
 

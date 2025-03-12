@@ -97,3 +97,36 @@ async def delivery_methods_list(
     products_service: ProductsServiceDep,
 ) -> Sequence[schemas.DeliveryMethodDTO]:
     return await products_service.delivery_methods_list()
+
+
+@router.get(
+    "/exchange-rates/steam",
+    tags=["exchange-rates"],
+)
+async def get_steam_exchange_rates(
+    products_service: ProductsServiceDep,
+) -> schemas.ExchangeRatesMappingDTO:
+    return await products_service.get_steam_exchange_rates()
+
+
+@router.post(
+    "/exchange-rates/set",
+    tags=["exchange-rates"],
+    dependencies=[Depends(require_admin)],
+)
+async def set_exchange_rate(
+    dto: schemas.SetExchangeRateDTO, products_service: ProductsServiceDep
+):
+    await products_service.set_exchange_rate(dto)
+    return {"success": True}
+
+
+@router.get(
+    "/exchange-rates/get",
+    tags=["exchange-rates"],
+    dependencies=[Depends(require_admin)],
+)
+async def get_exchange_rates(
+    products_service: ProductsServiceDep,
+) -> schemas.ExchangeRatesMappingDTO:
+    return await products_service.get_exchange_rates()

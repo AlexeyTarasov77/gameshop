@@ -8,20 +8,23 @@ from sales.schemas import SetExchangeRateDTO
 class CurrencyConverter:
     def __init__(self, redis: RedisClient) -> None:
         self._db = redis
-        self._key = "rub_exchange_rates"
+        self._name = "exchange_rates"
 
-    async def get_rub_exchange_rates(self) -> ExchangeRatesMappingDTO:
-        res = await self._db.hgetall(self._key)
-        return ExchangeRatesMappingDTO.model_validate(
-            {"rub/" + curr.lower(): rate for curr, rate in res.items()}
-        )
+    async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
+        res = await self._db.hgetall(self._name)
+        return ExchangeRatesMappingDTO.model_validate(res)
 
-    async def set_rub_exchange_rate(self, dto: SetExchangeRateDTO):
-        await self._db.hset(self._key, dto.to.lower(), dto.value)
+    def _build_key(self, rate_from: str, rate_to: str) -> str:
+        return f"{rate_from}/{rate_to}".lower()
+
+    async def set_exchange_rate(self, dto: SetExchangeRateDTO):
+        await self._db.hset(self._name, self._build_key(dto.from_, dto.to), dto.value)
 
     async def convert_to_rub(self, price: PriceUnitDTO) -> Decimal:
-        curr = price.currency_code.lower()
-        exchange_rate = await self._db.hget(self._key, curr)
+        rate_from = price.currency_code.lower()
+        exchange_rate = await self._db.hget(
+            self._name, self._build_key(rate_from, "rub")
+        )
         if exchange_rate is None:
-            raise ValueError("Exchange rate for currency %s wasn't found" % curr)
+            raise ValueError("Exchange rate for currency %s wasn't found" % rate_from)
         return price.value * Decimal(exchange_rate)

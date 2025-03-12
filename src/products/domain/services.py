@@ -16,7 +16,7 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import CurrencyConverterI
+from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
 from products.models import (
     Product,
     ProductCategory,
@@ -29,9 +29,11 @@ from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
     CreateProductDTO,
+    ExchangeRatesMappingDTO,
     ListProductsFilterDTO,
     PlatformDTO,
     SalesDTO,
+    SetExchangeRateDTO,
     ShowProduct,
     ShowProductWithRelations,
     SteamItemDTO,
@@ -141,9 +143,11 @@ class ProductsService(BaseService):
         uow: AbstractUnitOfWork,
         logger: Logger,
         currency_converter: CurrencyConverterI,
+        steam_api: SteamAPIClientI,
     ) -> None:
         super().__init__(uow, logger)
         self._currency_converter = currency_converter
+        self._steam_api = steam_api
 
     async def load_new_sales(self, products: Sequence[SalesDTO]):
         products_for_save: list[Product] = []
@@ -288,3 +292,12 @@ class ProductsService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=product_id)
         except OperationRestrictedByRefError:
             raise EntityOperationRestrictedByRefError(self.entity_name)
+
+    async def get_steam_exchange_rates(self) -> ExchangeRatesMappingDTO:
+        return await self._steam_api.get_currency_rates()
+
+    async def set_exchange_rate(self, dto: SetExchangeRateDTO) -> None:
+        await self._currency_converter.set_exchange_rate(dto)
+
+    async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
+        return await self._currency_converter.get_exchange_rates()

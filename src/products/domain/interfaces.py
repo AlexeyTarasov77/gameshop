@@ -13,8 +13,8 @@ from products.schemas import (
     ListProductsFilterDTO,
     PriceUnitDTO,
     UpdateProductDTO,
+    SetExchangeRateDTO,
 )
-from sales.schemas import SetExchangeRateDTO
 
 
 class CurrencyConverterI(t.Protocol):
