@@ -1,11 +1,13 @@
 from datetime import datetime
 
 from collections.abc import Sequence
+from decimal import Decimal
 from sqlalchemy import and_, delete, desc, not_, or_, select, func
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
+from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
 from products.models import (
     Product,
     ProductCategory,
@@ -53,7 +55,7 @@ class ProductsRepository(PaginationRepository[Product]):
         if dto.in_stock is not None:
             stmt = stmt.filter_by(in_stock=dto.in_stock)
         if dto.category is not None:
-            stmt = stmt.where(func.lower(Product.category) == dto.category.lower())
+            stmt = stmt.where(func.lower(Product.category) == dto.category.name.lower())
         res = await self._session.execute(stmt)
         products = res.scalars().all()
         filtered_products = [rec for rec in products if rec.prices]
@@ -62,14 +64,11 @@ class ProductsRepository(PaginationRepository[Product]):
             filtered_products
         )
 
-    async def create_with_image(self, dto: CreateProductDTO, image_url: str) -> Product:
+    async def create_with_dto(self, dto: CreateProductDTO) -> Product:
         product = await super().create(
-            category_id=dto.category.id,
-            platform_id=dto.platform.id,
-            delivery_method_id=dto.delivery_method.id,
-            image_url=image_url,
+            image_url=dto.image,
             **dto.model_dump(
-                exclude={"category", "platform", "delivery_method", "image"},
+                exclude={"image", "discounted_price"},
             ),
         )
         return product
@@ -78,17 +77,11 @@ class ProductsRepository(PaginationRepository[Product]):
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
     ) -> Product:
         data = dto.model_dump(
-            exclude={"image", "category", "platform", "delivery_method"},
+            exclude={"image"},
             exclude_unset=True,
         )
         if image_url:
             data["image_url"] = image_url
-        if dto.platform:
-            data["platform_id"] = dto.platform.id
-        if dto.category:
-            data["category_id"] = dto.category.id
-        if dto.delivery_method:
-            data["delivery_method_id"] = dto.delivery_method.id
         product = await super().update(
             data,
             id=product_id,
@@ -118,3 +111,10 @@ class ProductsRepository(PaginationRepository[Product]):
     async def delete_for_categories(self, categories: Sequence[ProductCategory]):
         stmt = delete(Product).where(Product.category.in_(categories))
         await self._session.execute(stmt)
+
+
+class PricesRepository(SqlAlchemyRepository):
+    model = RegionalPrice
+
+    async def add_price(self, for_product_id: int, base_price: Decimal) -> None:
+        await super().create(product_id=for_product_id, base_price=base_price)

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from fastapi import APIRouter, Body, Depends, status
 import typing as t
-from products.schemas import ProductInCartDTO, ShowProductWithRelations
+from products.schemas import ProductInCartDTO, ShowProductWithPrices
 from sessions.domain.interfaces import CartManagerFactoryI, WishlistManagerFactoryI
 from sessions.schemas import AddToCartDTO
 from core.dependencies import SessionKeyDep
@@ -53,7 +53,7 @@ async def remove_from_wishlist(
 @wishlist_router.get("/")
 async def list_products_in_wishlist(
     sessions_service: SessionsServiceDep,
-) -> Sequence[ShowProductWithRelations]:
+) -> Sequence[ShowProductWithPrices]:
     return await sessions_service.wishlist_list_products()
 
 

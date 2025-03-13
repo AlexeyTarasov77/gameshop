@@ -1,10 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Annotated
-from uuid import UUID, uuid4
-
 from pydantic_extra_types.currency_code import Currency
+from typing import Any, Annotated
 
 from core.schemas import (
     Base64Int,
@@ -12,11 +10,15 @@ from core.schemas import (
     DateTimeAfterNow,
     ExchangeRate,
     ImgUrl,
-    ParseJson,
     ProductDiscount,
     UploadImage,
 )
-from pydantic import Field, RootModel, computed_field
+from pydantic import (
+    Field,
+    PlainSerializer,
+    RootModel,
+    computed_field,
+)
 
 from products.models import (
     ProductCategory,
@@ -36,16 +38,19 @@ class SetExchangeRateDTO(BaseDTO):
 
 
 class _BaseContentTypeDTO[T: Enum](BaseDTO):
-    name: T
+    # name: str
+    # url: str
+    # id: int
+    name: T = Field(serialization_alias="id")
 
     @computed_field
-    def id(self) -> UUID:
-        return uuid4()
+    def label(self) -> str:
+        print(type(self.name.value))
+        return getattr(self.name.value, "label", "")
 
     @computed_field
     def url(self) -> str:
-        enum_member = self.name
-        return enum_member.name.replace("_", "").lower()
+        return self.name.name.replace("_", "").lower()
 
 
 class RegionalPriceDTO(BaseDTO):
@@ -69,12 +74,25 @@ class BaseProductDTO(BaseDTO):
 
 
 class CreateProductDTO(BaseProductDTO):
-    category: Annotated[CategoryDTO, ParseJson]
-    platform: Annotated[PlatformDTO, ParseJson]
-    delivery_method: Annotated[DeliveryMethodDTO, ParseJson]
-    prices: Annotated[list[RegionalPriceDTO], ParseJson]
+    category: ProductCategory
+    platform: ProductPlatform
+    delivery_method: ProductDeliveryMethod
+    discounted_price: Decimal
     deal_until: DateTimeAfterNow | None = None
     image: UploadImage
+
+
+def _base_field_ser(v: Enum) -> dict[str, Any]:
+    name = v.value.label
+    url = v.name.replace("_", "-").lower()
+    return {"name": name, "url": url, "id": v.value}
+
+
+ProductPlatformField = Annotated[ProductPlatform, PlainSerializer(_base_field_ser)]
+ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_ser)]
+ProductDeliveryMethodField = Annotated[
+    ProductDeliveryMethod, PlainSerializer(_base_field_ser)
+]
 
 
 class UpdateProductDTO(BaseDTO):
@@ -82,15 +100,15 @@ class UpdateProductDTO(BaseDTO):
     in_stock: bool | None = None
     description: str | None = Field(min_length=10, default=None)
     regular_price: Decimal | None = Field(ge=0, default=None)
-    category: Annotated[CategoryDTO | None, ParseJson] = None
-    platform: Annotated[PlatformDTO | None, ParseJson] = None
-    delivery_method: Annotated[DeliveryMethodDTO | None, ParseJson] = None
+    category: ProductCategory | None = None
+    platform: ProductPlatform | None = None
+    delivery_method: ProductDeliveryMethod | None = None
     image: UploadImage | None = None
     discount: ProductDiscount | None = None
     deal_until: DateTimeAfterNow | None = None
 
 
-class BaseShowProductDTO(BaseProductDTO):
+class ShowProduct(BaseProductDTO):
     id: Base64Int
     deal_until: datetime | None
     total_discount: int
@@ -98,6 +116,9 @@ class BaseShowProductDTO(BaseProductDTO):
     updated_at: datetime
     image_url: ImgUrl
     in_stock: bool
+    category: ProductCategoryField
+    platform: ProductPlatformField
+    delivery_method: ProductDeliveryMethodField
 
 
 class PriceUnitDTO(BaseDTO):
@@ -130,22 +151,13 @@ class ListProductsFilterDTO(BaseDTO):
     region: str | None = None
 
 
-class ShowProduct(BaseShowProductDTO):
-    category_id: Base64Int
-    platform_id: Base64Int
-    delivery_method_id: Base64Int
-
-
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
     discounted_price: Decimal
 
 
-class ShowProductWithRelations(BaseShowProductDTO):
-    category: CategoryDTO
-    platform: PlatformDTO
-    delivery_method: DeliveryMethodDTO
+class ShowProductWithPrices(ShowProduct):
     prices: list[RegionalWithDiscountedPriceDTO]
 
 
-class ProductInCartDTO(ShowProductWithRelations):
+class ProductInCartDTO(ShowProductWithPrices):
     quantity: int = Field(gt=0)

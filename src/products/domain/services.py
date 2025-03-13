@@ -35,7 +35,7 @@ from products.schemas import (
     SalesDTO,
     SetExchangeRateDTO,
     ShowProduct,
-    ShowProductWithRelations,
+    ShowProductWithPrices,
     SteamItemDTO,
     UpdateProductDTO,
 )
@@ -154,7 +154,7 @@ class ProductsService(BaseService):
         for item in products:
             calculated_prices: list[RegionalPrice] = []
             for region, price in item.prices.items():
-                if item.platform.lower() == ProductPlatform.XBOX:
+                if item.platform == ProductPlatform.XBOX:
                     assert region in XboxParseRegions
                     new_value = XboxPriceCalculator(price.value).calc_for_region(region)
                     price.value = new_value
@@ -207,17 +207,15 @@ class ProductsService(BaseService):
             await uow.products_repo.save_many(products_for_save)
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
+        base_price = dto.discounted_price / (100 - dto.discount) * 100
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create_with_image(
-                    dto, cast(str, dto.image)
-                )
+                product = await uow.products_repo.create_with_dto(dto)
+                await uow.prices_repo.add_price(product.id, base_price)
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,
-                name=dto.name,
-                category_id=dto.category.id,
-                platform_id=dto.platform.id,
+                **dto.model_dump(include={"name", "category", "platform"}),
             ) from e
         return ShowProduct.model_validate(product)
 
@@ -225,7 +223,7 @@ class ProductsService(BaseService):
         self,
         dto: ListProductsFilterDTO,
         pagination_params: PaginationParams,
-    ) -> PaginationResT[ShowProductWithRelations]:
+    ) -> PaginationResT[ShowProductWithPrices]:
         async with self._uow as uow:
             (
                 products,
@@ -234,22 +232,22 @@ class ProductsService(BaseService):
                 dto,
                 pagination_params,
             )
-        dtos: list[ShowProductWithRelations] = []
+        dtos: list[ShowProductWithPrices] = []
         for product in products:
             [
                 regional_price.calc_discounted_price(product.discount)
                 for regional_price in product.prices
             ]
-            dtos.append(ShowProductWithRelations.model_validate(product))
+            dtos.append(ShowProductWithPrices.model_validate(product))
         return dtos, total_records
 
-    async def get_product(self, product_id: int) -> ShowProductWithRelations:
+    async def get_product(self, product_id: int) -> ShowProductWithPrices:
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
-        return ShowProductWithRelations.model_validate(product)
+        return ShowProductWithPrices.model_validate(product)
 
     async def platforms_list(self) -> Sequence[PlatformDTO]:
         return [PlatformDTO(name=platform) for platform in ProductPlatform]
@@ -272,13 +270,11 @@ class ProductsService(BaseService):
                     product_id, dto, cast(str | None, dto.image)
                 )
         except AlreadyExistsError:
-            params = {
-                "name": dto.name,
-                "category_id": dto.category.id if dto.category is not None else None,
-                "platform_id": dto.platform.id if dto.platform is not None else None,
-            }
             raise EntityAlreadyExistsError(
-                self.entity_name, **{k: v for k, v in params.items() if v is not None}
+                self.entity_name,
+                **dto.model_dump(
+                    include={"name", "category", "platform"}, exclude_none=True
+                ),
             )
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)

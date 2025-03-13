@@ -28,9 +28,7 @@ class SteamAPIClientI(t.Protocol):
 
 
 class ProductsRepositoryI(t.Protocol):
-    async def create_with_image(
-        self, dto: CreateProductDTO, image_url: str
-    ) -> Product: ...
+    async def create_with_dto(self, dto: CreateProductDTO) -> Product: ...
 
     async def update_by_id(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
@@ -53,3 +51,7 @@ class ProductsRepositoryI(t.Protocol):
     async def save_many(self, products: Sequence[Product]): ...
 
     async def delete_for_categories(self, categories: Sequence[ProductCategory]): ...
+
+
+class PricesRepositoryI(t.Protocol):
+    async def add_price(self, for_product_id: int, base_price: Decimal) -> None: ...

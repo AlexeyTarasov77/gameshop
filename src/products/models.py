@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
 
 from sqlalchemy.dialects.postgresql import ENUM
 
@@ -8,45 +9,64 @@ from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enum import IntEnum, auto
+from enum import Enum, auto
 
 from core.utils import CIEnum
 
 
-# class IntWithLabel(int):
-#     def __new__(cls, value: int, *args, **kwargs):
-#         if value < 0:
-#             raise ValueError("positive types must not be less than zero")
-#         return super().__new__(cls, value)
-#
-#     def __init__(self, value: int, label: str) -> None:
-#         super().__init__()
-#         self.label = label
-#
-#     def __str__(self):
-#         return self.label
+class IntWithLabel(int):
+    def __new__(cls, value: int, *args, **kwargs):
+        if value <= 0:
+            raise ValueError("value should be > 0")
+        return super().__new__(cls, value)
+
+    #
+    def __init__(self, value: int, label: str) -> None:
+        super().__init__()
+        self.label = label
+
+    def __str__(self):
+        return self.label
 
 
-class ProductPlatform(CIEnum):
-    XBOX = auto()
-    PSN = auto()
-    STEAM = auto()
+class _BaseLabeledEnum(Enum):
+    @classmethod
+    def _missing_(cls, value: Any):
+        try:
+            if isinstance(value, str):
+                found = cls.__members__.get(value.upper()) or (
+                    int(value) in [member.value for member in cls.__members__.values()]
+                    and cls(int(value))
+                )
+                if not found:
+                    return None
+                return found
+            else:
+                return None
+        except ValueError:
+            return None
 
 
-class ProductCategory(CIEnum):
-    GAMES = "Игры"
-    SUBSCRIPTIONS = "Подписки"
-    RECHARGE_CARDS = "Карты пополнения"
-    DONATE = "Внутриигровая валюта"
-    XBOX_SALES = "Распродажа XBOX"
-    PSN_SALES = "Распродажа PSN"
-    STEAM_KEYS = "Ключи Steam"
+class ProductPlatform(_BaseLabeledEnum):
+    XBOX = IntWithLabel(1, "xbox")
+    PSN = IntWithLabel(2, "psn")
+    STEAM = IntWithLabel(3, "steam")
 
 
-class ProductDeliveryMethod(CIEnum):
-    KEY = "Ключ"
-    ACCOUNT_PURCHASE = "Покупка на аккаунт"
-    GIFT = "Передача подарком"
+class ProductCategory(_BaseLabeledEnum):
+    GAMES = IntWithLabel(1, "Игры")
+    SUBSCRIPTIONS = IntWithLabel(2, "Подписки")
+    RECHARGE_CARDS = IntWithLabel(3, "Карты пополнения")
+    DONATE = IntWithLabel(4, "Внутриигровая валюта")
+    XBOX_SALES = IntWithLabel(5, "Распродажа XBOX")
+    PSN_SALES = IntWithLabel(6, "Распродажа PSN")
+    STEAM_KEYS = IntWithLabel(7, "Ключи Steam")
+
+
+class ProductDeliveryMethod(_BaseLabeledEnum):
+    KEY = IntWithLabel(1, "Ключ")
+    ACCOUNT_PURCHASE = IntWithLabel(2, "Покупка на аккаунт")
+    GIFT = IntWithLabel(3, "Передача подарком")
 
 
 class PsnParseRegions(CIEnum):

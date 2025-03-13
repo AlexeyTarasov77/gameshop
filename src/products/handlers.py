@@ -20,7 +20,7 @@ async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
     dto: t.Annotated[schemas.ListProductsFilterDTO, Query()] = {},  # type: ignore
-) -> PaginatedResponse[schemas.ShowProductWithRelations]:
+) -> PaginatedResponse[schemas.ShowProductWithPrices]:
     products, total_records = await products_service.list_products(
         dto,
         pagination_params,
@@ -31,7 +31,7 @@ async def list_products(
 @router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
-) -> schemas.ShowProductWithRelations:
+) -> schemas.ShowProductWithPrices:
     return await products_service.get_product(int(product_id))
 
 
@@ -40,7 +40,7 @@ async def get_product(
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         restrict_content_type("multipart/form-data"),
-        Depends(require_admin),
+        # Depends(require_admin),
     ],
 )
 async def create_product(

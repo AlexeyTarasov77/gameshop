@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from logging import Logger
 from typing import Literal
-from products.schemas import ProductInCartDTO, ShowProductWithRelations
+from products.schemas import ProductInCartDTO, ShowProductWithPrices
 from sessions.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
@@ -60,15 +60,13 @@ class SessionsService(BaseService):
             res.append(ProductInCartDTO.model_validate(product))
         return res
 
-    async def wishlist_list_products(self) -> Sequence[ShowProductWithRelations]:
+    async def wishlist_list_products(self) -> Sequence[ShowProductWithPrices]:
         product_ids = await self._wishlist_manager.list_ids()
         if not product_ids:
             return []
         async with self._uow as uow:
             products = await uow.products_repo.list_by_ids(product_ids)
-        return [
-            ShowProductWithRelations.model_validate(product) for product in products
-        ]
+        return [ShowProductWithPrices.model_validate(product) for product in products]
 
     async def cart_update_qty(
         self, product_id: int, qty: int

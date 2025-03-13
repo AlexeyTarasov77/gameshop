@@ -15,8 +15,8 @@ from orders.domain.interfaces import (
     OrdersRepositoryI,
 )
 from orders.repositories import OrderItemsRepository, OrdersRepository
-from products.domain.interfaces import ProductsRepositoryI
-from products.repositories import ProductsRepository
+from products.domain.interfaces import PricesRepositoryI, ProductsRepositoryI
+from products.repositories import PricesRepository, ProductsRepository
 from users.domain.interfaces import (
     AdminsRepositoryI,
     TokensRepositoryI,
@@ -34,6 +34,7 @@ class AbstractUnitOfWork[S](abc.ABC):
 
     news_repo: NewsRepositoryI
     products_repo: ProductsRepositoryI
+    prices_repo: PricesRepositoryI
     admins_repo: AdminsRepositoryI
     users_repo: UsersRepositoryI
     tokens_repo: TokensRepositoryI
@@ -90,6 +91,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         # initializing repositories using created session
         self.users_repo = self._register_repo(UsersRepository)
         self.admins_repo = self._register_repo(AdminsRepository)
+        self.prices_repo = self._register_repo(PricesRepository)
         self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
         self.products_repo = self._register_repo(ProductsRepository)

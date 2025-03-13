@@ -7,7 +7,7 @@ import random
 import string
 from pathlib import Path
 from types import EllipsisType
-from typing import Any
+from typing import Any, Self
 from config import Config
 
 import aiofiles
@@ -21,8 +21,8 @@ class CIEnum(StrEnum):
     Note that member name should be equal to it's value to work as expected"""
 
     @classmethod
-    def _missing_(cls, value: Any):
-        return isinstance(value, str) and cls.__members__.get(value.upper())
+    def _missing_(cls, value: Any) -> Self | None:
+        return (isinstance(value, str) and cls.__members__.get(value.upper())) or None
 
 
 def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
