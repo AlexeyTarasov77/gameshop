@@ -89,6 +89,7 @@ def _init_container() -> punq.Container:
         str(cfg.pg_dsn),
         exception_mapper=PostgresExceptionsMapper,
         future=True,
+        echo=True,
     )
     container.register(PasswordHasherI, BcryptHasher)
     container.register(TokenHasherI, SHA256Hasher)

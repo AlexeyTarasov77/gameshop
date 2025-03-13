@@ -1,13 +1,15 @@
 from datetime import datetime
 
 from collections.abc import Sequence
-from sqlalchemy import and_, delete, desc, not_, or_, select
+from sqlalchemy import and_, delete, desc, not_, or_, select, func
+from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
 from products.models import (
     Product,
     ProductCategory,
+    RegionalPrice,
 )
 from products.schemas import (
     CreateProductDTO,
@@ -25,14 +27,20 @@ class ProductsRepository(PaginationRepository[Product]):
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
         stmt = (
-            super()
-            ._get_pagination_stmt(pagination_params)
+            select(self.model)
             .order_by(desc(Product.created_at))
+            .options(
+                selectinload(
+                    Product.prices
+                    if dto.region is None
+                    else Product.prices.and_(
+                        func.lower(RegionalPrice.region_code) == dto.region.lower()
+                    )
+                )
+            )
         )
         if dto.query:
             stmt = stmt.where(self.model.name.ilike(f"%{dto.query}%"))
-        if dto.category_id is not None:
-            stmt = stmt.filter_by(category_id=dto.category_id)
         if dto.discounted is not None:
             base_cond = and_(
                 or_(
@@ -41,16 +49,18 @@ class ProductsRepository(PaginationRepository[Product]):
                 ),
                 self.model.discount > 0,
             )
-
-            if dto.discounted is True:
-                stmt = stmt.where(base_cond)
-            else:
-                stmt = stmt.where(not_(base_cond))
+            stmt = stmt.where(base_cond if dto.discounted else not_(base_cond))
         if dto.in_stock is not None:
             stmt = stmt.filter_by(in_stock=dto.in_stock)
-
+        if dto.category is not None:
+            stmt = stmt.where(func.lower(Product.category) == dto.category.lower())
         res = await self._session.execute(stmt)
-        return super()._split_records_and_count(res.all())
+        products = res.scalars().all()
+        filtered_products = [rec for rec in products if rec.prices]
+        offset = pagination_params.calc_offset()
+        return filtered_products[offset : offset + pagination_params.page_size], len(
+            filtered_products
+        )
 
     async def create_with_image(self, dto: CreateProductDTO, image_url: str) -> Product:
         product = await super().create(

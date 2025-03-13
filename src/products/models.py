@@ -8,9 +8,23 @@ from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enum import auto
+from enum import IntEnum, auto
 
 from core.utils import CIEnum
+
+
+# class IntWithLabel(int):
+#     def __new__(cls, value: int, *args, **kwargs):
+#         if value < 0:
+#             raise ValueError("positive types must not be less than zero")
+#         return super().__new__(cls, value)
+#
+#     def __init__(self, value: int, label: str) -> None:
+#         super().__init__()
+#         self.label = label
+#
+#     def __str__(self):
+#         return self.label
 
 
 class ProductPlatform(CIEnum):
@@ -45,19 +59,6 @@ class XboxParseRegions(CIEnum):
     AR = auto()
     TR = auto()
 
-    # @discounted_price.setter
-    # def discounted_price(self, new_value: float | PriceUnit):
-    # discount = (self.base_price - self.discounted_price).value // (
-    #     self.base_price / 100
-    # ).value
-    # recalculated_base_price = (new_value * 100) / (100 - discount)
-    # self.base_price = recalculated_base_price
-    # if isinstance(new_value, PriceUnit):
-    #     self._discounted_price = new_value
-    # else:
-    #     self._discounted_price.value = new_value
-    #
-
 
 class Product(SqlAlchemyBaseModel):
     __table_args__ = (UniqueConstraint("name", "category", "platform"),)
@@ -77,9 +78,7 @@ class Product(SqlAlchemyBaseModel):
         bool | None
     ]  # indicates whether discount applies to game pass (only for xbox sales)
     deal_until: Mapped[datetime | None]
-    prices: Mapped[list["RegionalPrice"]] = relationship(
-        back_populates="product", lazy="selectin"
-    )
+    prices: Mapped[list["RegionalPrice"]] = relationship(back_populates="product")
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
 

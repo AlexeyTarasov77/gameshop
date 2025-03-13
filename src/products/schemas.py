@@ -8,7 +8,6 @@ from pydantic_extra_types.currency_code import Currency
 
 from core.schemas import (
     Base64Int,
-    Base64IntOptionalIDParam,
     BaseDTO,
     DateTimeAfterNow,
     ExchangeRate,
@@ -125,9 +124,10 @@ class SalesDTO(ProductForLoadDTO):
 
 class ListProductsFilterDTO(BaseDTO):
     query: str | None = None
-    category_id: Base64IntOptionalIDParam = None
     discounted: bool | None = None
     in_stock: bool | None = None
+    category: ProductCategory | None = None
+    region: str | None = None
 
 
 class ShowProduct(BaseShowProductDTO):
