@@ -36,10 +36,10 @@ class ShoppingService(BaseService):
     async def cart_add(self, dto: AddToCartDTO) -> int:
         dto.quantity = dto.quantity or 1
         await self._require_product_in_stock(int(dto.product_id))
-        is_in_cart = await self._cart_manager.check_exists(int(dto.product_id))
-        if is_in_cart:
-            return await self._cart_manager.add(dto)
-        await self._cart_manager.create(dto)
+        try:
+            await self._cart_manager.create(dto)
+        except AlreadyExistsError:
+            return await self._cart_manager.add_quantity(dto)
         return dto.quantity
 
     async def cart_remove(self, product_id: int):

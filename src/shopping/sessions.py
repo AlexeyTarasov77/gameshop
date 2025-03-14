@@ -3,7 +3,7 @@ from typing import Protocol
 from fastapi import Request, Response
 from secrets import token_urlsafe
 from starlette.middleware.base import DispatchFunction, RequestResponseEndpoint
-
+from redis.commands.json._util import JsonType
 from gateways.db.exceptions import NotFoundError
 from gateways.db import RedisClient
 
@@ -39,7 +39,7 @@ class RedisSessionManager:
     def storage_key(self) -> str:
         return self._prefix + ":" + self.session_key
 
-    async def set_to_session(self, path: str, data, **kwargs) -> bool:
+    async def set_to_session(self, path: str, data: JsonType, **kwargs) -> bool:
         return (
             await self._db.json().set(self.storage_key, path, data, **kwargs)
             is not None

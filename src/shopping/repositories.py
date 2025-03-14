@@ -86,9 +86,8 @@ class UserCartManager(_BaseUserManager):
         if data:
             await self._db.hset(self._key, mapping=data)  # type: ignore
 
-    async def add(self, dto: AddToCartDTO) -> int:
-        assert dto.quantity
-        return await self._db.hincrby(self._key, str(dto.product_id), dto.quantity)
+    async def add_quantity(self, dto: AddToCartDTO) -> int:
+        return await self._db.hincrby(self._key, str(dto.product_id), dto.quantity or 1)
 
     async def delete_by_id(self, product_id: int):
         deleted = await self._db.hdel(self._key, str(product_id))
@@ -96,16 +95,14 @@ class UserCartManager(_BaseUserManager):
             raise NotFoundError()
 
     async def update_qty_by_id(self, product_id: int, qty: int):
-        if not await self.check_exists(product_id):
+        updated = await self._db.hsetnx(self._key, str(product_id), qty)
+        if not updated:
             raise NotFoundError()
-        await self._db.hset(self._key, str(product_id), qty)
-
-    async def check_exists(self, product_id: int) -> bool:
-        return await self._db.hexists(self._key, str(product_id))
 
     async def create(self, dto: AddToCartDTO):
-        assert dto.quantity
-        created = await self._db.hsetnx(self._key, str(dto.product_id), dto.quantity)
+        created = await self._db.hsetnx(
+            self._key, str(dto.product_id), dto.quantity or 1
+        )
         if not created:
             raise AlreadyExistsError()
 
@@ -118,16 +115,13 @@ class CartSessionManager(RedisSessionManager):
     _base_json_path = "$.cart"
 
     async def create(self, dto: AddToCartDTO):
-        await super().set_to_session(
-            f"{self._base_json_path}.{dto.product_id}", dto.quantity
+        created = await super().set_to_session(
+            f"{self._base_json_path}.{dto.product_id}", dto.quantity, nx=True
         )
+        if not created:
+            raise AlreadyExistsError()
 
-    async def check_exists(self, product_id: int) -> bool:
-        return bool(
-            await super().retrieve_from_session(f"{self._base_json_path}.{product_id}")
-        )
-
-    async def add(self, dto: AddToCartDTO) -> int:
+    async def add_quantity(self, dto: AddToCartDTO) -> int:
         new_qty = await self._db.json().numincrby(
             self.storage_key,
             f"{self._base_json_path}.{dto.product_id}",
