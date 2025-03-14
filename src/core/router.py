@@ -9,7 +9,6 @@ from news.handlers import router as news_router
 from orders.handlers import router as orders_router
 from sessions.handlers import cart_router, wishlist_router
 from payments.handlers import router as payments_router
-from sales.handlers import router as sales_router
 
 major_version = Resolve(Config).api_version[0]
 
@@ -22,7 +21,6 @@ api_router.include_router(orders_router)
 api_router.include_router(cart_router)
 api_router.include_router(wishlist_router)
 api_router.include_router(payments_router)
-api_router.include_router(sales_router)
 
 router = APIRouter()
 router.include_router(api_router)

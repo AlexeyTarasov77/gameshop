@@ -145,7 +145,6 @@ def _init_container() -> punq.Container:
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )
-
     return container
 
 

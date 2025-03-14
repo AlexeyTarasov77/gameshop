@@ -27,7 +27,9 @@ class SalesParser:
         self._client = client
         self._service = products_service
 
-    def parsed_to_dto(self, product: ParsedItem, platform: ProductPlatform) -> SalesDTO:
+    def _parsed_to_dto(
+        self, product: ParsedItem, platform: ProductPlatform
+    ) -> SalesDTO:
         return SalesDTO.model_validate(
             {
                 **asdict(product),
@@ -36,14 +38,14 @@ class SalesParser:
             }
         )
 
-    async def load_parsed(
+    async def _load_parsed(
         self, psn_sales: Sequence[ParsedItem], xbox_sales: Sequence[ParsedItem]
     ):
         sales: list[SalesDTO] = []
         for product in psn_sales:
-            sales.append(self.parsed_to_dto(product, ProductPlatform.PSN))
+            sales.append(self._parsed_to_dto(product, ProductPlatform.PSN))
         for product in xbox_sales:
-            sales.append(self.parsed_to_dto(product, ProductPlatform.XBOX))
+            sales.append(self._parsed_to_dto(product, ProductPlatform.XBOX))
         await self._service.load_new_sales(sales)
 
     async def parse_and_save(self, limit: int | None):
@@ -71,5 +73,5 @@ class SalesParser:
             round(time.perf_counter() - t1, 1),
         )
         self._logger.info("Loading sales to db...")
-        await self.load_parsed(psn_sales, xbox_sales)
+        await self._load_parsed(psn_sales, xbox_sales)
         self._logger.info("Sales succesfully loaded")

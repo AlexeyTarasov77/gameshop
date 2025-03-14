@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI | None = None):
     logger = Resolve(Logger)
     db = Resolve(SqlAlchemyClient)
     redis_client = Resolve(RedisClient)
@@ -25,8 +25,10 @@ async def lifespan(app: FastAPI):
     [await task for task in done_tasks]
     await redis_client.setup()
     logger.info("Gateways are ready to accept connections!")
-    yield
-    await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
+    try:
+        yield
+    finally:
+        await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
 
 
 def app_factory() -> FastAPI:

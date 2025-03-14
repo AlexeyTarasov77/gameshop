@@ -1,8 +1,7 @@
 from decimal import Decimal
 from products.schemas import PriceUnitDTO
-from sales.schemas import ExchangeRatesMappingDTO
+from products.schemas import ExchangeRatesMappingDTO, SetExchangeRateDTO
 from gateways.db import RedisClient
-from sales.schemas import SetExchangeRateDTO
 
 
 class CurrencyConverter:
