@@ -99,7 +99,9 @@ class Product(SqlAlchemyBaseModel):
         bool | None
     ]  # indicates whether discount applies to game pass (only for xbox sales)
     deal_until: Mapped[datetime | None]
-    prices: Mapped[list["RegionalPrice"]] = relationship(back_populates="product")
+    prices: Mapped[list["RegionalPrice"]] = relationship(
+        back_populates="product", lazy="selectin"
+    )
     created_at: Mapped[created_at_type]
     updated_at: Mapped[updated_at_type]
 

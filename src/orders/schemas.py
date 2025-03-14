@@ -5,6 +5,7 @@ from typing import Annotated, Self
 from uuid import UUID
 from pydantic import AfterValidator, EmailStr, Field, field_validator
 from payments.models import AvailablePaymentSystems
+from shopping.schemas import AddToCartDTO
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
 from orders.models import Order, OrderStatus
@@ -45,9 +46,7 @@ CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
 
 
-class OrderItemInCartDTO(BaseDTO):
-    product_id: Base64Int
-    quantity: int = Field(gt=0)
+class OrderItemInCartDTO(AddToCartDTO): ...
 
 
 class OrderItemProduct(BaseDTO):
@@ -110,7 +109,7 @@ class CreateOrderDTO(BaseDTO):
     @field_validator("cart")
     @classmethod
     def check_cart(cls, value: list) -> list:
-        assert len(value) > 0
+        assert len(value) > 0, "Cart can't by empty"
         return value
 
 

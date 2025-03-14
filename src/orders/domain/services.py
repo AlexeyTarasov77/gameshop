@@ -1,4 +1,3 @@
-from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.pagination import PaginationParams
@@ -38,34 +37,55 @@ class OrdersService(BaseService):
         try:
             async with self._uow as uow:
                 cart_products = await uow.products_repo.list_by_ids(
-                    [int(item.product_id) for item in dto.cart]
+                    [int(item.product_id) for item in dto.cart], only_in_stock=True
                 )
                 if len(cart_products) != len(dto.cart):
-                    raise EntityNotFoundError("Some of the supplied products not found")
-                price_mapping: dict[int, Decimal] = {}
-                for product in cart_products:
-                    price_mapping[product.id] = product.total_price
-                    if not product.in_stock:
-                        self._logger.warning(
-                            "Attempt to create order with unavailable product %s",
-                            product.id,
-                        )
-                        raise UnavailableProductError(product.name)
+                    raise EntityNotFoundError(
+                        "Some of the supplied products not found or aren't in stock anymore"
+                    )
                 order = await uow.orders_repo.create_from_dto(dto, user_id)
+                order_items: list[OrderItem] = []
+                for product in cart_products:
+                    [mapped_item] = [
+                        item for item in dto.cart if item.product_id == product.id
+                    ]
+                    # find price for provided region
+                    region = (
+                        mapped_item.region.lower().strip() if mapped_item.region else ""
+                    )
+                    mapped_price_by_region = None
+                    for regional_price in product.prices:
+                        if regional_price.region_code.lower().strip() == region:
+                            mapped_price_by_region = (
+                                regional_price.calc_discounted_price(product.discount)
+                            )
+                    if mapped_price_by_region is None:
+                        raise UnavailableProductError(product.name)
+                    order_items.append(
+                        OrderItem(
+                            order_id=order.id,
+                            region=region or None,
+                            price=mapped_price_by_region,
+                            product_id=product.id,
+                            quantity=mapped_item.quantity,
+                        )
+                    )
                 if not dto.user.email and user_id is not None:
                     user = await uow.users_repo.get_by_id(user_id, is_active=True)
                     order.user = user
-                order_items = [
-                    OrderItem(
-                        order_id=order.id,
-                        price=price_mapping[int(item.product_id)],
-                        product_id=item.product_id,
-                        quantity=item.quantity,
-                    )
-                    for item in dto.cart
-                ]
                 order.items = order_items
                 await uow.order_items_repo.save_many(order_items)
+
+                # creating payment bill
+                payment_system = self._payment_system_factory.choose_by_name(
+                    dto.selected_ps
+                )
+                self._logger.info(
+                    "Creating payment bill for %s payment system", dto.selected_ps
+                )
+                bill_id, payment_url = await payment_system.create_bill(
+                    order.id, order.total, order.client_email
+                )
         except NotFoundError:
             # user not found
             self._logger.warning(
@@ -73,13 +93,6 @@ class OrdersService(BaseService):
                 user_id,
             )
             raise EntityNotFoundError("User", id=user_id)
-        payment_system = self._payment_system_factory.choose_by_name(dto.selected_ps)
-        self._logger.info(
-            "Creating payment bill for %s payment system", dto.selected_ps
-        )
-        bill_id, payment_url = await payment_system.create_bill(
-            order.id, order.total, order.client_email
-        )
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
             order.client_email,

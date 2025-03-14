@@ -100,8 +100,12 @@ class ProductsRepository(PaginationRepository[Product]):
     async def get_by_id(self, product_id: int) -> Product:
         return await super().get_one(id=product_id)
 
-    async def list_by_ids(self, ids: Sequence[int]) -> Sequence[Product]:
+    async def list_by_ids(
+        self, ids: Sequence[int], *, only_in_stock: bool = False
+    ) -> Sequence[Product]:
         stmt = select(Product).where(Product.id.in_(ids))
+        if only_in_stock:
+            stmt = stmt.filter_by(in_stock=True)
         res = await self._session.execute(stmt)
         return res.scalars().all()
 

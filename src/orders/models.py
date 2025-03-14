@@ -68,6 +68,7 @@ class OrderItem(SqlAlchemyBaseModel):
     order_id: Mapped[int] = mapped_column(ForeignKey("order.id", ondelete="CASCADE"))
     order: Mapped[Order] = relationship(back_populates="items")
     price: Mapped[Decimal]
+    region: Mapped[str | None]  # regions which price belongs to
     quantity: Mapped[int] = mapped_column(CheckConstraint("quantity > 0"))
 
     @property
