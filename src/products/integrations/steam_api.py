@@ -12,11 +12,18 @@ class GamesForFarmAPIClient:
         self._service = products_service
 
     def _good_to_dto(self, good: dict) -> SteamItemDTO:
-        return SteamItemDTO.model_validate({**good, "prices": {"": good["price_wmr"]}})
+        return SteamItemDTO.model_validate(
+            {
+                **good,
+                "price_rub": good["price_wmr"],  # price in rubs
+                "discount": 0,
+                "image_url": good["icon"],
+            }
+        )
 
     async def _fetch_goods_without_bundle(self) -> Sequence[SteamItemDTO]:
         resp = await self._client.get(self._url)
-        data = await resp.json()
+        data = resp.json()["goods"]
         goods = list(data.values())
         goods_no_bundle = [
             good for good in goods if "bundle" not in good["name"].lower()

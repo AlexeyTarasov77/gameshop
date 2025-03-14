@@ -195,10 +195,11 @@ class ProductsService(BaseService):
     async def load_new_steam_items(self, items: Sequence[SteamItemDTO]):
         products_for_save = [
             Product(
-                **item.model_dump(),
-                categor=ProductCategory.STEAM_KEYS,
+                **item.model_dump(exclude={"price_rub"}),
+                category=ProductCategory.STEAM_KEYS,
                 delivery_method=ProductDeliveryMethod.KEY,
                 platform=ProductPlatform.STEAM,
+                prices=[RegionalPrice(base_price=item.price_rub)],
             )
             for item in items
         ]

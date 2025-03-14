@@ -130,17 +130,18 @@ class ProductForLoadDTO(BaseDTO):
     name: str
     discount: int
     image_url: str
-    prices: dict[XboxParseRegions | PsnParseRegions, PriceUnitDTO]
 
 
 class SteamItemDTO(ProductForLoadDTO):
     description: str
+    price_rub: Decimal
 
 
 class SalesDTO(ProductForLoadDTO):
     platform: ProductPlatform
     with_gp: bool | None = None
     deal_until: datetime | None = None
+    prices: dict[XboxParseRegions | PsnParseRegions, PriceUnitDTO]
 
 
 class ListProductsFilterDTO(BaseDTO):
