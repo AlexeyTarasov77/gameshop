@@ -1,6 +1,6 @@
 import typing as t
 
-from sessions.schemas import AddToCartDTO
+from shopping.schemas import AddToCartDTO
 
 
 class CartManagerI(t.Protocol):

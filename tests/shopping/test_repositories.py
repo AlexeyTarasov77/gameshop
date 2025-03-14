@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import tests.utils  # noqa
 import pytest
-from sessions.repositories import (
+from shopping.repositories import (
     CartSessionManager,
     UserCartManager,
     UserWishlistManager,

@@ -13,13 +13,13 @@ from payments.systems import PaymentSystemFactoryImpl
 from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
 from products.integrations import GamesForFarmAPIClient, NSGiftsAPIClient
 from products.currencies import CurrencyConverter
-from sessions.domain.interfaces import (
+from shopping.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,
     WishlistManagerFactoryI,
 )
-from sessions.domain.services import SessionsService
-from sessions.repositories import (
+from shopping.domain.services import ShoppingService
+from shopping.repositories import (
     CartManagerFactory,
     SessionCopier,
     WishlistManagerFactory,
@@ -30,7 +30,7 @@ from gateways.db.exceptions import (
     AbstractDatabaseExceptionMapper,
     PostgresExceptionsMapper,
 )
-from sessions.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
+from shopping.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
 from gateways.db import SqlAlchemyClient, RedisClient
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
@@ -124,7 +124,7 @@ def _init_container() -> punq.Container:
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
-    container.register(SessionsService)
+    container.register(ShoppingService)
     container.register(
         PaymentsService,
         PaymentsService,

@@ -1,7 +1,7 @@
 import asyncio
 from logging import Logger
 from gateways.db import RedisClient, SqlAlchemyClient
-from sessions.sessions import SessionCreatorI, session_middleware
+from shopping.sessions import SessionCreatorI, session_middleware
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve, cleanup_list
 from config import Config

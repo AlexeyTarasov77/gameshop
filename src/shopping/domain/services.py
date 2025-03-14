@@ -2,18 +2,18 @@ from collections.abc import Sequence
 from logging import Logger
 from typing import Literal
 from products.schemas import ProductInCartDTO, ShowProductWithPrices
-from sessions.domain.interfaces import (
+from shopping.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
 )
-from sessions.schemas import AddToCartDTO
+from shopping.schemas import AddToCartDTO
 from core.services.base import BaseService
 from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
-class SessionsService(BaseService):
+class ShoppingService(BaseService):
     entity_name = "Product"
 
     def __init__(

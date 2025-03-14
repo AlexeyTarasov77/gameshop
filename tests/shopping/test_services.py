@@ -1,23 +1,23 @@
-from sessions.domain.interfaces import CartManagerI, WishlistManagerI
+from shopping.domain.interfaces import CartManagerI, WishlistManagerI
 from tests.utils import exc_to_ctx_manager
 
 from random import randint
 import pytest
 from unittest.mock import AsyncMock, MagicMock, Mock, create_autospec, patch
 
-from sessions.domain.services import SessionsService
+from shopping.domain.services import ShoppingService
 from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
 @pytest.fixture
-def sessions_service() -> SessionsService:
+def sessions_service() -> ShoppingService:
     uow = create_autospec(AbstractUnitOfWork)
     uow.__aenter__.return_value = uow
     cart_repo = create_autospec(CartManagerI)
     wishlist_repo = create_autospec(WishlistManagerI)
-    return SessionsService(uow, cart_repo, wishlist_repo)
+    return ShoppingService(uow, cart_repo, wishlist_repo)
 
 
 class TestSessionsService:

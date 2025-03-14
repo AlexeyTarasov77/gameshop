@@ -7,7 +7,7 @@ from products.handlers import router as product_router
 from users.handlers import router as users_router
 from news.handlers import router as news_router
 from orders.handlers import router as orders_router
-from sessions.handlers import cart_router, wishlist_router
+from shopping.handlers import cart_router, wishlist_router
 from payments.handlers import router as payments_router
 
 major_version = Resolve(Config).api_version[0]

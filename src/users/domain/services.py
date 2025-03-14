@@ -13,7 +13,7 @@ from core.utils import UnspecifiedType
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 from mailing.domain.services import MailingService
-from sessions.domain.interfaces import SessionCopierI
+from shopping.domain.interfaces import SessionCopierI
 from users.domain.interfaces import (
     UserEmailTemplatesI,
     PasswordHasherI,

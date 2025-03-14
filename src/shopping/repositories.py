@@ -4,12 +4,12 @@ from collections.abc import Mapping, Sequence
 from logging import Logger
 
 from gateways.db import RedisClient
-from sessions.domain.interfaces import (
+from shopping.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
 )
-from sessions.schemas import AddToCartDTO
-from sessions.sessions import RedisSessionManager
+from shopping.schemas import AddToCartDTO
+from shopping.sessions import RedisSessionManager
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
 
