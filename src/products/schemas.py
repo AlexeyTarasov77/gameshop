@@ -1,4 +1,5 @@
 from datetime import datetime
+from pydantic_extra_types.country import CountryAlpha2
 from decimal import Decimal
 from enum import Enum
 from pydantic_extra_types.currency_code import Currency
@@ -148,7 +149,7 @@ class ListProductsFilterDTO(BaseDTO):
     categories: list[ProductCategory] | None = None
     platforms: list[ProductPlatform] | None = None
     delivery_methods: list[ProductDeliveryMethod] | None = None
-    region: str | None = None
+    regions: list[CountryAlpha2] | None = None
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):

@@ -1,8 +1,8 @@
 from datetime import datetime
-
+from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
-from sqlalchemy import and_, delete, desc, not_, or_, select, func, update
+from sqlalchemy import String, and_, delete, desc, not_, or_, select, func, update
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
@@ -34,9 +34,11 @@ class ProductsRepository(PaginationRepository[Product]):
             .options(
                 selectinload(
                     Product.prices
-                    if dto.region is None
+                    if not dto.regions
                     else Product.prices.and_(
-                        func.lower(RegionalPrice.region_code) == dto.region.lower()
+                        func.lower(cast(RegionalPrice.region_code, String)).in_(
+                            [region.lower() for region in dto.regions]
+                        )
                     )
                 )
             )
