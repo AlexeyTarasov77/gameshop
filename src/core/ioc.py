@@ -11,9 +11,8 @@ from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFact
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
 from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
-from products.integrations.steam_api import GamesForFarmAPIClient
+from products.integrations import GamesForFarmAPIClient, NSGiftsAPIClient
 from products.currencies import CurrencyConverter
-from sales.steam_api import NSGiftsSteamAPIClient
 from sessions.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,
@@ -136,7 +135,7 @@ def _init_container() -> punq.Container:
     )
     container.register(
         SteamAPIClientI,
-        NSGiftsSteamAPIClient,
+        NSGiftsAPIClient,
         steam_api_auth_email=cfg.clients.steam_api.auth_email,
         steam_api_auth_password=cfg.clients.steam_api.auth_password,
         scope=punq.Scope.singleton,

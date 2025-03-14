@@ -14,10 +14,10 @@ from enum import Enum, auto
 from core.utils import CIEnum
 
 
-class IntWithLabel(int):
+class LabeledID(int):
     def __new__(cls, value: int, *args, **kwargs):
         if value <= 0:
-            raise ValueError("value should be > 0")
+            raise ValueError("id should be > 0")
         return super().__new__(cls, value)
 
     #
@@ -33,40 +33,41 @@ class _BaseLabeledEnum(Enum):
     @classmethod
     def _missing_(cls, value: Any):
         try:
-            if isinstance(value, str):
-                found = cls.__members__.get(value.upper()) or (
-                    int(value) in [member.value for member in cls.__members__.values()]
-                    and cls(int(value))
-                )
-                if not found:
-                    return None
-                return found
-            else:
+            if not isinstance(value, str):
+                raise ValueError()
+            # case-insensitive lookup in members first, then try to convert to int and find in values
+            found = cls.__members__.get(value.upper()) or (
+                int(value) in [member.value for member in cls.__members__.values()]
+                and cls(int(value))
+            )
+            if not found:
                 return None
+            return found
         except ValueError:
+            # value is not str or failed to convert to integer
             return None
 
 
 class ProductPlatform(_BaseLabeledEnum):
-    XBOX = IntWithLabel(1, "xbox")
-    PSN = IntWithLabel(2, "psn")
-    STEAM = IntWithLabel(3, "steam")
+    XBOX = LabeledID(1, "xbox")
+    PSN = LabeledID(2, "psn")
+    STEAM = LabeledID(3, "steam")
 
 
 class ProductCategory(_BaseLabeledEnum):
-    GAMES = IntWithLabel(1, "Игры")
-    SUBSCRIPTIONS = IntWithLabel(2, "Подписки")
-    RECHARGE_CARDS = IntWithLabel(3, "Карты пополнения")
-    DONATE = IntWithLabel(4, "Внутриигровая валюта")
-    XBOX_SALES = IntWithLabel(5, "Распродажа XBOX")
-    PSN_SALES = IntWithLabel(6, "Распродажа PSN")
-    STEAM_KEYS = IntWithLabel(7, "Ключи Steam")
+    GAMES = LabeledID(1, "Игры")
+    SUBSCRIPTIONS = LabeledID(2, "Подписки")
+    RECHARGE_CARDS = LabeledID(3, "Карты пополнения")
+    DONATE = LabeledID(4, "Внутриигровая валюта")
+    XBOX_SALES = LabeledID(5, "Распродажа XBOX")
+    PSN_SALES = LabeledID(6, "Распродажа PSN")
+    STEAM_KEYS = LabeledID(7, "Ключи Steam")
 
 
 class ProductDeliveryMethod(_BaseLabeledEnum):
-    KEY = IntWithLabel(1, "Ключ")
-    ACCOUNT_PURCHASE = IntWithLabel(2, "Покупка на аккаунт")
-    GIFT = IntWithLabel(3, "Передача подарком")
+    KEY = LabeledID(1, "Ключ")
+    ACCOUNT_PURCHASE = LabeledID(2, "Покупка на аккаунт")
+    GIFT = LabeledID(3, "Передача подарком")
 
 
 class PsnParseRegions(CIEnum):

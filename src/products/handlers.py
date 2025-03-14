@@ -40,7 +40,7 @@ async def get_product(
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         restrict_content_type("multipart/form-data"),
-        # Depends(require_admin),
+        Depends(require_admin),
     ],
 )
 async def create_product(

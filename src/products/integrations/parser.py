@@ -13,7 +13,7 @@ from products.models import ProductPlatform
 from httpx import AsyncClient
 from gamesparser import ParsedItem, PsnParser, XboxParser
 
-from sales.models import (
+from products.models import (
     PsnParseRegions,
     XboxParseRegions,
 )
