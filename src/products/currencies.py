@@ -13,6 +13,11 @@ class CurrencyConverter:
         res = await self._db.hgetall(self._name)
         return ExchangeRatesMappingDTO.model_validate(res)
 
+    async def get_rate_for(self, rate_from: str, rate_to: str = "rub") -> float | None:
+        key = self._build_key(rate_from, rate_to)
+        res = await self._db.hget(self._name, key)
+        return float(res) if res else None
+
     def _build_key(self, rate_from: str, rate_to: str) -> str:
         return f"{rate_from}/{rate_to}".lower()
 

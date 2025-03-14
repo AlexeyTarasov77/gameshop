@@ -32,15 +32,12 @@ ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
 
 
 class SetExchangeRateDTO(BaseDTO):
-    from_: Currency = Field(default=Currency("RUB"), alias="from")
-    to: Currency
+    from_: Currency = Field(alias="from")
+    to: Currency = Field(default=Currency("RUB"))
     value: float
 
 
 class _BaseContentTypeDTO[T: Enum](BaseDTO):
-    # name: str
-    # url: str
-    # id: int
     name: T = Field(serialization_alias="id")
 
     @computed_field

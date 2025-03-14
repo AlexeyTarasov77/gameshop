@@ -6,7 +6,7 @@ from json import JSONDecoder, JSONEncoder
 from logging import Logger
 from typing import Any
 
-from redis.commands.search.field import Field, TagField, TextField
+from redis.commands.search.field import Field
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.asyncio import Redis, ResponseError
 from redis.commands.json import JSON
@@ -33,23 +33,13 @@ class IndexSchema:
     _type: IndexType = IndexType.JSON
 
 
-class AvailableIndexes(Enum):
-    SALES_IDX = IndexMetadata("sales_item:", "idx:sales")
+class AvailableIndexes(Enum): ...
 
 
 class RedisClient(Redis):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.indexes: tuple[IndexSchema] = (
-            IndexSchema(
-                AvailableIndexes.SALES_IDX.value,
-                (
-                    TextField("$.name", as_name="name"),
-                    TagField("$.category", as_name="category"),
-                    TagField("$.prices.*.region", as_name="price_regions"),
-                ),
-            ),
-        )
+        self.indexes: tuple[IndexSchema] = tuple()
 
     @classmethod
     def from_url(

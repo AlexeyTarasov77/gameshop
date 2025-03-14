@@ -2,7 +2,7 @@ from datetime import datetime
 
 from collections.abc import Sequence
 from decimal import Decimal
-from sqlalchemy import and_, delete, desc, not_, or_, select, func
+from sqlalchemy import and_, delete, desc, not_, or_, select, func, update
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
@@ -113,8 +113,19 @@ class ProductsRepository(PaginationRepository[Product]):
         await self._session.execute(stmt)
 
 
-class PricesRepository(SqlAlchemyRepository):
+class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     model = RegionalPrice
 
     async def add_price(self, for_product_id: int, base_price: Decimal) -> None:
         await super().create(product_id=for_product_id, base_price=base_price)
+
+    async def update_with_rate(
+        self, for_currency: str, new_rate: float, old_rate: float
+    ) -> None:
+        update_price_clause = RegionalPrice.base_price / old_rate * new_rate
+        stmt = (
+            update(self.model)
+            .values(base_price=update_price_clause)
+            .where(func.lower(self.model.converted_from_curr) == for_currency.lower())
+        )
+        await self._session.execute(stmt)

@@ -294,7 +294,14 @@ class ProductsService(BaseService):
         return await self._steam_api.get_currency_rates()
 
     async def set_exchange_rate(self, dto: SetExchangeRateDTO) -> None:
+        old_rate = await self._currency_converter.get_rate_for(dto.from_, dto.to)
         await self._currency_converter.set_exchange_rate(dto)
+        if old_rate is None:
+            return
+        new_rate = dto.value
+        # update existing prices with new rate (only that which was converted from updated rate)
+        async with self._uow as uow:
+            await uow.prices_repo.update_with_rate(dto.from_, new_rate, old_rate)
 
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()
