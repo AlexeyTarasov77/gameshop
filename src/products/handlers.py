@@ -112,7 +112,7 @@ async def get_steam_exchange_rates(
 @router.post(
     "/exchange-rates/set",
     tags=["exchange-rates"],
-    # dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_admin)],
 )
 async def set_exchange_rate(
     dto: schemas.SetExchangeRateDTO, products_service: ProductsServiceDep

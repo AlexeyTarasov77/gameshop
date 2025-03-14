@@ -54,8 +54,12 @@ class ProductsRepository(PaginationRepository[Product]):
             stmt = stmt.where(base_cond if dto.discounted else not_(base_cond))
         if dto.in_stock is not None:
             stmt = stmt.filter_by(in_stock=dto.in_stock)
-        if dto.category is not None:
-            stmt = stmt.where(func.lower(Product.category) == dto.category.name.lower())
+        if dto.categories:
+            stmt = stmt.where(Product.category.in_(dto.categories))
+        if dto.platforms:
+            stmt = stmt.where(Product.platform.in_(dto.platforms))
+        if dto.delivery_methods:
+            stmt = stmt.where(Product.delivery_method.in_(dto.delivery_methods))
         res = await self._session.execute(stmt)
         products = res.scalars().all()
         filtered_products = [rec for rec in products if rec.prices]

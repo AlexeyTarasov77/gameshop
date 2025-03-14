@@ -145,7 +145,9 @@ class ListProductsFilterDTO(BaseDTO):
     query: str | None = None
     discounted: bool | None = None
     in_stock: bool | None = None
-    category: ProductCategory | None = None
+    categories: list[ProductCategory] | None = None
+    platforms: list[ProductPlatform] | None = None
+    delivery_methods: list[ProductDeliveryMethod] | None = None
     region: str | None = None
 
 
