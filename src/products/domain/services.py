@@ -11,6 +11,7 @@ from core.services.exceptions import (
     EntityOperationRestrictedByRefError,
 )
 from core.uow import AbstractUnitOfWork
+from gateways.currency_converter import ExchangeRatesMappingDTO, SetExchangeRateDTO
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
@@ -30,11 +31,9 @@ from products.schemas import (
     CategoryDTO,
     DeliveryMethodDTO,
     CreateProductDTO,
-    ExchangeRatesMappingDTO,
     ListProductsFilterDTO,
     PlatformDTO,
     SalesDTO,
-    SetExchangeRateDTO,
     ShowProduct,
     ShowProductWithPrices,
     SteamItemDTO,

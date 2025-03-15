@@ -5,7 +5,7 @@ from core.pagination import PaginationParams, PaginationResT
 from orders.schemas import CreateOrderDTO, SteamTopUpCreateDTO, UpdateOrderDTO
 from orders.models import Order, OrderItem, SteamTopUp
 from payments.models import AvailablePaymentSystems
-from products.schemas import ExchangeRatesMappingDTO
+from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
 class OrdersRepositoryI(Protocol):

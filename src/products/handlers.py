@@ -6,6 +6,10 @@ from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
 from fastapi import APIRouter, Form, Depends, Query, status
+from gateways.currency_converter import (
+    ExchangeRatesMappingDTO,
+    SetExchangeRateDTO,
+)
 from products import schemas
 from products.domain.services import ProductsService
 from users.dependencies import require_admin
@@ -105,7 +109,7 @@ async def delivery_methods_list(
 )
 async def get_steam_exchange_rates(
     products_service: ProductsServiceDep,
-) -> schemas.ExchangeRatesMappingDTO:
+) -> ExchangeRatesMappingDTO:
     return await products_service.get_steam_exchange_rates()
 
 
@@ -115,7 +119,7 @@ async def get_steam_exchange_rates(
     dependencies=[Depends(require_admin)],
 )
 async def set_exchange_rate(
-    dto: schemas.SetExchangeRateDTO, products_service: ProductsServiceDep
+    dto: SetExchangeRateDTO, products_service: ProductsServiceDep
 ):
     await products_service.set_exchange_rate(dto)
     return {"success": True}
@@ -128,5 +132,5 @@ async def set_exchange_rate(
 )
 async def get_exchange_rates(
     products_service: ProductsServiceDep,
-) -> schemas.ExchangeRatesMappingDTO:
+) -> ExchangeRatesMappingDTO:
     return await products_service.get_exchange_rates()

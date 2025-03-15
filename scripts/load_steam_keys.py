@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.append((Path().parent / "src").absolute().as_posix())
 
-from products.integrations.steam_api import GamesForFarmAPIClient
+from gateways.steam import GamesForFarmAPIClient
 from core.ioc import get_container
 from main import lifespan
 

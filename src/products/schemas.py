@@ -2,14 +2,12 @@ from datetime import datetime
 from pydantic_extra_types.country import CountryAlpha2
 from decimal import Decimal
 from enum import Enum, StrEnum
-from pydantic_extra_types.currency_code import Currency
 from typing import Any, Annotated
 
 from core.schemas import (
     Base64Int,
     BaseDTO,
     DateTimeAfterNow,
-    ExchangeRate,
     ImgUrl,
     ProductDiscount,
     UploadImage,
@@ -17,10 +15,10 @@ from core.schemas import (
 from pydantic import (
     Field,
     PlainSerializer,
-    RootModel,
     computed_field,
 )
 
+from gateways.currency_converter import PriceUnitDTO
 from products.models import (
     ProductCategory,
     ProductDeliveryMethod,
@@ -28,14 +26,6 @@ from products.models import (
     XboxParseRegions,
     ProductPlatform,
 )
-
-ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
-
-
-class SetExchangeRateDTO(BaseDTO):
-    from_: Currency = Field(alias="from")
-    to: Currency = Field(default=Currency("RUB"))
-    value: float
 
 
 class _BaseContentTypeDTO[T: Enum](BaseDTO):
@@ -117,11 +107,6 @@ class ShowProduct(BaseProductDTO):
     category: ProductCategoryField
     platform: ProductPlatformField
     delivery_method: ProductDeliveryMethodField
-
-
-class PriceUnitDTO(BaseDTO):
-    currency_code: Currency
-    value: Decimal
 
 
 class ProductForLoadDTO(BaseDTO):

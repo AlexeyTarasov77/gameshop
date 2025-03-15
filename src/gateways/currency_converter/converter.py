@@ -1,6 +1,5 @@
 from decimal import Decimal
-from products.schemas import PriceUnitDTO
-from products.schemas import ExchangeRatesMappingDTO, SetExchangeRateDTO
+from .schemas import PriceUnitDTO, ExchangeRatesMappingDTO, SetExchangeRateDTO
 from gateways.db import RedisClient
 
 

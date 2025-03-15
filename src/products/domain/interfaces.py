@@ -3,17 +3,19 @@ from decimal import Decimal
 import typing as t
 
 from core.pagination import PaginationParams, PaginationResT
+from gateways.currency_converter.schemas import (
+    ExchangeRatesMappingDTO,
+    SetExchangeRateDTO,
+)
 from products.models import (
     Product,
     ProductCategory,
 )
 from products.schemas import (
     CreateProductDTO,
-    ExchangeRatesMappingDTO,
     ListProductsFilterDTO,
     PriceUnitDTO,
     UpdateProductDTO,
-    SetExchangeRateDTO,
 )
 
 

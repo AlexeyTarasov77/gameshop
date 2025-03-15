@@ -1,4 +1,4 @@
-.PHONY: api/run api/run/test api/run/prod run/tests run/tests/docker migrations/new migrations/run api/deploy/prod api/deploy/test api/parse-sales
+.PHONY: api/run api/run/test api/run/prod run/tests run/tests/docker migrations/new migrations/run api/deploy/prod api/deploy/test 
 
 MODE ?= local
 
@@ -29,6 +29,3 @@ api/deploy/prod:
 
 api/deploy/test:
 	bash scripts/deploy.sh test
-
-api/parse-sales:
-	MODE=$(MODE) poetry run python src/products/integrations/parser.py $(limit)

@@ -12,8 +12,8 @@ from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFact
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
 from products.domain.interfaces import CurrencyConverterI
-from products.integrations import GamesForFarmAPIClient, NSGiftsAPIClient
-from products.currencies import CurrencyConverter
+from gateways.steam import GamesForFarmAPIClient, NSGiftsAPIClient
+from gateways.currency_converter import CurrencyConverter
 from shopping.domain.interfaces import (
     CartManagerFactoryI,
     SessionCopierI,

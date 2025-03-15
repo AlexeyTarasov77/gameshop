@@ -1,18 +1,23 @@
 from collections.abc import Sequence
 from decimal import Decimal
+from logging import Logger
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
 from orders.schemas import SteamTopUpCreateDTO
 from products.domain.services import ProductsService
-from products.schemas import ExchangeRatesMappingDTO, SteamItemDTO
+from products.schemas import SteamItemDTO
+from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
 class GamesForFarmAPIClient:
-    def __init__(self, client: AsyncClient, products_service: ProductsService) -> None:
+    def __init__(
+        self, client: AsyncClient, products_service: ProductsService, logger: Logger
+    ) -> None:
         self._url = "https://gamesforfarm.com/api?key=GamesInStock_Gamesforfarm"
         self._client = client
         self._service = products_service
+        self._logger = logger
 
     def _good_to_dto(self, good: dict) -> SteamItemDTO:
         return SteamItemDTO.model_validate(
@@ -25,17 +30,20 @@ class GamesForFarmAPIClient:
         )
 
     async def _fetch_goods_without_bundle(self) -> Sequence[SteamItemDTO]:
+        self._logger.info("Fetching goods from api...")
         resp = await self._client.get(self._url)
         data = resp.json()["goods"]
         goods = list(data.values())
         goods_no_bundle = [
             good for good in goods if "bundle" not in good["name"].lower()
         ]
+        self._logger.info("Goods succesfully fetched and filtered")
         return [self._good_to_dto(good) for good in goods_no_bundle]
 
     async def fetch_and_save(self):
         goods = await self._fetch_goods_without_bundle()
         await self._service.load_new_steam_items(goods)
+        self._logger.info("Fetched goods succesfully loaded")
 
 
 class NSGiftsAPIClient:

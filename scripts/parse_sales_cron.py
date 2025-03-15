@@ -6,7 +6,7 @@ sys.path.append((Path().parent / "src").absolute().as_posix())
 
 from core.ioc import get_container
 from main import lifespan
-from products.integrations.parser import SalesParser
+from gateways.gamesparser import SalesParser
 
 
 async def main():
