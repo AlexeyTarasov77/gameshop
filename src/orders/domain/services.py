@@ -39,6 +39,7 @@ class OrdersService(BaseService):
         self._payment_system_factory = payment_system_factory
         self._steam_api = steam_api
         self._top_up_fee_manager = top_up_fee_manager
+        self._top_up_default_fee = 10  # %
 
     async def create_order(
         self,
@@ -191,13 +192,12 @@ class OrdersService(BaseService):
             top_up_id = await self._steam_api.create_top_up_request(dto)
         except ValueError as e:
             raise InvalidValueError(str(e))
-        default_percent_fee = 10
         percent_fee = await self._top_up_fee_manager.get_current_fee()
         if percent_fee is None:
             self._logger.warning(
-                "Steam top up fee is unset. Using default: %s", default_percent_fee
+                "Steam top up fee is unset. Using default: %s", self._top_up_default_fee
             )
-            percent_fee = default_percent_fee
+            percent_fee = self._top_up_default_fee
         async with self._uow as uow:
             order = await uow.steam_top_up_repo.create_with_id(
                 dto, top_up_id, percent_fee, user_id
@@ -220,4 +220,12 @@ class OrdersService(BaseService):
         )
         return SteamTopUpCreateResDTO(
             order=ShowSteamTopUp.model_validate(order), payment_url=payment_url
+        )
+
+    async def set_steam_top_up_fee(self, percent_fee: int) -> None:
+        await self._top_up_fee_manager.set_current_fee(percent_fee)
+
+    async def get_steam_top_up_fee(self) -> int:
+        return (
+            await self._top_up_fee_manager.get_current_fee() or self._top_up_default_fee
         )

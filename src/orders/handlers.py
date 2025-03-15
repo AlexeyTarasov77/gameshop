@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep
 from core.ioc import Inject
@@ -88,3 +88,20 @@ async def steam_top_up(
     user_id: int | None = Depends(get_optional_user_id),
 ) -> SteamTopUpCreateResDTO:
     return await orders_service.steam_top_up(dto, user_id)
+
+
+@router.post("/steam/top-up/fee", dependencies=[Depends(require_admin)])
+async def set_steam_top_up_fee(
+    percent_fee: t.Annotated[int, Body(embed=True, gt=0)],
+    orders_service: OrdersServiceDep,
+) -> dict[str, bool]:
+    await orders_service.set_steam_top_up_fee(percent_fee)
+    return {"success": True}
+
+
+@router.get("/steam/top-up/fee")
+async def get_steam_top_up_fee(
+    orders_service: OrdersServiceDep,
+) -> dict[str, int]:
+    percent_fee = await orders_service.get_steam_top_up_fee()
+    return {"percent_fee": percent_fee}
