@@ -15,7 +15,6 @@ from core.schemas import (
 from pydantic import (
     Field,
     PlainSerializer,
-    computed_field,
 )
 
 from gateways.currency_converter import PriceUnitDTO
@@ -28,17 +27,17 @@ from products.models import (
 )
 
 
-class _BaseContentTypeDTO[T: Enum](BaseDTO):
-    name: T = Field(serialization_alias="id")
+def _base_field_ser(v: Enum) -> dict[str, Any]:
+    name = v.value.label
+    url = v.name.replace("_", "-").lower()
+    return {"name": name, "url": url, "id": v.value}
 
-    @computed_field
-    def label(self) -> str:
-        print(type(self.name.value))
-        return getattr(self.name.value, "label", "")
 
-    @computed_field
-    def url(self) -> str:
-        return self.name.name.replace("_", "").lower()
+ProductPlatformField = Annotated[ProductPlatform, PlainSerializer(_base_field_ser)]
+ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_ser)]
+ProductDeliveryMethodField = Annotated[
+    ProductDeliveryMethod, PlainSerializer(_base_field_ser)
+]
 
 
 class RegionalPriceDTO(BaseDTO):
@@ -46,13 +45,16 @@ class RegionalPriceDTO(BaseDTO):
     region_code: str | None
 
 
-class CategoryDTO(_BaseContentTypeDTO[ProductCategory]): ...
+class CategoriesListDTO(BaseDTO):
+    categories: list[ProductCategoryField]
 
 
-class PlatformDTO(_BaseContentTypeDTO[ProductPlatform]): ...
+class PlatformsListDTO(BaseDTO):
+    platforms: list[ProductPlatformField]
 
 
-class DeliveryMethodDTO(_BaseContentTypeDTO[ProductDeliveryMethod]): ...
+class DeliveryMethodsListDTO(BaseDTO):
+    delivery_methods: list[ProductDeliveryMethodField]
 
 
 class BaseProductDTO(BaseDTO):
@@ -68,19 +70,6 @@ class CreateProductDTO(BaseProductDTO):
     discounted_price: Decimal
     deal_until: DateTimeAfterNow | None = None
     image: UploadImage
-
-
-def _base_field_ser(v: Enum) -> dict[str, Any]:
-    name = v.value.label
-    url = v.name.replace("_", "-").lower()
-    return {"name": name, "url": url, "id": v.value}
-
-
-ProductPlatformField = Annotated[ProductPlatform, PlainSerializer(_base_field_ser)]
-ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_ser)]
-ProductDeliveryMethodField = Annotated[
-    ProductDeliveryMethod, PlainSerializer(_base_field_ser)
-]
 
 
 class UpdateProductDTO(BaseDTO):

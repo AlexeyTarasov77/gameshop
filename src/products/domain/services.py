@@ -28,11 +28,11 @@ from products.models import (
     XboxParseRegions,
 )
 from products.schemas import (
-    CategoryDTO,
-    DeliveryMethodDTO,
+    CategoriesListDTO,
     CreateProductDTO,
+    DeliveryMethodsListDTO,
     ListProductsFilterDTO,
-    PlatformDTO,
+    PlatformsListDTO,
     SalesDTO,
     ShowProduct,
     ShowProductWithPrices,
@@ -254,17 +254,14 @@ class ProductsService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProductWithPrices.model_validate(product)
 
-    async def platforms_list(self) -> Sequence[PlatformDTO]:
-        return [PlatformDTO(name=platform) for platform in ProductPlatform]
+    async def platforms_list(self) -> PlatformsListDTO:
+        return PlatformsListDTO(platforms=list(ProductPlatform))
 
-    async def categories_list(self) -> Sequence[CategoryDTO]:
-        return [CategoryDTO(name=category) for category in ProductCategory]
+    async def categories_list(self) -> CategoriesListDTO:
+        return CategoriesListDTO(categories=list(ProductCategory))
 
-    async def delivery_methods_list(self) -> Sequence[DeliveryMethodDTO]:
-        return [
-            DeliveryMethodDTO(name=delivery_method)
-            for delivery_method in ProductDeliveryMethod
-        ]
+    async def delivery_methods_list(self) -> DeliveryMethodsListDTO:
+        return DeliveryMethodsListDTO(delivery_methods=list(ProductDeliveryMethod))
 
     async def update_product(
         self, product_id: int, dto: UpdateProductDTO

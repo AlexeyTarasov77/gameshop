@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 import typing as t
 
 from core.ioc import Inject
@@ -85,21 +84,21 @@ async def delete_product(
 @router.get("/platforms")
 async def platforms_list(
     products_service: ProductsServiceDep,
-) -> Sequence[schemas.PlatformDTO]:
+) -> schemas.PlatformsListDTO:
     return await products_service.platforms_list()
 
 
 @router.get("/categories")
 async def categories_list(
     products_service: ProductsServiceDep,
-) -> Sequence[schemas.CategoryDTO]:
+) -> schemas.CategoriesListDTO:
     return await products_service.categories_list()
 
 
 @router.get("/delivery-methods")
 async def delivery_methods_list(
     products_service: ProductsServiceDep,
-) -> Sequence[schemas.DeliveryMethodDTO]:
+) -> schemas.DeliveryMethodsListDTO:
     return await products_service.delivery_methods_list()
 
 
