@@ -1,13 +1,12 @@
-from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type, updated_at_type
+from gateways.db.sqlalchemy_gateway import int_pk_type
 
 from sqlalchemy.orm import Mapped
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway.models import TimestampMixin
 
 
-class News(SqlAlchemyBaseModel):
+class News(SqlAlchemyBaseModel, TimestampMixin):
     id: Mapped[int_pk_type]
     title: Mapped[str]
     description: Mapped[str]
     photo_url: Mapped[str | None]
-    created_at: Mapped[created_at_type]
-    updated_at: Mapped[updated_at_type]

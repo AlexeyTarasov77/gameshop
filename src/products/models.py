@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlalchemy.dialects.postgresql import ENUM
 
-from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
-from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import int_pk_type
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,8 +20,7 @@ class LabeledID(int):
             raise ValueError("id should be > 0")
         return super().__new__(cls, value)
 
-    #
-    def __init__(self, value: int, label: str) -> None:
+    def __init__(self, _, label: str) -> None:
         super().__init__()
         self.label = label
 
@@ -30,6 +29,13 @@ class LabeledID(int):
 
 
 class _BaseLabeledEnum(Enum):
+    def __new__(cls, value: str):
+        print("called new", value)
+        cls._next_id = getattr(cls, "_next_id", 0) + 1
+        obj = object.__new__(cls)
+        obj._value_ = LabeledID(cls._next_id, value)
+        return obj
+
     @classmethod
     def _missing_(cls, value: Any):
         try:
@@ -49,25 +55,25 @@ class _BaseLabeledEnum(Enum):
 
 
 class ProductPlatform(_BaseLabeledEnum):
-    XBOX = LabeledID(1, "xbox")
-    PSN = LabeledID(2, "psn")
-    STEAM = LabeledID(3, "steam")
+    XBOX = "xbox"
+    PSN = "psn"
+    STEAM = "steam"
 
 
 class ProductCategory(_BaseLabeledEnum):
-    GAMES = LabeledID(1, "Игры")
-    SUBSCRIPTIONS = LabeledID(2, "Подписки")
-    RECHARGE_CARDS = LabeledID(3, "Карты пополнения")
-    DONATE = LabeledID(4, "Внутриигровая валюта")
-    XBOX_SALES = LabeledID(5, "Распродажа XBOX")
-    PSN_SALES = LabeledID(6, "Распродажа PSN")
-    STEAM_KEYS = LabeledID(7, "Ключи Steam")
+    GAMES = "Игры"
+    SUBSCRIPTIONS = "Подписки"
+    RECHARGE_CARDS = "Карты пополнения"
+    DONATE = "Внутриигровая валюта"
+    XBOX_SALES = "Распродажа XBOX"
+    PSN_SALES = "Распродажа PSN"
+    STEAM_KEYS = "Ключи Steam"
 
 
 class ProductDeliveryMethod(_BaseLabeledEnum):
-    KEY = LabeledID(1, "Ключ")
-    ACCOUNT_PURCHASE = LabeledID(2, "Покупка на аккаунт")
-    GIFT = LabeledID(3, "Передача подарком")
+    KEY = "Ключ"
+    ACCOUNT_PURCHASE = "Покупка на аккаунт"
+    GIFT = "Передача подарком"
 
 
 class PsnParseRegions(CIEnum):
@@ -81,7 +87,7 @@ class XboxParseRegions(CIEnum):
     TR = auto()
 
 
-class Product(SqlAlchemyBaseModel):
+class Product(SqlAlchemyBaseModel, TimestampMixin):
     __table_args__ = (UniqueConstraint("name", "category", "platform"),)
 
     id: Mapped[int_pk_type]
@@ -102,8 +108,6 @@ class Product(SqlAlchemyBaseModel):
     prices: Mapped[list["RegionalPrice"]] = relationship(
         back_populates="product", lazy="selectin"
     )
-    created_at: Mapped[created_at_type]
-    updated_at: Mapped[updated_at_type]
 
     @property
     def total_discount(self) -> int:

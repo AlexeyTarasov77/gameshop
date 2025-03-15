@@ -1,8 +1,8 @@
 import re
 import typing as t
-
+from .column_types import created_at_type, updated_at_type
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped
 
 
 class SqlAlchemyBaseModel(DeclarativeBase):
@@ -24,3 +24,8 @@ class SqlAlchemyBaseModel(DeclarativeBase):
         s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", cls.__name__)
         snake_case_name = re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
         return snake_case_name
+
+
+class TimestampMixin:
+    created_at: Mapped[created_at_type]
+    updated_at: Mapped[updated_at_type]

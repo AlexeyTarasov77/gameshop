@@ -3,15 +3,16 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
 from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
-from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy.dialects.postgresql import BYTEA, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 if TYPE_CHECKING:
     from orders.models import Order
 
 
-class User(SqlAlchemyBaseModel):
+class User(SqlAlchemyBaseModel, TimestampMixin):
     __allow_unmapped__ = True
     is_admin: bool | None = None
 
@@ -22,8 +23,6 @@ class User(SqlAlchemyBaseModel):
     photo_url: Mapped[str | None]
     is_active: Mapped[bool] = mapped_column(default=False)
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
-    created_at: Mapped[created_at_type]
-    updated_at: Mapped[updated_at_type]
 
 
 class TokenScopes(StrEnum):
