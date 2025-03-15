@@ -8,7 +8,7 @@ from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
-from payments.models import AvailablePaymentSystems
+from payments.models import PaymentMixin
 from products.models import Product
 from users.models import User
 
@@ -19,14 +19,20 @@ class OrderStatus(Enum):
     CANCELLED = "CANCELLED"
 
 
-class Order(SqlAlchemyBaseModel):
+class OrderMixin(PaymentMixin):
+    id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
+    order_date: Mapped[created_at_type]
+    status: Mapped[OrderStatus] = mapped_column(
+        server_default=text(OrderStatus.PENDING.value)
+    )
+
+
+class Order(SqlAlchemyBaseModel, OrderMixin):
     __table_args__ = (
         CheckConstraint(
             "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL"
         ),
     )
-    id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
-    order_date: Mapped[created_at_type]
     customer_email: Mapped[str | None]
     customer_tg_username: Mapped[str]
     user_id: Mapped[int | None] = mapped_column(
@@ -40,11 +46,6 @@ class Order(SqlAlchemyBaseModel):
     items: Mapped[list["OrderItem"]] = relationship(
         back_populates="order", lazy="selectin", passive_deletes=True
     )
-    status: Mapped[OrderStatus] = mapped_column(
-        server_default=text(OrderStatus.PENDING.value)
-    )
-    bill_id: Mapped[str | None]
-    paid_with: Mapped[AvailablePaymentSystems | None]
 
     @property
     def total(self) -> Decimal:
@@ -74,3 +75,13 @@ class OrderItem(SqlAlchemyBaseModel):
     @property
     def total_price(self) -> Decimal:
         return self.price * self.quantity
+
+
+class SteamTopUp(SqlAlchemyBaseModel, OrderMixin):
+    steam_login: Mapped[str]
+    amount: Mapped[Decimal]
+    percent_fee: Mapped[int]
+
+    @property
+    def total(self) -> Decimal:
+        return self.amount + self.amount / 100 * self.percent_fee

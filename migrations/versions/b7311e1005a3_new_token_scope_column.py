@@ -12,6 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from users.models import TokenScopes
+
 
 # revision identifiers, used by Alembic.
 revision: str = "b7311e1005a3"
@@ -19,7 +21,7 @@ down_revision: Union[str, None] = "88cf604daf6d"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-_token_scopes = postgresql.ENUM("ACTIVATION", "PASSWORD_RESET", name="tokenscopes")
+_token_scopes = postgresql.ENUM(TokenScopes, name="tokenscopes")
 
 
 def upgrade() -> None:
@@ -29,7 +31,7 @@ def upgrade() -> None:
         "token",
         sa.Column(
             "scope",
-            sa.Enum("ACTIVATION", "PASSWORD_RESET", name="tokenscopes"),
+            _token_scopes,
             nullable=False,
         ),
     )

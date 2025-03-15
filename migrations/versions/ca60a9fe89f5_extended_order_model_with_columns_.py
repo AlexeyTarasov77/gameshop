@@ -12,6 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from payments.models import AvailablePaymentSystems
+
 
 # revision identifiers, used by Alembic.
 revision: str = "ca60a9fe89f5"
@@ -19,8 +21,7 @@ down_revision: Union[str, None] = "54954f5403c0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-_payments_enum_members = ("PAYPALYCH",)
-payments_enum = postgresql.ENUM(*_payments_enum_members, name="availablepaymentsystems")
+payments_enum = postgresql.ENUM(AvailablePaymentSystems, name="availablepaymentsystems")
 
 
 def upgrade() -> None:
@@ -31,7 +32,7 @@ def upgrade() -> None:
         "order",
         sa.Column(
             "paid_with",
-            sa.Enum(*_payments_enum_members, name="availablepaymentsystems"),
+            sa.Enum(AvailablePaymentSystems, name="availablepaymentsystems"),
             nullable=True,
         ),
     )
@@ -43,24 +44,4 @@ def downgrade() -> None:
     op.drop_column("order", "paid_with")
     op.drop_column("order", "bill_id")
     payments_enum.drop(op.get_bind())
-    op.create_table(
-        "_test_product",
-        sa.Column(
-            "id",
-            sa.INTEGER(),
-            sa.Identity(
-                always=True,
-                start=1,
-                increment=1,
-                minvalue=1,
-                maxvalue=2147483647,
-                cycle=False,
-                cache=1,
-            ),
-            autoincrement=True,
-            nullable=False,
-        ),
-        sa.Column("name", sa.TEXT(), autoincrement=False, nullable=True),
-        sa.Column("price", sa.NullType(), autoincrement=False, nullable=True),
-    )
     # ### end Alembic commands ###

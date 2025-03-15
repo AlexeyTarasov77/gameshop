@@ -143,3 +143,8 @@ class CreateOrderResDTO(BaseDTO):
 class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
     customer: CustomerWithUserDTO  # type: ignore
+
+
+class SteamTopUpDTO(BaseDTO):
+    login: str
+    rub_amount: Decimal
