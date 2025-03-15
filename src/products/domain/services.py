@@ -16,7 +16,8 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
+from products.domain.interfaces import CurrencyConverterI
+from orders.domain.interfaces import SteamAPIClientI
 from products.models import (
     Product,
     ProductCategory,

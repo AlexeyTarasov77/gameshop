@@ -3,7 +3,7 @@ from decimal import Decimal
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
-from orders.schemas import SteamTopUpDTO
+from orders.schemas import SteamTopUpCreateDTO
 from products.domain.services import ProductsService
 from products.schemas import ExchangeRatesMappingDTO, SteamItemDTO
 
@@ -64,30 +64,38 @@ class NSGiftsAPIClient:
         self, rub_amount: Decimal
     ) -> tuple[Decimal, float]:
         resp = await self._client.post(
-            self._base_url + "/steam/get_amount", json={"amount": str(rub_amount)}
+            self._base_url + "/steam/get_amount",
+            json={"amount": str(rub_amount)},
+            auth=self._auth,
         )
         data = resp.json()
         return Decimal(data["usd_price"]), float(data["exchange_rate"])
 
-    async def create_top_up_request(self, dto: SteamTopUpDTO) -> uuid.UUID:
+    async def create_top_up_request(self, dto: SteamTopUpCreateDTO) -> uuid.UUID:
         service_id = 1  # id for steam top-up service
         usd_amount, exchange_rate = await self._convert_amount_to_usd(dto.rub_amount)
-        if usd_amount < 1:
-            raise ValueError("amount_rub should be >= %s" % exchange_rate)
+        usd_min_deposit = 0.13
+        if usd_amount < usd_min_deposit:
+            raise ValueError(
+                "amount_rub should be >= %s" % (usd_min_deposit * exchange_rate)
+            )
         top_up_id = uuid.uuid4()
         resp = await self._client.post(
             self._base_url + "/create_order",
             json={
                 "service_id": service_id,
-                "custom_id": top_up_id,
-                "quantity": usd_amount,
-                "data": dto.login,
+                "custom_id": str(top_up_id),
+                "quantity": str(usd_amount),
+                "data": dto.steam_login,
             },
+            auth=self._auth,
         )
         assert resp.json()["status"] == 1
         return top_up_id
 
     async def top_up_complete(self, top_up_id: uuid.UUID):
-        resp = await self._client.post("/pay_order", json={"custom_id": top_up_id})
+        resp = await self._client.post(
+            "/pay_order", json={"custom_id": top_up_id}, auth=self._auth
+        )
         data = resp.json()
         print(data)

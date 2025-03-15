@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 if TYPE_CHECKING:
-    from orders.models import Order
+    from orders.models import Order, SteamTopUp
 
 
 class User(SqlAlchemyBaseModel, TimestampMixin):
@@ -23,6 +23,7 @@ class User(SqlAlchemyBaseModel, TimestampMixin):
     photo_url: Mapped[str | None]
     is_active: Mapped[bool] = mapped_column(default=False)
     orders: Mapped[list["Order"]] = relationship(back_populates="user")
+    steam_top_ups: Mapped[list["SteamTopUp"]] = relationship(back_populates="user")
 
 
 class TokenScopes(StrEnum):

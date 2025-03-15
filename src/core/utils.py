@@ -1,4 +1,5 @@
 import asyncio
+from json import JSONEncoder
 import httpx
 from collections.abc import Coroutine
 from concurrent.futures import ThreadPoolExecutor
@@ -118,3 +119,11 @@ class JWTAuth(httpx.Auth):
 
     def _set_auth_header(self, request: httpx.Request):
         request.headers["Authorization"] = f"Bearer {self._token}"
+
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, o: Any) -> Any:
+        try:
+            return str(o)
+        except Exception:
+            return super().default(o)

@@ -10,6 +10,8 @@ from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateOrderDTO,
     CreateOrderResDTO,
+    SteamTopUpCreateDTO,
+    SteamTopUpCreateResDTO,
     UpdateOrderDTO,
     ShowOrderExtended,
 )
@@ -77,3 +79,12 @@ async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
 ) -> ShowOrderExtended:
     return await orders_service.get_order(order_id)
+
+
+@router.post("/steam/top-up")
+async def steam_top_up(
+    dto: SteamTopUpCreateDTO,
+    orders_service: OrdersServiceDep,
+    user_id: int | None = Depends(get_optional_user_id),
+) -> SteamTopUpCreateResDTO:
+    return await orders_service.steam_top_up(dto, user_id)

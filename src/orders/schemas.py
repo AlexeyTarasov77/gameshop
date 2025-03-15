@@ -117,11 +117,14 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class ShowOrder(BaseDTO):
+class BaseShowOrderDTO(BaseDTO):
     id: UUID
     order_date: datetime
     status: OrderStatus
     total: Decimal
+
+
+class ShowOrder(BaseShowOrderDTO):
     customer: CustomerWithUserIdDTO
 
     @classmethod
@@ -143,8 +146,23 @@ class CreateOrderResDTO(BaseDTO):
 class ShowOrderExtended(ShowOrder):
     items: list[OrderItemShowDTO]
     customer: CustomerWithUserDTO  # type: ignore
+    bill_id: str
+    paid_with: AvailablePaymentSystems
 
 
-class SteamTopUpDTO(BaseDTO):
-    login: str
+class SteamTopUpCreateDTO(BaseDTO):
+    steam_login: str
     rub_amount: Decimal
+    selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
+    customer_email: EmailStr
+
+
+class ShowSteamTopUp(BaseShowOrderDTO):
+    steam_login: str
+    amount: Decimal
+    percent_fee: int
+
+
+class SteamTopUpCreateResDTO(BaseDTO):
+    payment_url: str
+    order: ShowSteamTopUp

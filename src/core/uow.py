@@ -13,8 +13,13 @@ from news.repositories import NewsRepository
 from orders.domain.interfaces import (
     OrderItemsRepositoryI,
     OrdersRepositoryI,
+    SteamTopUpRepositoryI,
 )
-from orders.repositories import OrderItemsRepository, OrdersRepository
+from orders.repositories import (
+    OrderItemsRepository,
+    OrdersRepository,
+    SteamTopUpRepository,
+)
 from products.domain.interfaces import PricesRepositoryI, ProductsRepositoryI
 from products.repositories import PricesRepository, ProductsRepository
 from users.domain.interfaces import (
@@ -40,6 +45,7 @@ class AbstractUnitOfWork[S](abc.ABC):
     tokens_repo: TokensRepositoryI
     orders_repo: OrdersRepositoryI
     order_items_repo: OrderItemsRepositoryI
+    steam_top_up_repo: SteamTopUpRepositoryI
 
     def __init__(self, session_factory: Callable[[], S]):
         self._session_factory = session_factory
@@ -97,6 +103,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self.products_repo = self._register_repo(ProductsRepository)
         self.orders_repo = self._register_repo(OrdersRepository)
         self.order_items_repo = self._register_repo(OrderItemsRepository)
+        self.steam_top_up_repo = self._register_repo(SteamTopUpRepository)
         self._check_init_repos_correct()
 
     def _check_init_repos_correct(self):

@@ -14,6 +14,9 @@ class UnavailableProductError(ServiceError):
         super().__init__(f"Can't create order! Product {product_name} is not available")
 
 
+class InvalidValueError(ServiceError): ...
+
+
 class TokenError(ServiceError): ...
 
 

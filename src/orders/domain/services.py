@@ -2,15 +2,23 @@ from logging import Logger
 from uuid import UUID
 from core.pagination import PaginationParams
 from core.services.base import BaseService
-from core.services.exceptions import EntityNotFoundError, UnavailableProductError
+from core.services.exceptions import (
+    EntityNotFoundError,
+    InvalidValueError,
+    UnavailableProductError,
+)
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
+from orders.domain.interfaces import SteamAPIClientI, TopUpFeeManagerI
 from orders.models import OrderItem
 from orders.schemas import (
     CreateOrderDTO,
     CreateOrderResDTO,
     ShowOrder,
     ShowOrderExtended,
+    SteamTopUpCreateDTO,
+    ShowSteamTopUp,
+    SteamTopUpCreateResDTO,
     UpdateOrderDTO,
 )
 from payments.domain.interfaces import PaymentSystemFactoryI
@@ -24,9 +32,13 @@ class OrdersService(BaseService):
         uow: AbstractUnitOfWork,
         logger: Logger,
         payment_system_factory: PaymentSystemFactoryI,
+        top_up_fee_manager: TopUpFeeManagerI,
+        steam_api: SteamAPIClientI,
     ):
         super().__init__(uow, logger)
         self._payment_system_factory = payment_system_factory
+        self._steam_api = steam_api
+        self._top_up_fee_manager = top_up_fee_manager
 
     async def create_order(
         self,
@@ -170,4 +182,42 @@ class OrdersService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return ShowOrderExtended.from_model(
             order, items=order.items, user=order.user, total=order.total
+        )
+
+    async def steam_top_up(
+        self, dto: SteamTopUpCreateDTO, user_id: int | None
+    ) -> SteamTopUpCreateResDTO:
+        try:
+            top_up_id = await self._steam_api.create_top_up_request(dto)
+        except ValueError as e:
+            raise InvalidValueError(str(e))
+        default_percent_fee = 10
+        percent_fee = await self._top_up_fee_manager.get_current_fee()
+        if percent_fee is None:
+            self._logger.warning(
+                "Steam top up fee is unset. Using default: %s", default_percent_fee
+            )
+            percent_fee = default_percent_fee
+        async with self._uow as uow:
+            order = await uow.steam_top_up_repo.create_with_id(
+                dto, top_up_id, percent_fee, user_id
+            )
+            payment_system = self._payment_system_factory.choose_by_name(
+                dto.selected_ps
+            )
+            self._logger.info(
+                "Creating payment bill for %s payment system", dto.selected_ps
+            )
+            bill_id, payment_url = await payment_system.create_bill(
+                order.id, order.total, order.client_email
+            )
+
+        self._logger.info(
+            "Succesfully created steam top up order. Order id: %s, bill id: %s, client_email: %s",
+            order.id,
+            bill_id,
+            order.client_email,
+        )
+        return SteamTopUpCreateResDTO(
+            order=ShowSteamTopUp.model_validate(order), payment_url=payment_url
         )

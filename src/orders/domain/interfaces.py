@@ -2,9 +2,10 @@ from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
-from orders.schemas import CreateOrderDTO, UpdateOrderDTO
-from orders.models import Order, OrderItem
+from orders.schemas import CreateOrderDTO, SteamTopUpCreateDTO, UpdateOrderDTO
+from orders.models import Order, OrderItem, SteamTopUp
 from payments.models import AvailablePaymentSystems
+from products.schemas import ExchangeRatesMappingDTO
 
 
 class OrdersRepositoryI(Protocol):
@@ -27,3 +28,23 @@ class OrdersRepositoryI(Protocol):
 
 class OrderItemsRepositoryI(Protocol):
     async def save_many(self, entities: Sequence[OrderItem]) -> None: ...
+
+
+class SteamAPIClientI(Protocol):
+    async def create_top_up_request(self, dto: SteamTopUpCreateDTO) -> UUID: ...
+    async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
+
+
+class SteamTopUpRepositoryI(Protocol):
+    async def create_with_id(
+        self,
+        dto: SteamTopUpCreateDTO,
+        order_id: UUID,
+        percent_fee: int,
+        user_id: int | None,
+    ) -> SteamTopUp: ...
+
+
+class TopUpFeeManagerI(Protocol):
+    async def set_current_fee(self, percent_fee: int) -> None: ...
+    async def get_current_fee(self) -> int | None: ...

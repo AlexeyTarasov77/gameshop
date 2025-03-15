@@ -6,7 +6,7 @@ from enum import Enum
 from sqlalchemy import CheckConstraint, ForeignKey, text
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
-from sqlalchemy.orm import Mapped, relationship, mapped_column
+from sqlalchemy.orm import Mapped, declared_attr, relationship, mapped_column
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from payments.models import PaymentMixin
 from products.models import Product
@@ -20,11 +20,25 @@ class OrderStatus(Enum):
 
 
 class OrderMixin(PaymentMixin):
+    user: Mapped[User | None]
     id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
     order_date: Mapped[created_at_type]
     status: Mapped[OrderStatus] = mapped_column(
         server_default=text(OrderStatus.PENDING.value)
     )
+    customer_email: Mapped[str | None]
+
+    @declared_attr
+    def user_id(cls):
+        return mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
+
+    @property
+    def client_email(self) -> str:
+        email = self.customer_email
+        if not email:
+            assert self.user
+            email = self.user.email
+        return email
 
 
 class Order(SqlAlchemyBaseModel, OrderMixin):
@@ -33,14 +47,10 @@ class Order(SqlAlchemyBaseModel, OrderMixin):
             "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL"
         ),
     )
-    customer_email: Mapped[str | None]
-    customer_tg_username: Mapped[str]
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("user.id", ondelete="CASCADE")
-    )
     user: Mapped[User | None] = relationship(
         back_populates="orders", lazy="joined", passive_deletes=True
     )
+    customer_tg_username: Mapped[str]
     customer_phone: Mapped[str | None]
     customer_name: Mapped[str | None]
     items: Mapped[list["OrderItem"]] = relationship(
@@ -50,14 +60,6 @@ class Order(SqlAlchemyBaseModel, OrderMixin):
     @property
     def total(self) -> Decimal:
         return Decimal(sum(item.total_price for item in self.items))
-
-    @property
-    def client_email(self) -> str:
-        email = self.customer_email
-        if not email:
-            assert self.user
-            email = self.user.email
-        return email
 
 
 class OrderItem(SqlAlchemyBaseModel):
@@ -78,9 +80,13 @@ class OrderItem(SqlAlchemyBaseModel):
 
 
 class SteamTopUp(SqlAlchemyBaseModel, OrderMixin):
+    __table_args__ = (CheckConstraint("amount > 0"),)
     steam_login: Mapped[str]
     amount: Mapped[Decimal]
     percent_fee: Mapped[int]
+    user: Mapped[User | None] = relationship(
+        back_populates="steam_top_ups", lazy="joined", passive_deletes=True
+    )
 
     @property
     def total(self) -> Decimal:

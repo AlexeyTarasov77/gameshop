@@ -7,10 +7,11 @@ from httpx import AsyncClient
 import punq
 from fastapi import Depends
 from mailing.domain.services import MailingService
+from orders.repositories import TopUpFeeManager
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
 from payments.systems import PaymentSystemFactoryImpl
-from products.domain.interfaces import CurrencyConverterI, SteamAPIClientI
+from products.domain.interfaces import CurrencyConverterI
 from products.integrations import GamesForFarmAPIClient, NSGiftsAPIClient
 from products.currencies import CurrencyConverter
 from shopping.domain.interfaces import (
@@ -34,6 +35,7 @@ from shopping.sessions import RedisSessionCreator, RedisSessionManager, SessionC
 from gateways.db import SqlAlchemyClient, RedisClient
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
+from orders.domain.interfaces import SteamAPIClientI
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
     UserEmailTemplatesI,
@@ -108,7 +110,9 @@ def _init_container() -> punq.Container:
     container.register(PaymentEmailTemplatesI, EmailTemplates)
     container.register(ProductsService)
     container.register(NewsService)
-    container.register(OrdersService)
+    container.register(
+        OrdersService, OrdersService, top_up_fee_manager=TopUpFeeManager(redis_client)
+    )
     container.register(
         UsersService,
         UsersService,

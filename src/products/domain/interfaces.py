@@ -26,10 +26,6 @@ class CurrencyConverterI(t.Protocol):
     ) -> float | None: ...
 
 
-class SteamAPIClientI(t.Protocol):
-    async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
-
-
 class ProductsRepositoryI(t.Protocol):
     async def create_with_dto(self, dto: CreateProductDTO) -> Product: ...
 

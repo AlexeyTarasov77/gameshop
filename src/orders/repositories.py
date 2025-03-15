@@ -1,13 +1,15 @@
 from collections.abc import Sequence
 from uuid import UUID
+from redis.asyncio import Redis
 from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
-from orders.models import Order, OrderItem, OrderStatus
+from orders.models import Order, OrderItem, OrderStatus, SteamTopUp
 from orders.schemas import (
     CreateOrderDTO,
+    SteamTopUpCreateDTO,
     UpdateOrderDTO,
 )
 from payments.models import AvailablePaymentSystems
@@ -96,3 +98,35 @@ class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
     async def save_many(self, entities: Sequence[OrderItem]) -> None:
         self._session.add_all(entities)
         await self._session.flush()
+
+
+class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUp]):
+    model = SteamTopUp
+
+    async def create_with_id(
+        self,
+        dto: SteamTopUpCreateDTO,
+        order_id: UUID,
+        percent_fee: int,
+        user_id: int | None,
+    ) -> SteamTopUp:
+        return await super().create(
+            id=order_id,
+            percent_fee=percent_fee,
+            amount=dto.rub_amount,
+            user_id=user_id,
+            **dto.model_dump(include={"steam_login", "customer_email"}),
+        )
+
+
+class TopUpFeeManager:
+    def __init__(self, db: Redis):
+        self._db = db
+        self._key = "steam_top_up_fee"
+
+    async def set_current_fee(self, percent_fee: int) -> None:
+        await self._db.set(self._key, percent_fee)
+
+    async def get_current_fee(self) -> int | None:
+        fee = await self._db.get(self._key)
+        return None if fee is None else int(fee)
