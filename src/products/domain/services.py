@@ -246,6 +246,10 @@ class ProductsService(BaseService):
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
+                [
+                    price.calc_discounted_price(product.discount)
+                    for price in product.prices
+                ]
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProductWithPrices.model_validate(product)
