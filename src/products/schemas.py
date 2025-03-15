@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic_extra_types.country import CountryAlpha2
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, StrEnum
 from pydantic_extra_types.currency_code import Currency
 from typing import Any, Annotated
 
@@ -142,6 +142,11 @@ class SalesDTO(ProductForLoadDTO):
     prices: dict[XboxParseRegions | PsnParseRegions, PriceUnitDTO]
 
 
+class OrderByOption(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
 class ListProductsFilterDTO(BaseDTO):
     query: str | None = None
     discounted: bool | None = None
@@ -150,6 +155,7 @@ class ListProductsFilterDTO(BaseDTO):
     platforms: list[ProductPlatform] | None = None
     delivery_methods: list[ProductDeliveryMethod] | None = None
     regions: list[CountryAlpha2] | None = None
+    price_ordering: OrderByOption | None = None
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):

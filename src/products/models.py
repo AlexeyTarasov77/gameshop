@@ -30,7 +30,6 @@ class LabeledID(int):
 
 class _BaseLabeledEnum(Enum):
     def __new__(cls, value: str):
-        print("called new", value)
         cls._next_id = getattr(cls, "_next_id", 0) + 1
         obj = object.__new__(cls)
         obj._value_ = LabeledID(cls._next_id, value)

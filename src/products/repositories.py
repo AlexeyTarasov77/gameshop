@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
-from sqlalchemy import String, and_, delete, desc, not_, or_, select, func, update
+from sqlalchemy import String, and_, asc, delete, desc, not_, or_, select, func, update
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
@@ -16,6 +16,7 @@ from products.models import (
 from products.schemas import (
     CreateProductDTO,
     ListProductsFilterDTO,
+    OrderByOption,
     UpdateProductDTO,
 )
 
@@ -43,6 +44,13 @@ class ProductsRepository(PaginationRepository[Product]):
                 )
             )
         )
+        if dto.price_ordering:
+            option = {OrderByOption.ASC: asc, OrderByOption.DESC: desc}[
+                dto.price_ordering
+            ]
+            stmt = stmt.join(self.model.prices).order_by(
+                option(RegionalPrice.base_price)
+            )
         if dto.query:
             stmt = stmt.where(self.model.name.ilike(f"%{dto.query}%"))
         if dto.discounted is not None:
