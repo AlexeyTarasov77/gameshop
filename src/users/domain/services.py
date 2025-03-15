@@ -102,15 +102,18 @@ class UsersService(BaseService):
                     TokenScopes.ACTIVATION,
                     uow.tokens_repo,
                 )
-        except AlreadyExistsError as e:
+        except AlreadyExistsError:
             self._logger.info("User with email=%s already exists", dto.email)
-            error = e
-            async with self._uow as uow:
-                existed_user = await uow.users_repo.get_by_email(dto.email)
-                if not existed_user.is_active:
-                    self._logger.info("Existent user is not activated")
-                    error = exc.UserIsNotActivatedError()
-            raise error
+            # if user already exists but not activated yet - resend activation token
+            try:
+                await self.resend_activation_token(dto.email)
+            except exc.UserAlreadyActivatedError:
+                pass
+            else:
+                raise exc.UserIsNotActivatedError(
+                    "Your account already exists but not activated yet, we've sent a new activation token on your email. Activate your account and sign in"
+                )
+            raise exc.EntityAlreadyExistsError(self.entity_name, email=dto.email)
         email_body = await self._email_templates.signup(
             user.username, self._activation_link_builder(plain_token)
         )
@@ -142,7 +145,7 @@ class UsersService(BaseService):
             self._logger.warning(
                 "Attempt to sign in from not activated user %s", user.id
             )
-            raise exc.UserIsNotActivatedError()
+            raise exc.UserIsNotActivatedError("Activate account to sign in")
         if not self._password_hasher.compare(dto.password, user.password_hash):
             self._logger.info("Passwords does not match for user %s", user.id)
             raise exc.InvalidCredentialsError()
@@ -300,6 +303,8 @@ class UsersService(BaseService):
         try:
             async with self._uow as uow:
                 user = await uow.users_repo.get_by_email(email)
+                if user.is_active:
+                    raise exc.UserAlreadyActivatedError()
                 await uow.tokens_repo.delete_all_for_user(
                     user.id, TokenScopes.ACTIVATION
                 )
@@ -310,8 +315,6 @@ class UsersService(BaseService):
         except NotFoundError:
             self._logger.info("User with email: %s not found", email)
             raise exc.EntityNotFoundError(self.entity_name, email=email)
-        if user.is_active:
-            raise exc.UserAlreadyActivatedError()
         email_body = await self._email_templates.new_activation_token(
             plain_token, self._activation_link_builder(plain_token)
         )

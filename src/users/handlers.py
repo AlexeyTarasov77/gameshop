@@ -5,7 +5,6 @@ from pydantic import EmailStr
 
 from core.dependencies import SessionKeyDep, restrict_content_type
 from core.schemas import require_dto_not_empty
-from core.services.exceptions import UserIsNotActivatedError
 from users.dependencies import (
     UsersServiceDep,
     get_user_id_or_raise,
@@ -15,7 +14,6 @@ from fastapi import (
     Body,
     Depends,
     Form,
-    Request,
     status,
 )
 
@@ -31,17 +29,10 @@ router = APIRouter(prefix="/users", tags=["users", "auth"])
     dependencies=[restrict_content_type("multipart/form-data")],
 )
 async def signup(
-    req: Request,
     dto: t.Annotated[schemas.CreateUserDTO, Form(media_type="multipart/form-data")],
     users_service: UsersServiceDep,
 ) -> schemas.ShowUser | JSONResponse:
-    try:
-        return await users_service.signup(dto)
-    except UserIsNotActivatedError:
-        return JSONResponse(
-            {"redirect_url": str(req.url_for("resend_activation_token"))},
-            status.HTTP_403_FORBIDDEN,
-        )
+    return await users_service.signup(dto)
 
 
 @router.post("/signin")
