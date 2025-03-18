@@ -1,19 +1,20 @@
 from decimal import Decimal
-from typing import NamedTuple, Protocol
+from typing import Protocol
 from uuid import UUID
 
+from orders.models import OrderCategory
 from payments.models import AvailablePaymentSystems
-
-
-class CreatedBill(NamedTuple):
-    bill_id: str
-    payment_url: str
+from payments.schemas import PaymentBillDTO
 
 
 class PaymentSystemI(Protocol):
     async def create_bill(
-        self, order_id: UUID, order_total: Decimal, customer_email: str
-    ) -> CreatedBill: ...
+        self,
+        order_id: UUID,
+        order_total: Decimal,
+        customer_email: str,
+        payment_for: OrderCategory,
+    ) -> PaymentBillDTO: ...
 
     def is_success(self, status: str) -> bool: ...
 

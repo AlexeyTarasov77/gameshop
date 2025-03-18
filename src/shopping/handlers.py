@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Depends, status
 import typing as t
 from products.schemas import ProductInCartDTO, ShowProductWithPrices
 from shopping.domain.interfaces import CartManagerFactoryI, WishlistManagerFactoryI
-from shopping.schemas import AddToCartDTO
+from shopping.schemas import ItemInCartDTO
 from core.dependencies import SessionKeyDep
 from core.ioc import Inject, Resolve
 from shopping.domain.services import ShoppingService
@@ -59,7 +59,7 @@ async def list_products_in_wishlist(
 
 @cart_router.post("/add")
 async def add_to_cart(
-    dto: AddToCartDTO, shopping_service: ShoppingServiceDep
+    dto: ItemInCartDTO, shopping_service: ShoppingServiceDep
 ) -> dict[str, int]:
     new_qty = await shopping_service.cart_add(dto)
     return {"quantity": new_qty}

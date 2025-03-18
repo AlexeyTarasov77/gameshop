@@ -10,7 +10,7 @@ from handlers.test_products import new_product  # noqa
 from handlers.test_users import new_user  # noqa
 from handlers.conftest import client, db, fake
 from orders.handlers import router
-from orders.models import Order, OrderItem, OrderStatus
+from orders.models import InAppOrder, InAppOrderItem, OrderStatus
 from products.models import Product
 from handlers.helpers import (
     create_model_obj,
@@ -58,10 +58,10 @@ def _gen_order_data() -> dict[str, str]:
 @pytest.fixture
 def new_order(new_user: User):  # noqa
     data = _gen_order_data()
-    order_coro = create_model_obj(Order, **data, user_id=new_user.id)
+    order_coro = create_model_obj(InAppOrder, **data, user_id=new_user.id)
     order = next(order_coro)
     items_coros: list[SupportsNext] = [
-        create_model_obj(OrderItem, **_gen_order_item_data(order.id))
+        create_model_obj(InAppOrderItem, **_gen_order_item_data(order.id))
         for _ in range(random.randint(1, 10))
     ]
     [next(coro) for coro in items_coros]
@@ -138,7 +138,7 @@ def test_create_order(
             < datetime.fromisoformat(resp_data["order_date"])
             < datetime.now()
         )
-        order = get_model_obj(Order, id=order_id)
+        order = get_model_obj(InAppOrder, id=order_id)
         assert order is not None
         assert order.id == order_id
         assert order.status.value == resp_data["status"]
@@ -147,12 +147,14 @@ def test_create_order(
 @pytest.mark.parametrize(
     ["expected_status", "order_id"], [(204, None), (404, 999999), (422, -1)]
 )
-def test_delete_order(new_order: Order, expected_status: int, order_id: int | None):
+def test_delete_order(
+    new_order: InAppOrder, expected_status: int, order_id: int | None
+):
     order_id = order_id or new_order.id
     resp = client.delete(f"{router.prefix}/delete/{order_id}")
     assert resp.status_code == expected_status
     if expected_status == 204:
-        assert get_model_obj(Order, id=new_order.id) is None
+        assert get_model_obj(InAppOrder, id=new_order.id) is None
 
 
 @pytest.mark.parametrize(
@@ -166,7 +168,10 @@ def test_delete_order(new_order: Order, expected_status: int, order_id: int | No
     ],
 )
 def test_update_order(
-    new_order: Order, data: dict[str, int], expected_status: int, order_id: int | None
+    new_order: InAppOrder,
+    data: dict[str, int],
+    expected_status: int,
+    order_id: int | None,
 ):
     order_id = order_id or new_order.id
     resp = client.patch(f"{router.prefix}/update/{order_id}", json=data)
@@ -179,7 +184,7 @@ def test_update_order(
 @pytest.mark.parametrize(
     ["expected_status", "order_id"], [(200, None), (422, -1), (404, 999999)]
 )
-def test_get_order(new_order: Order, expected_status: int, order_id: int | None):
+def test_get_order(new_order: InAppOrder, expected_status: int, order_id: int | None):
     order_id = order_id or new_order.id
     resp = client.get(f"{router.prefix}/detail/{order_id}")
     assert resp.status_code == expected_status
@@ -210,7 +215,7 @@ def test_get_order(new_order: Order, expected_status: int, order_id: int | None)
     ],
 )
 def test_list_orders_for_user(
-    new_order: Order,
+    new_order: InAppOrder,
     new_user: User,  # noqa
     expected_status: int,
     params: dict[str, int] | None,
@@ -240,7 +245,7 @@ def test_list_orders_for_user(
 
 @pytest.mark.parametrize(["expected_status", "params"], pagination_test_cases)
 def test_list_all_orders(
-    new_order: Order,
+    new_order: InAppOrder,
     new_user: User,  # noqa
     expected_status: int,
     params: dict[str, int] | None,

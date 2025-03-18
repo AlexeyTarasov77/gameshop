@@ -1,23 +1,23 @@
 from collections.abc import Sequence
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import desc, select
+from sqlalchemy import desc, insert, select
 from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
-from orders.models import Order, OrderItem, OrderStatus, SteamTopUp
+from orders.models import InAppOrder, InAppOrderItem, OrderStatus, SteamTopUpOrder
 from orders.schemas import (
-    CreateOrderDTO,
-    SteamTopUpCreateDTO,
+    CreateInAppOrderDTO,
+    CreateSteamTopUpOrderDTO,
     UpdateOrderDTO,
 )
 from payments.models import AvailablePaymentSystems
 from products.models import Product
 
 
-class OrdersRepository(PaginationRepository[Order]):
-    model = Order
+class OrdersRepository(PaginationRepository[InAppOrder]):
+    model = InAppOrder
 
     def _get_select_stmt(self):
         return (
@@ -26,18 +26,20 @@ class OrdersRepository(PaginationRepository[Order]):
             .options(selectinload(self.model.items))
         )
 
-    async def create_from_dto(self, dto: CreateOrderDTO, user_id: int | None) -> Order:
+    async def create_from_dto(
+        self, dto: CreateInAppOrderDTO, user_id: int | None
+    ) -> InAppOrder:
         return await super().create(
             **{"customer_" + k: v for k, v in dto.user},
             user_id=user_id,
         )
 
-    async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order:
+    async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder:
         return await super().update(dto.model_dump(), id=order_id)
 
     async def update_for_payment(
         self, bill_id: str, paid_with: AvailablePaymentSystems, order_id: UUID
-    ) -> Order:
+    ) -> InAppOrder:
         return await super().update(
             {
                 "bill_id": bill_id,
@@ -52,7 +54,7 @@ class OrdersRepository(PaginationRepository[Order]):
 
     def _get_rels_load_options(self):
         return selectinload(self.model.items).options(
-            joinedload(OrderItem.product).load_only(Product.id, Product.name)
+            joinedload(InAppOrderItem.product).load_only(Product.id, Product.name)
         )
 
     async def _paginated_list(
@@ -63,7 +65,7 @@ class OrdersRepository(PaginationRepository[Order]):
             ._get_pagination_stmt(pagination_params)
             .options(self._get_rels_load_options())
             .filter_by(**filter_by)
-            .order_by(desc(Order.order_date))
+            .order_by(desc(InAppOrder.order_date))
         )
 
         res = await self._session.execute(stmt)
@@ -79,7 +81,7 @@ class OrdersRepository(PaginationRepository[Order]):
     ) -> PaginationResT[model]:
         return await self._paginated_list(pagination_params)
 
-    async def get_by_id(self, order_id: UUID) -> Order:
+    async def get_by_id(self, order_id: UUID) -> InAppOrder:
         stmt = (
             select(self.model)
             .filter_by(id=order_id)
@@ -92,24 +94,35 @@ class OrdersRepository(PaginationRepository[Order]):
         return order
 
 
-class OrderItemsRepository(SqlAlchemyRepository[OrderItem]):
-    model = OrderItem
+class OrderItemsRepository(SqlAlchemyRepository[InAppOrderItem]):
+    model = InAppOrderItem
 
-    async def save_many(self, entities: Sequence[OrderItem]) -> None:
-        self._session.add_all(entities)
-        await self._session.flush()
+    async def save_many(self, entities: Sequence[InAppOrderItem]) -> None:
+        await self._session.execute(
+            insert(InAppOrderItem),
+            [
+                {
+                    "order_id": ent.order_id,
+                    "product_id": ent.product_id,
+                    "region": ent.region,
+                    "quantity": ent.quantity,
+                    "price": ent.price,
+                }
+                for ent in entities
+            ],
+        )
 
 
-class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUp]):
-    model = SteamTopUp
+class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUpOrder]):
+    model = SteamTopUpOrder
 
     async def create_with_id(
         self,
-        dto: SteamTopUpCreateDTO,
+        dto: CreateSteamTopUpOrderDTO,
         order_id: UUID,
         percent_fee: int,
         user_id: int | None,
-    ) -> SteamTopUp:
+    ) -> SteamTopUpOrder:
         return await super().create(
             id=order_id,
             percent_fee=percent_fee,
@@ -117,6 +130,9 @@ class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUp]):
             user_id=user_id,
             **dto.model_dump(include={"steam_login", "customer_email"}),
         )
+
+    async def get_by_id(self, top_up_id: UUID) -> SteamTopUpOrder:
+        return await super().get_one(id=top_up_id)
 
 
 class TopUpFeeManager:

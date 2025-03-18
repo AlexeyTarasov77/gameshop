@@ -2,14 +2,14 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
-from gateways.db.sqlalchemy_gateway import created_at_type, int_pk_type, updated_at_type
+from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy.dialects.postgresql import BYTEA, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 if TYPE_CHECKING:
-    from orders.models import Order, SteamTopUp
+    from orders.models import InAppOrder, SteamTopUpOrder
 
 
 class User(SqlAlchemyBaseModel, TimestampMixin):
@@ -22,8 +22,10 @@ class User(SqlAlchemyBaseModel, TimestampMixin):
     password_hash: Mapped[bytes] = mapped_column(BYTEA)
     photo_url: Mapped[str | None]
     is_active: Mapped[bool] = mapped_column(default=False)
-    orders: Mapped[list["Order"]] = relationship(back_populates="user")
-    steam_top_ups: Mapped[list["SteamTopUp"]] = relationship(back_populates="user")
+    in_app_orders: Mapped[list["InAppOrder"]] = relationship(back_populates="user")
+    steam_top_up_orders: Mapped[list["SteamTopUpOrder"]] = relationship(
+        back_populates="user"
+    )
 
 
 class TokenScopes(StrEnum):

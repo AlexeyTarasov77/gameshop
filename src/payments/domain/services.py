@@ -5,13 +5,15 @@ from uuid import UUID
 from core.services.base import BaseService
 from core.services.exceptions import ActionForbiddenError
 from core.uow import AbstractUnitOfWork
+from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
-from orders.models import OrderStatus
+from orders.models import InAppOrder, OrderCategory, SteamTopUpOrder
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
     PaymentEmailTemplatesI,
     PaymentSystemFactoryI,
 )
+from payments.schemas import ProcessOrderPaymentDTO
 
 
 class PaymentsService(BaseService):
@@ -32,16 +34,31 @@ class PaymentsService(BaseService):
         self._email_templates = email_templates
         self._order_details_link_builder = order_details_link_builder
 
+    async def _process_steam_top_up_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> SteamTopUpOrder:
+        order = await uow.steam_top_up_repo.update_payment_details(
+            **dto.model_dump(), check_is_pending=True
+        )
+        return order
+
+    async def _process_in_app_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> InAppOrder:
+        order = await uow.orders_repo.update_payment_details(
+            **dto.model_dump(), check_is_pending=True
+        )
+        return order
+
     async def process_payment(
         self,
         status: str,
         order_id: UUID,
         bill_id: str,
-        payment_system_name: AvailablePaymentSystems,
+        ps_name: AvailablePaymentSystems,
+        payment_for: OrderCategory,
     ):
-        payment_system = self._payment_system_factory.choose_by_name(
-            payment_system_name
-        )
+        payment_system = self._payment_system_factory.choose_by_name(ps_name)
         if not payment_system.is_success(status):
             self._logger.warning(
                 "Payment for order %s failed with status: %s. bill_id: %s",
@@ -50,19 +67,26 @@ class PaymentsService(BaseService):
                 bill_id,
             )
             return
-        async with self._uow as uow:
-            # TODO: check that order status is PENDING
-            order = await uow.orders_repo.get_by_id(order_id)
-            if order.status != OrderStatus.PENDING:
-                self._logger.error(
-                    "Trying to pay for not active order with status: %s", order.status
-                )
-                raise ActionForbiddenError("Order has been already processed!")
-            order = await uow.orders_repo.update_for_payment(
-                bill_id,
-                payment_system_name,
+        process_order_dto = ProcessOrderPaymentDTO(
+            paid_with=ps_name, order_id=order_id, bill_id=bill_id
+        )
+        try:
+            async with self._uow as uow:
+                match payment_for:
+                    case OrderCategory.IN_APP:
+                        order = await self._process_in_app_order(process_order_dto, uow)
+                    case OrderCategory.STEAM_TOP_UP:
+                        order = await self._process_steam_top_up_order(
+                            process_order_dto, uow
+                        )
+
+        except NotFoundError:
+            self._logger.error(
+                "Trying to pay for not active or not found order. Order id: %s",
                 order_id,
             )
+            raise ActionForbiddenError("Order not found")
+
         email_body = await self._email_templates.order_checkout(
             self._order_details_link_builder(order_id), order_id
         )

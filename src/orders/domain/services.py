@@ -4,24 +4,30 @@ from core.pagination import PaginationParams
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
-    InvalidValueError,
+    ClientError,
     UnavailableProductError,
 )
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from orders.domain.interfaces import SteamAPIClientI, TopUpFeeManagerI
-from orders.models import OrderItem
+from orders.models import (
+    InAppOrder,
+    InAppOrderItem,
+    OrderCategory,
+    SteamTopUpOrder,
+)
 from orders.schemas import (
-    CreateOrderDTO,
-    CreateOrderResDTO,
-    ShowOrder,
-    ShowOrderExtended,
-    SteamTopUpCreateDTO,
-    ShowSteamTopUp,
-    SteamTopUpCreateResDTO,
+    CreateInAppOrderDTO,
+    OrderPaymentDTO,
+    InAppOrderDTO,
+    InAppOrderExtendedDTO,
+    CreateSteamTopUpOrderDTO,
+    SteamTopUpOrderDTO,
     UpdateOrderDTO,
 )
 from payments.domain.interfaces import PaymentSystemFactoryI
+from payments.models import AvailablePaymentSystems
+from payments.schemas import PaymentBillDTO
 
 
 class OrdersService(BaseService):
@@ -41,11 +47,27 @@ class OrdersService(BaseService):
         self._top_up_fee_manager = top_up_fee_manager
         self._top_up_default_fee = 10  # %
 
-    async def create_order(
+    async def _create_payment_bill(
         self,
-        dto: CreateOrderDTO,
+        ps_name: AvailablePaymentSystems,
+        order_like_obj: InAppOrder | SteamTopUpOrder,
+    ) -> PaymentBillDTO:
+        payment_system = self._payment_system_factory.choose_by_name(ps_name)
+        self._logger.info("Creating payment bill for %s payment system", ps_name)
+        return await payment_system.create_bill(
+            order_like_obj.id,
+            order_like_obj.total,
+            order_like_obj.client_email,
+            OrderCategory.IN_APP
+            if isinstance(order_like_obj, InAppOrder)
+            else OrderCategory.STEAM_TOP_UP,
+        )
+
+    async def create_in_app_order(
+        self,
+        dto: CreateInAppOrderDTO,
         user_id: int | None,
-    ) -> CreateOrderResDTO:
+    ) -> OrderPaymentDTO[InAppOrderDTO]:
         self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
         try:
             async with self._uow as uow:
@@ -57,7 +79,7 @@ class OrdersService(BaseService):
                         "Some of the supplied products not found or aren't in stock anymore"
                     )
                 order = await uow.orders_repo.create_from_dto(dto, user_id)
-                order_items: list[OrderItem] = []
+                order_items: list[InAppOrderItem] = []
                 for product in cart_products:
                     [mapped_item] = [
                         item for item in dto.cart if item.product_id == product.id
@@ -75,7 +97,7 @@ class OrdersService(BaseService):
                     if mapped_price_by_region is None:
                         raise UnavailableProductError(product.name)
                     order_items.append(
-                        OrderItem(
+                        InAppOrderItem(
                             order_id=order.id,
                             region=region or None,
                             price=mapped_price_by_region,
@@ -89,16 +111,7 @@ class OrdersService(BaseService):
                 order.items = order_items
                 await uow.order_items_repo.save_many(order_items)
 
-                # creating payment bill
-                payment_system = self._payment_system_factory.choose_by_name(
-                    dto.selected_ps
-                )
-                self._logger.info(
-                    "Creating payment bill for %s payment system", dto.selected_ps
-                )
-                bill_id, payment_url = await payment_system.create_bill(
-                    order.id, order.total, order.client_email
-                )
+                payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         except NotFoundError:
             # user not found
             self._logger.warning(
@@ -110,14 +123,14 @@ class OrdersService(BaseService):
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
             order.client_email,
             order.id,
-            bill_id,
+            payment_dto.bill_id,
         )
-        return CreateOrderResDTO(
-            order=ShowOrder.from_model(order, total=order.total),
-            payment_url=payment_url,
+        return OrderPaymentDTO(
+            order=InAppOrderDTO.from_model(order, total=order.total),
+            payment_url=payment_dto.payment_url,
         )
 
-    async def update_order(self, dto: UpdateOrderDTO, order_id: UUID) -> ShowOrder:
+    async def update_order(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrderDTO:
         self._logger.info("Updating order: %s. Data: %s", order_id, dto)
         try:
             async with self._uow as uow:
@@ -125,7 +138,7 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return ShowOrder.from_model(order, total=order.total)
+        return InAppOrderDTO.from_model(order, total=order.total)
 
     async def delete_order(self, order_id: UUID) -> None:
         self._logger.info("Deleting order: %s", order_id)
@@ -138,7 +151,7 @@ class OrdersService(BaseService):
 
     async def list_orders_for_user(
         self, pagination_params: PaginationParams, user_id: int
-    ) -> tuple[list[ShowOrderExtended], int]:
+    ) -> tuple[list[InAppOrderExtendedDTO], int]:
         self._logger.info(
             "Listing orders for user: %s. Pagination params: %s",
             user_id,
@@ -150,15 +163,16 @@ class OrdersService(BaseService):
                 user_id,
             )
         return [
-            ShowOrderExtended.from_model(
+            InAppOrderExtendedDTO.from_model(
                 order, items=order.items, user=order.user, total=order.total
             )
             for order in orders
         ], total_records
 
+    # TODO: Return both in app and steam top up orders
     async def list_all_orders(
         self, pagination_params: PaginationParams
-    ) -> tuple[list[ShowOrderExtended], int]:
+    ) -> tuple[list[InAppOrderExtendedDTO], int]:
         self._logger.info(
             "Listing all orders. Pagination params: %s", pagination_params
         )
@@ -167,13 +181,13 @@ class OrdersService(BaseService):
                 pagination_params
             )
         return [
-            ShowOrderExtended.from_model(
+            InAppOrderExtendedDTO.from_model(
                 order, items=order.items, user=order.user, total=order.total
             )
             for order in orders
         ], total_records
 
-    async def get_order(self, order_id: UUID) -> ShowOrderExtended:
+    async def get_order(self, order_id: UUID) -> InAppOrderExtendedDTO:
         self._logger.info("Fetching order by id: %s", order_id)
         try:
             async with self._uow as uow:
@@ -181,17 +195,17 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return ShowOrderExtended.from_model(
+        return InAppOrderExtendedDTO.from_model(
             order, items=order.items, user=order.user, total=order.total
         )
 
     async def steam_top_up(
-        self, dto: SteamTopUpCreateDTO, user_id: int | None
-    ) -> SteamTopUpCreateResDTO:
+        self, dto: CreateSteamTopUpOrderDTO, user_id: int | None
+    ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
         try:
             top_up_id = await self._steam_api.create_top_up_request(dto)
         except ValueError as e:
-            raise InvalidValueError(str(e))
+            raise ClientError(str(e))
         percent_fee = await self._top_up_fee_manager.get_current_fee()
         if percent_fee is None:
             self._logger.warning(
@@ -199,27 +213,19 @@ class OrdersService(BaseService):
             )
             percent_fee = self._top_up_default_fee
         async with self._uow as uow:
-            order = await uow.steam_top_up_repo.create_with_id(
+            top_up = await uow.steam_top_up_repo.create_with_id(
                 dto, top_up_id, percent_fee, user_id
             )
-            payment_system = self._payment_system_factory.choose_by_name(
-                dto.selected_ps
-            )
-            self._logger.info(
-                "Creating payment bill for %s payment system", dto.selected_ps
-            )
-            bill_id, payment_url = await payment_system.create_bill(
-                order.id, order.total, order.client_email
-            )
-
+            payment_dto = await self._create_payment_bill(dto.selected_ps, top_up)
         self._logger.info(
-            "Succesfully created steam top up order. Order id: %s, bill id: %s, client_email: %s",
-            order.id,
-            bill_id,
-            order.client_email,
+            "Succesfully created steam top up order. Top-Up id: %s, bill id: %s, client_email: %s",
+            top_up.id,
+            payment_dto.bill_id,
+            top_up.client_email,
         )
-        return SteamTopUpCreateResDTO(
-            order=ShowSteamTopUp.model_validate(order), payment_url=payment_url
+        return OrderPaymentDTO(
+            order=SteamTopUpOrderDTO.model_validate(top_up),
+            payment_url=payment_dto.payment_url,
         )
 
     async def set_steam_top_up_fee(self, percent_fee: int) -> None:

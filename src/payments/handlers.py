@@ -6,9 +6,9 @@ import typing as t
 from fastapi.responses import RedirectResponse
 
 from core.ioc import Inject
+from orders.models import OrderCategory
 from payments.domain.interfaces import AvailablePaymentSystems, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
-
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -44,13 +44,11 @@ async def paypalych_webhook(
     payments_service: PaymentsServiceDep,
     Status: t.Annotated[str, Form()],
     TrsId: t.Annotated[str, Form()],
+    custom: t.Annotated[OrderCategory, Form()],
     payload: t.Annotated[PayPalychSigVerifier, Depends()],
 ) -> dict[str, bool]:
     await payments_service.process_payment(
-        Status,
-        payload.order_id,
-        TrsId,
-        AvailablePaymentSystems.PAYPALYCH,
+        Status, payload.order_id, TrsId, AvailablePaymentSystems.PAYPALYCH, custom
     )
     return {"success": True}
 

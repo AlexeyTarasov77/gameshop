@@ -6,7 +6,7 @@ from shopping.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
 )
-from shopping.schemas import AddToCartDTO
+from shopping.schemas import ItemInCartDTO
 from core.services.base import BaseService
 from core.services.exceptions import EntityAlreadyExistsError, EntityNotFoundError
 from core.uow import AbstractUnitOfWork
@@ -33,7 +33,7 @@ class ShoppingService(BaseService):
         if not in_stock:
             raise EntityNotFoundError(self.entity_name, id=product_id)
 
-    async def cart_add(self, dto: AddToCartDTO) -> int:
+    async def cart_add(self, dto: ItemInCartDTO) -> int:
         dto.quantity = dto.quantity or 1
         await self._require_product_in_stock(int(dto.product_id))
         try:

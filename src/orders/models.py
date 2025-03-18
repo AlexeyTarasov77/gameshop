@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
-from enum import Enum
+from enum import Enum, IntEnum
 from sqlalchemy import CheckConstraint, ForeignKey, text
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
@@ -19,14 +19,23 @@ class OrderStatus(Enum):
     CANCELLED = "CANCELLED"
 
 
-class OrderMixin(PaymentMixin):
-    user: Mapped[User | None]
+class OrderCategory(IntEnum):
+    IN_APP = 1
+    STEAM_TOP_UP = 2
+
+
+class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
+    __table_args__ = (
+        CheckConstraint("customer_email IS NOT NULL OR user_id IS NOT NULL"),
+    )
+    user = None
     id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
     order_date: Mapped[created_at_type]
     status: Mapped[OrderStatus] = mapped_column(
-        server_default=text(OrderStatus.PENDING.value)
+        server_default=text(f"'{OrderStatus.PENDING.value}'")
     )
     customer_email: Mapped[str | None]
+    category: Mapped[OrderCategory]
 
     @declared_attr
     def user_id(cls):
@@ -40,20 +49,20 @@ class OrderMixin(PaymentMixin):
             email = self.user.email
         return email
 
+    __mapper_args__ = {
+        "polymorphic_on": "category",
+    }
 
-class Order(SqlAlchemyBaseModel, OrderMixin):
-    __table_args__ = (
-        CheckConstraint(
-            "(customer_email IS NOT NULL AND customer_name IS NOT NULL) OR user_id IS NOT NULL"
-        ),
-    )
+
+class InAppOrder(BaseOrder):
+    id: Mapped[UUID] = mapped_column(ForeignKey("base_order.id"), primary_key=True)
     user: Mapped[User | None] = relationship(
-        back_populates="orders", lazy="joined", passive_deletes=True
+        back_populates="in_app_orders", lazy="joined", passive_deletes=True
     )
     customer_tg_username: Mapped[str]
     customer_phone: Mapped[str | None]
     customer_name: Mapped[str | None]
-    items: Mapped[list["OrderItem"]] = relationship(
+    items: Mapped[list["InAppOrderItem"]] = relationship(
         back_populates="order", lazy="selectin", passive_deletes=True
     )
 
@@ -61,15 +70,21 @@ class Order(SqlAlchemyBaseModel, OrderMixin):
     def total(self) -> Decimal:
         return Decimal(sum(item.total_price for item in self.items))
 
+    __mapper_args__ = {
+        "polymorphic_identity": OrderCategory.IN_APP,
+    }
 
-class OrderItem(SqlAlchemyBaseModel):
+
+class InAppOrderItem(SqlAlchemyBaseModel):
     id: Mapped[int_pk_type]
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="RESTRICT")
     )
     product: Mapped[Product] = relationship(lazy="joined")
-    order_id: Mapped[int] = mapped_column(ForeignKey("order.id", ondelete="CASCADE"))
-    order: Mapped[Order] = relationship(back_populates="items")
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("in_app_order.id", ondelete="CASCADE")
+    )
+    order: Mapped[InAppOrder] = relationship(back_populates="items")
     price: Mapped[Decimal]
     region: Mapped[str | None]  # regions which price belongs to
     quantity: Mapped[int] = mapped_column(CheckConstraint("quantity > 0"))
@@ -79,15 +94,20 @@ class OrderItem(SqlAlchemyBaseModel):
         return self.price * self.quantity
 
 
-class SteamTopUp(SqlAlchemyBaseModel, OrderMixin):
+class SteamTopUpOrder(BaseOrder):
     __table_args__ = (CheckConstraint("amount > 0"),)
+    id: Mapped[UUID] = mapped_column(ForeignKey("base_order.id"), primary_key=True)
     steam_login: Mapped[str]
     amount: Mapped[Decimal]
     percent_fee: Mapped[int]
     user: Mapped[User | None] = relationship(
-        back_populates="steam_top_ups", lazy="joined", passive_deletes=True
+        back_populates="steam_top_up_orders", lazy="joined", passive_deletes=True
     )
 
     @property
     def total(self) -> Decimal:
         return self.amount + self.amount / 100 * self.percent_fee
+
+    __mapper_args__ = {
+        "polymorphic_identity": OrderCategory.STEAM_TOP_UP,
+    }

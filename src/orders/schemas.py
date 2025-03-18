@@ -5,10 +5,10 @@ from typing import Annotated, Self
 from uuid import UUID
 from pydantic import AfterValidator, EmailStr, Field, field_validator
 from payments.models import AvailablePaymentSystems
-from shopping.schemas import AddToCartDTO
+from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
-from orders.models import Order, OrderStatus
+from orders.models import InAppOrder, OrderStatus
 
 
 def check_phone(value: str) -> str:
@@ -46,17 +46,14 @@ CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
 
 
-class OrderItemInCartDTO(AddToCartDTO): ...
-
-
-class OrderItemProduct(BaseDTO):
+class _InAppOrderItemProduct(BaseDTO):
     id: Base64Int
     name: str
 
 
-class OrderItemShowDTO(BaseDTO):
+class InAppOrderItemDTO(BaseDTO):
     id: Base64Int
-    product: OrderItemProduct
+    product: _InAppOrderItemProduct
     price: Decimal
     quantity: int = Field(gt=0)
     total_price: Decimal
@@ -69,7 +66,7 @@ class CustomerDTO(BaseDTO):
     name: CustomerName | None = None
 
     @classmethod
-    def from_order(cls, order: Order) -> Self:
+    def from_order(cls, order: InAppOrder) -> Self:
         prefix = "customer_"
         return cls.model_construct(
             None,
@@ -85,7 +82,7 @@ class CustomerWithUserIdDTO(CustomerDTO):
     user_id: Base64Int | None
 
     @classmethod
-    def from_order(cls, order: Order) -> Self:
+    def from_order(cls, order: InAppOrder) -> Self:
         obj = super().from_order(order)
         obj.user_id = order.user_id
         return obj
@@ -95,21 +92,22 @@ class CustomerWithUserDTO(CustomerDTO):
     user: ShowUser | None
 
     @classmethod
-    def from_order(cls, order: Order) -> Self:
+    def from_order(cls, order: InAppOrder) -> Self:
         obj = super().from_order(order)
         obj.user = ShowUser.model_validate(order.user) if order.user else None
         return obj
 
 
-class CreateOrderDTO(BaseDTO):
-    cart: list[OrderItemInCartDTO]
+class CreateInAppOrderDTO(BaseDTO):
+    cart: list[ItemInCartDTO]
     user: CustomerDTO
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
 
+    # TODO: check if that validator is redundant
     @field_validator("cart")
     @classmethod
     def check_cart(cls, value: list) -> list:
-        assert len(value) > 0, "Cart can't by empty"
+        assert len(value) > 0, "Cart can't be empty"
         return value
 
 
@@ -117,18 +115,18 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class BaseShowOrderDTO(BaseDTO):
+class BaseOrderDTO(BaseDTO):
     id: UUID
     order_date: datetime
     status: OrderStatus
     total: Decimal
 
 
-class ShowOrder(BaseShowOrderDTO):
+class InAppOrderDTO(BaseOrderDTO):
     customer: CustomerWithUserIdDTO
 
     @classmethod
-    def from_model(cls, order: Order, **kwargs):
+    def from_model(cls, order: InAppOrder, **kwargs):
         return cls.model_validate(
             {
                 **order.dump(),
@@ -138,31 +136,26 @@ class ShowOrder(BaseShowOrderDTO):
         )
 
 
-class CreateOrderResDTO(BaseDTO):
+class OrderPaymentDTO[T: BaseDTO](BaseDTO):
     payment_url: str
-    order: ShowOrder
+    order: T
 
 
-class ShowOrderExtended(ShowOrder):
-    items: list[OrderItemShowDTO]
+class InAppOrderExtendedDTO(InAppOrderDTO):
+    items: list[InAppOrderItemDTO]
     customer: CustomerWithUserDTO  # type: ignore
     bill_id: str
     paid_with: AvailablePaymentSystems
 
 
-class SteamTopUpCreateDTO(BaseDTO):
+class CreateSteamTopUpOrderDTO(BaseDTO):
     steam_login: str
     rub_amount: Decimal
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
     customer_email: EmailStr
 
 
-class ShowSteamTopUp(BaseShowOrderDTO):
+class SteamTopUpOrderDTO(BaseOrderDTO):
     steam_login: str
     amount: Decimal
     percent_fee: int
-
-
-class SteamTopUpCreateResDTO(BaseDTO):
-    payment_url: str
-    order: ShowSteamTopUp

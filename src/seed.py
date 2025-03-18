@@ -11,7 +11,7 @@ from news.models import News
 from products.models import Category, Platform, Product, DeliveryMethod
 from users.hashing import BcryptHasher
 from users.models import User
-from orders.models import Order, OrderItem, OrderStatus
+from orders.models import InAppOrder, InAppOrderItem, OrderStatus
 from core.exception_mappers import PostgresExceptionsMapper
 import os
 
@@ -114,7 +114,7 @@ async def create_orders(n: int, users: list[User], products: list[Product]):
             "status": random.choice(list(OrderStatus)),
             "user": _call_optional(lambda: random.choice(users)),
             "items": [
-                OrderItem(
+                InAppOrderItem(
                     product=random.choice(products),
                     price=Decimal(random.randint(100, 1000)),
                     quantity=random.randint(1, 10),
@@ -122,7 +122,7 @@ async def create_orders(n: int, users: list[User], products: list[Product]):
             ],
         }
 
-    return await _create_entities(Order, data_generator, n)
+    return await _create_entities(InAppOrder, data_generator, n)
 
 
 async def create_news(n: int):

@@ -8,12 +8,13 @@ import typing as t
 from core.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
 from orders.schemas import (
-    CreateOrderDTO,
-    CreateOrderResDTO,
-    SteamTopUpCreateDTO,
-    SteamTopUpCreateResDTO,
+    CreateInAppOrderDTO,
+    OrderPaymentDTO,
+    InAppOrderDTO,
+    SteamTopUpOrderDTO,
+    CreateSteamTopUpOrderDTO,
     UpdateOrderDTO,
-    ShowOrderExtended,
+    InAppOrderExtendedDTO,
 )
 from users.dependencies import get_optional_user_id, get_user_id_or_raise, require_admin
 
@@ -27,13 +28,13 @@ OrdersServiceDep = t.Annotated[OrdersService, Inject(OrdersService)]
     status_code=status.HTTP_201_CREATED,
 )
 async def create_order(
-    dto: CreateOrderDTO,
+    dto: CreateInAppOrderDTO,
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
     orders_service: OrdersServiceDep,
-) -> CreateOrderResDTO:
+) -> OrderPaymentDTO[InAppOrderDTO]:
     if not (user_id or (dto.user.email and dto.user.name)):
         raise HTTPException(400, "email and name are required for not authorized user")
-    return await orders_service.create_order(dto, user_id)
+    return await orders_service.create_in_app_order(dto, user_id)
 
 
 @router.patch("/update/{order_id}", dependencies=[Depends(require_admin)])
@@ -57,7 +58,7 @@ async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
 async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
-) -> PaginatedResponse[ShowOrderExtended]:
+) -> PaginatedResponse[InAppOrderExtendedDTO]:
     orders, total_records = await orders_service.list_all_orders(pagination_params)
     return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
@@ -67,7 +68,7 @@ async def list_orders_for_user(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
     user_id: int = Depends(get_user_id_or_raise),
-) -> PaginatedResponse[ShowOrderExtended]:
+) -> PaginatedResponse[InAppOrderExtendedDTO]:
     orders, total_records = await orders_service.list_orders_for_user(
         pagination_params, user_id
     )
@@ -77,16 +78,16 @@ async def list_orders_for_user(
 @router.get("/detail/{order_id}")
 async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
-) -> ShowOrderExtended:
+) -> InAppOrderExtendedDTO:
     return await orders_service.get_order(order_id)
 
 
 @router.post("/steam/top-up")
 async def steam_top_up(
-    dto: SteamTopUpCreateDTO,
+    dto: CreateSteamTopUpOrderDTO,
     orders_service: OrdersServiceDep,
     user_id: int | None = Depends(get_optional_user_id),
-) -> SteamTopUpCreateResDTO:
+) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
     return await orders_service.steam_top_up(dto, user_id)
 
 

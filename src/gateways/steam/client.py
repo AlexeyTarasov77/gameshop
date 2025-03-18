@@ -4,7 +4,7 @@ from logging import Logger
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
-from orders.schemas import SteamTopUpCreateDTO
+from orders.schemas import CreateSteamTopUpOrderDTO
 from products.domain.services import ProductsService
 from products.schemas import SteamItemDTO
 from gateways.currency_converter import ExchangeRatesMappingDTO
@@ -79,7 +79,7 @@ class NSGiftsAPIClient:
         data = resp.json()
         return Decimal(data["usd_price"]), float(data["exchange_rate"])
 
-    async def create_top_up_request(self, dto: SteamTopUpCreateDTO) -> uuid.UUID:
+    async def create_top_up_request(self, dto: CreateSteamTopUpOrderDTO) -> uuid.UUID:
         service_id = 1  # id for steam top-up service
         usd_amount, exchange_rate = await self._convert_amount_to_usd(dto.rub_amount)
         usd_min_deposit = 0.13

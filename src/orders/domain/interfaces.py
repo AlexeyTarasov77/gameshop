@@ -2,47 +2,62 @@ from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
-from orders.schemas import CreateOrderDTO, SteamTopUpCreateDTO, UpdateOrderDTO
-from orders.models import Order, OrderItem, SteamTopUp
+from orders.schemas import CreateInAppOrderDTO, CreateSteamTopUpOrderDTO, UpdateOrderDTO
+from orders.models import InAppOrder, InAppOrderItem, SteamTopUpOrder
 from payments.models import AvailablePaymentSystems
 from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
 class OrdersRepositoryI(Protocol):
     async def create_from_dto(
-        self, dto: CreateOrderDTO, user_id: int | None
-    ) -> Order: ...
-    async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> Order: ...
-    async def update_for_payment(
-        self, bill_id: str, paid_with: AvailablePaymentSystems, order_id: UUID
-    ) -> Order: ...
+        self, dto: CreateInAppOrderDTO, user_id: int | None
+    ) -> InAppOrder: ...
+    async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder: ...
+    async def update_payment_details(
+        self,
+        bill_id: str,
+        paid_with: AvailablePaymentSystems,
+        order_id: UUID,
+        *,
+        check_is_pending: bool,
+    ) -> InAppOrder: ...
     async def delete_by_id(self, order_id: UUID) -> None: ...
     async def list_orders_for_user(
         self, pagination_params: PaginationParams, user_id: int
-    ) -> PaginationResT[Order]: ...
+    ) -> PaginationResT[InAppOrder]: ...
     async def list_all_orders(
         self, pagination_params: PaginationParams
-    ) -> PaginationResT[Order]: ...
-    async def get_by_id(self, order_id: UUID) -> Order: ...
+    ) -> PaginationResT[InAppOrder]: ...
+    async def get_by_id(self, order_id: UUID) -> InAppOrder: ...
 
 
 class OrderItemsRepositoryI(Protocol):
-    async def save_many(self, entities: Sequence[OrderItem]) -> None: ...
+    async def save_many(self, entities: Sequence[InAppOrderItem]) -> None: ...
 
 
 class SteamAPIClientI(Protocol):
-    async def create_top_up_request(self, dto: SteamTopUpCreateDTO) -> UUID: ...
+    async def create_top_up_request(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
 
 
 class SteamTopUpRepositoryI(Protocol):
     async def create_with_id(
         self,
-        dto: SteamTopUpCreateDTO,
-        order_id: UUID,
+        dto: CreateSteamTopUpOrderDTO,
+        top_up_id: UUID,
         percent_fee: int,
         user_id: int | None,
-    ) -> SteamTopUp: ...
+    ) -> SteamTopUpOrder: ...
+
+    async def get_by_id(self, top_up_id: UUID) -> SteamTopUpOrder: ...
+    async def update_payment_details(
+        self,
+        bill_id: str,
+        paid_with: AvailablePaymentSystems,
+        order_id: UUID,
+        *,
+        check_is_pending: bool,
+    ) -> SteamTopUpOrder: ...
 
 
 class TopUpFeeManagerI(Protocol):

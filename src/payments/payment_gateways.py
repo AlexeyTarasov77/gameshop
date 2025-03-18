@@ -4,11 +4,12 @@ from uuid import UUID
 from httpx import AsyncClient
 
 from config import Config
+from orders.models import OrderCategory
 from payments.domain.interfaces import (
-    CreatedBill,
     PaymentSystemI,
 )
 from payments.models import AvailablePaymentSystems
+from payments.schemas import PaymentBillDTO
 
 
 class PaymentFailedError(Exception):
@@ -27,13 +28,18 @@ class PaypalychPaymentSystem:
         self._base_url = "https://pal24.pro/api/v1"
 
     async def create_bill(
-        self, order_id: UUID, order_total: Decimal, customer_email: str
-    ) -> CreatedBill:
+        self,
+        order_id: UUID,
+        order_total: Decimal,
+        customer_email: str,
+        payment_for: OrderCategory,
+    ) -> PaymentBillDTO:
         data = {
             "shop_id": self._shop_id,
             "order_id": str(order_id),
             "amount": str(order_total),
             "payer_email": customer_email,
+            "custom": payment_for,
         }
         resp = await self._client.post(
             self._base_url + "/bill/create",
@@ -43,7 +49,9 @@ class PaypalychPaymentSystem:
         resp_data = resp.json()
         if not resp_data["success"]:
             raise PaymentFailedError(resp_data)
-        return CreatedBill(resp_data["bill_id"], resp_data["link_page_url"])
+        return PaymentBillDTO(
+            bill_id=resp_data["bill_id"], payment_url=resp_data["link_page_url"]
+        )
 
     def is_success(self, status: str) -> bool:
         return status == "SUCCESS"

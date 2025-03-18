@@ -8,7 +8,7 @@ from shopping.domain.interfaces import (
     CartManagerI,
     WishlistManagerI,
 )
-from shopping.schemas import AddToCartDTO
+from shopping.schemas import ItemInCartDTO
 from shopping.sessions import RedisSessionManager
 from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 
@@ -86,7 +86,7 @@ class UserCartManager(_BaseUserManager):
         if data:
             await self._db.hset(self._key, mapping=data)  # type: ignore
 
-    async def add_quantity(self, dto: AddToCartDTO) -> int:
+    async def add_quantity(self, dto: ItemInCartDTO) -> int:
         return await self._db.hincrby(self._key, str(dto.product_id), dto.quantity or 1)
 
     async def delete_by_id(self, product_id: int):
@@ -99,7 +99,7 @@ class UserCartManager(_BaseUserManager):
         if not updated:
             raise NotFoundError()
 
-    async def create(self, dto: AddToCartDTO):
+    async def create(self, dto: ItemInCartDTO):
         created = await self._db.hsetnx(
             self._key, str(dto.product_id), dto.quantity or 1
         )
@@ -114,14 +114,14 @@ class UserCartManager(_BaseUserManager):
 class CartSessionManager(RedisSessionManager):
     _base_json_path = "$.cart"
 
-    async def create(self, dto: AddToCartDTO):
+    async def create(self, dto: ItemInCartDTO):
         created = await super().set_to_session(
             f"{self._base_json_path}.{dto.product_id}", dto.quantity, nx=True
         )
         if not created:
             raise AlreadyExistsError()
 
-    async def add_quantity(self, dto: AddToCartDTO) -> int:
+    async def add_quantity(self, dto: ItemInCartDTO) -> int:
         new_qty = await self._db.json().numincrby(
             self.storage_key,
             f"{self._base_json_path}.{dto.product_id}",
