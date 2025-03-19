@@ -10,7 +10,7 @@ from gateways.currency_converter import ExchangeRatesMappingDTO
 
 class OrdersRepositoryI(Protocol):
     async def create_from_dto(
-        self, dto: CreateInAppOrderDTO, user_id: int | None
+        self, dto: CreateInAppOrderDTO, user_id: int | None, items
     ) -> InAppOrder: ...
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder: ...
     async def update_payment_details(
@@ -38,6 +38,7 @@ class OrderItemsRepositoryI(Protocol):
 class SteamAPIClientI(Protocol):
     async def create_top_up_request(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
+    async def top_up_complete(self, top_up_id: UUID): ...
 
 
 class SteamTopUpRepositoryI(Protocol):

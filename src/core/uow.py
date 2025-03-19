@@ -119,6 +119,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
                 self.logger.debug(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
                     exc_value,
+                    exc_info=True,
                 )
                 await super().__aexit__(exc_type, exc_value, _)
                 self._handle_exc(exc_value)

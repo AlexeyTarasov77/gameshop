@@ -1,9 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Annotated, Self
+from typing import Annotated, Any
 from uuid import UUID
-from pydantic import AfterValidator, EmailStr, Field, field_validator
+from pydantic import (
+    AfterValidator,
+    EmailStr,
+    AliasChoices,
+    Field,
+    field_validator,
+    model_validator,
+)
 from payments.models import AvailablePaymentSystems
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
@@ -59,48 +66,33 @@ class InAppOrderItemDTO(BaseDTO):
     total_price: Decimal
 
 
-class CustomerDTO(BaseDTO):
-    email: EmailStr | None = None
-    phone: PhoneNumber | None = None
-    tg_username: CustomerTg
-    name: CustomerName | None = None
+class InAppOrderCustomerDTO(BaseDTO):
+    email: EmailStr | None = Field(
+        validation_alias=AliasChoices("customer_email", "email"), default=None
+    )
+    phone: PhoneNumber | None = Field(
+        validation_alias=AliasChoices("customer_phone", "phone"), default=None
+    )
+    tg_username: CustomerTg = Field(
+        validation_alias=AliasChoices("customer_tg_username", "tg_username")
+    )
 
-    @classmethod
-    def from_order(cls, order: InAppOrder) -> Self:
-        prefix = "customer_"
-        return cls.model_construct(
-            None,
-            **{
-                k.removeprefix(prefix): getattr(order, k)
-                for k in order.__table__.c.keys()
-                if k.startswith(prefix)
-            },
-        )
+    name: CustomerName | None = Field(
+        validation_alias=AliasChoices("customer_name", "name"), default=None
+    )
 
 
-class CustomerWithUserIdDTO(CustomerDTO):
+class InAppOrderCustomerWithUserIdDTO(InAppOrderCustomerDTO):
     user_id: Base64Int | None
 
-    @classmethod
-    def from_order(cls, order: InAppOrder) -> Self:
-        obj = super().from_order(order)
-        obj.user_id = order.user_id
-        return obj
 
-
-class CustomerWithUserDTO(CustomerDTO):
+class InAppOrderCustomerWithUserDTO(InAppOrderCustomerDTO):
     user: ShowUser | None
-
-    @classmethod
-    def from_order(cls, order: InAppOrder) -> Self:
-        obj = super().from_order(order)
-        obj.user = ShowUser.model_validate(order.user) if order.user else None
-        return obj
 
 
 class CreateInAppOrderDTO(BaseDTO):
     cart: list[ItemInCartDTO]
-    user: CustomerDTO
+    user: InAppOrderCustomerDTO
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
 
     # TODO: check if that validator is redundant
@@ -123,17 +115,15 @@ class BaseOrderDTO(BaseDTO):
 
 
 class InAppOrderDTO(BaseOrderDTO):
-    customer: CustomerWithUserIdDTO
+    customer: InAppOrderCustomerWithUserIdDTO
 
+    @model_validator(mode="before")
     @classmethod
-    def from_model(cls, order: InAppOrder, **kwargs):
-        return cls.model_validate(
-            {
-                **order.dump(),
-                "customer": cls.__annotations__["customer"].from_order(order),
-                **kwargs,
-            }
-        )
+    def convert_customer_data(cls, obj: Any) -> Any:
+        if not isinstance(obj, InAppOrder):
+            return obj
+        obj.customer = InAppOrderCustomerWithUserIdDTO.model_validate(obj)  # type: ignore
+        return obj
 
 
 class OrderPaymentDTO[T: BaseDTO](BaseDTO):
@@ -143,9 +133,17 @@ class OrderPaymentDTO[T: BaseDTO](BaseDTO):
 
 class InAppOrderExtendedDTO(InAppOrderDTO):
     items: list[InAppOrderItemDTO]
-    customer: CustomerWithUserDTO  # type: ignore
+    customer: InAppOrderCustomerWithUserDTO  # type: ignore
     bill_id: str
     paid_with: AvailablePaymentSystems
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_customer_data(cls, obj: Any) -> Any:
+        if not isinstance(obj, InAppOrder):
+            return obj
+        obj.customer = InAppOrderCustomerWithUserDTO.model_validate(obj)  # type: ignore
+        return obj
 
 
 class CreateSteamTopUpOrderDTO(BaseDTO):
@@ -155,7 +153,16 @@ class CreateSteamTopUpOrderDTO(BaseDTO):
     customer_email: EmailStr
 
 
-class SteamTopUpOrderDTO(BaseOrderDTO):
+class SteamTopUpOrderCustomerDTO(BaseDTO):
+    email: EmailStr | None = Field(validation_alias="customer_email", default=None)
     steam_login: str
+
+
+class SteamTopUpOrderCustomerWithUserIdDTO(SteamTopUpOrderCustomerDTO):
+    user_id: Base64Int | None
+
+
+class SteamTopUpOrderDTO(BaseOrderDTO):
+    customer: SteamTopUpOrderCustomerWithUserIdDTO
     amount: Decimal
     percent_fee: int

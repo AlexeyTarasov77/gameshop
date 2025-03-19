@@ -69,56 +69,41 @@ class OrdersService(BaseService):
         user_id: int | None,
     ) -> OrderPaymentDTO[InAppOrderDTO]:
         self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
-        try:
-            async with self._uow as uow:
-                cart_products = await uow.products_repo.list_by_ids(
-                    [int(item.product_id) for item in dto.cart], only_in_stock=True
-                )
-                if len(cart_products) != len(dto.cart):
-                    raise EntityNotFoundError(
-                        "Some of the supplied products not found or aren't in stock anymore"
-                    )
-                order = await uow.orders_repo.create_from_dto(dto, user_id)
-                order_items: list[InAppOrderItem] = []
-                for product in cart_products:
-                    [mapped_item] = [
-                        item for item in dto.cart if item.product_id == product.id
-                    ]
-                    # find price for provided region
-                    region = (
-                        mapped_item.region.lower().strip() if mapped_item.region else ""
-                    )
-                    mapped_price_by_region = None
-                    for regional_price in product.prices:
-                        if regional_price.region_code.lower().strip() == region:
-                            mapped_price_by_region = (
-                                regional_price.calc_discounted_price(product.discount)
-                            )
-                    if mapped_price_by_region is None:
-                        raise UnavailableProductError(product.name)
-                    order_items.append(
-                        InAppOrderItem(
-                            order_id=order.id,
-                            region=region or None,
-                            price=mapped_price_by_region,
-                            product_id=product.id,
-                            quantity=mapped_item.quantity,
-                        )
-                    )
-                if not dto.user.email and user_id is not None:
-                    user = await uow.users_repo.get_by_id(user_id, is_active=True)
-                    order.user = user
-                order.items = order_items
-                await uow.order_items_repo.save_many(order_items)
-
-                payment_dto = await self._create_payment_bill(dto.selected_ps, order)
-        except NotFoundError:
-            # user not found
-            self._logger.warning(
-                "OrdersService.create_order: suspicious attempt to create order from unexistent/inactive user with valid auth token. user_id from token: %s",
-                user_id,
+        async with self._uow as uow:
+            cart_products = await uow.products_repo.list_by_ids(
+                [int(item.product_id) for item in dto.cart], only_in_stock=True
             )
-            raise EntityNotFoundError("User", id=user_id)
+            if len(cart_products) != len(dto.cart):
+                raise EntityNotFoundError(
+                    "Some of the supplied products not found or aren't in stock anymore"
+                )
+            order_items: list[InAppOrderItem] = []
+            for product in cart_products:
+                [mapped_item] = [
+                    item for item in dto.cart if item.product_id == product.id
+                ]
+                # find price for provided region
+                region = (
+                    mapped_item.region.lower().strip() if mapped_item.region else ""
+                )
+                mapped_price_by_region = None
+                for regional_price in product.prices:
+                    if regional_price.region_code.lower().strip() == region:
+                        mapped_price_by_region = regional_price.calc_discounted_price(
+                            product.discount
+                        )
+                if mapped_price_by_region is None:
+                    raise UnavailableProductError(product.name)
+                order_items.append(
+                    InAppOrderItem(
+                        region=region or None,
+                        price=mapped_price_by_region,
+                        product_id=product.id,
+                        quantity=mapped_item.quantity,
+                    )
+                )
+            order = await uow.orders_repo.create_from_dto(dto, user_id, order_items)
+            payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
             order.client_email,
@@ -126,7 +111,7 @@ class OrdersService(BaseService):
             payment_dto.bill_id,
         )
         return OrderPaymentDTO(
-            order=InAppOrderDTO.from_model(order, total=order.total),
+            order=InAppOrderDTO.model_validate(order),
             payment_url=payment_dto.payment_url,
         )
 
@@ -138,7 +123,7 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return InAppOrderDTO.from_model(order, total=order.total)
+        return InAppOrderDTO.model_validate(order)
 
     async def delete_order(self, order_id: UUID) -> None:
         self._logger.info("Deleting order: %s", order_id)
@@ -163,10 +148,7 @@ class OrdersService(BaseService):
                 user_id,
             )
         return [
-            InAppOrderExtendedDTO.from_model(
-                order, items=order.items, user=order.user, total=order.total
-            )
-            for order in orders
+            InAppOrderExtendedDTO.model_validate(order) for order in orders
         ], total_records
 
     # TODO: Return both in app and steam top up orders
@@ -181,10 +163,7 @@ class OrdersService(BaseService):
                 pagination_params
             )
         return [
-            InAppOrderExtendedDTO.from_model(
-                order, items=order.items, user=order.user, total=order.total
-            )
-            for order in orders
+            InAppOrderExtendedDTO.model_validate(order) for order in orders
         ], total_records
 
     async def get_order(self, order_id: UUID) -> InAppOrderExtendedDTO:
@@ -195,9 +174,7 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return InAppOrderExtendedDTO.from_model(
-            order, items=order.items, user=order.user, total=order.total
-        )
+        return InAppOrderExtendedDTO.model_validate(order)
 
     async def steam_top_up(
         self, dto: CreateSteamTopUpOrderDTO, user_id: int | None

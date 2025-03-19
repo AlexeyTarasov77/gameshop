@@ -6,7 +6,12 @@ from sqlalchemy.orm import joinedload, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
-from orders.models import InAppOrder, InAppOrderItem, OrderStatus, SteamTopUpOrder
+from orders.models import (
+    InAppOrder,
+    InAppOrderItem,
+    OrderStatus,
+    SteamTopUpOrder,
+)
 from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamTopUpOrderDTO,
@@ -27,12 +32,17 @@ class OrdersRepository(PaginationRepository[InAppOrder]):
         )
 
     async def create_from_dto(
-        self, dto: CreateInAppOrderDTO, user_id: int | None
+        self,
+        dto: CreateInAppOrderDTO,
+        user_id: int | None,
+        items: Sequence[InAppOrderItem],
     ) -> InAppOrder:
-        return await super().create(
-            **{"customer_" + k: v for k, v in dto.user},
-            user_id=user_id,
-        )
+        data = {"customer_" + k: v for k, v in dto.user}
+        order_obj = InAppOrder(**data, user_id=user_id, items=items)
+        self._session.add(order_obj)
+        await self._session.flush()
+        self._session.expunge(order_obj)
+        return order_obj
 
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder:
         return await super().update(dto.model_dump(), id=order_id)
@@ -100,16 +110,7 @@ class OrderItemsRepository(SqlAlchemyRepository[InAppOrderItem]):
     async def save_many(self, entities: Sequence[InAppOrderItem]) -> None:
         await self._session.execute(
             insert(InAppOrderItem),
-            [
-                {
-                    "order_id": ent.order_id,
-                    "product_id": ent.product_id,
-                    "region": ent.region,
-                    "quantity": ent.quantity,
-                    "price": ent.price,
-                }
-                for ent in entities
-            ],
+            [ent.dump() for ent in entities],
         )
 
 

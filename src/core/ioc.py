@@ -10,7 +10,7 @@ from mailing.domain.services import MailingService
 from orders.repositories import TopUpFeeManager
 from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
 from payments.domain.services import PaymentsService
-from payments.systems import PaymentSystemFactoryImpl
+from payments.payment_gateways import PaymentSystemFactoryImpl
 from products.domain.interfaces import CurrencyConverterI
 from gateways.steam import GamesForFarmAPIClient, NSGiftsAPIClient
 from gateways.currency_converter import CurrencyConverter

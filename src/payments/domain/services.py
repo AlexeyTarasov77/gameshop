@@ -7,6 +7,7 @@ from core.services.exceptions import ActionForbiddenError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
+from orders.domain.interfaces import SteamAPIClientI
 from orders.models import InAppOrder, OrderCategory, SteamTopUpOrder
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
@@ -27,12 +28,14 @@ class PaymentsService(BaseService):
         mailing_service: MailingService,
         email_templates: PaymentEmailTemplatesI,
         order_details_link_builder: Callable[[UUID], str],
+        steam_api: SteamAPIClientI,
     ) -> None:
         super().__init__(uow, logger)
         self._mailing_service = mailing_service
         self._payment_system_factory = payment_system_factory
         self._email_templates = email_templates
         self._order_details_link_builder = order_details_link_builder
+        self._steam_api = steam_api
 
     async def _process_steam_top_up_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
@@ -40,6 +43,7 @@ class PaymentsService(BaseService):
         order = await uow.steam_top_up_repo.update_payment_details(
             **dto.model_dump(), check_is_pending=True
         )
+        await self._steam_api.top_up_complete(dto.order_id)
         return order
 
     async def _process_in_app_order(
