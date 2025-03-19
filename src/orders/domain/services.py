@@ -1,6 +1,6 @@
 from logging import Logger
 from uuid import UUID
-from core.pagination import PaginationParams
+from core.pagination import PaginationParams, PaginationResT
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
@@ -22,7 +22,9 @@ from orders.schemas import (
     InAppOrderDTO,
     InAppOrderExtendedDTO,
     CreateSteamTopUpOrderDTO,
+    ShowBaseOrderDTO,
     SteamTopUpOrderDTO,
+    SteamTopUpOrderExtendedDTO,
     UpdateOrderDTO,
 )
 from payments.domain.interfaces import PaymentSystemFactoryI
@@ -102,7 +104,9 @@ class OrdersService(BaseService):
                         quantity=mapped_item.quantity,
                     )
                 )
-            order = await uow.orders_repo.create_with_items(dto, user_id, order_items)
+            order = await uow.in_app_orders_repo.create_with_items(
+                dto, user_id, order_items
+            )
             payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
@@ -115,7 +119,9 @@ class OrdersService(BaseService):
             payment_url=payment_dto.payment_url,
         )
 
-    async def update_order(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrderDTO:
+    async def update_order(
+        self, dto: UpdateOrderDTO, order_id: UUID
+    ) -> ShowBaseOrderDTO:
         self._logger.info("Updating order: %s. Data: %s", order_id, dto)
         try:
             async with self._uow as uow:
@@ -123,7 +129,7 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return InAppOrderDTO.model_validate(order)
+        return ShowBaseOrderDTO.model_validate(order)
 
     async def delete_order(self, order_id: UUID) -> None:
         self._logger.info("Deleting order: %s", order_id)
@@ -135,8 +141,11 @@ class OrdersService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=order_id)
 
     async def list_orders_for_user(
-        self, pagination_params: PaginationParams, user_id: int
-    ) -> tuple[list[InAppOrderExtendedDTO], int]:
+        self,
+        pagination_params: PaginationParams,
+        user_id: int,
+        category: OrderCategory | None,
+    ) -> PaginationResT[ShowBaseOrderDTO]:
         self._logger.info(
             "Listing orders for user: %s. Pagination params: %s",
             user_id,
@@ -144,29 +153,30 @@ class OrdersService(BaseService):
         )
         async with self._uow as uow:
             orders, total_records = await uow.orders_repo.list_orders_for_user(
-                pagination_params,
-                user_id,
+                pagination_params, user_id, category
             )
         return [
-            InAppOrderExtendedDTO.model_validate(order) for order in orders
+            ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
     # TODO: Return both in app and steam top up orders
     async def list_all_orders(
-        self, pagination_params: PaginationParams
-    ) -> tuple[list[InAppOrderExtendedDTO], int]:
+        self, pagination_params: PaginationParams, category: OrderCategory | None
+    ) -> PaginationResT[ShowBaseOrderDTO]:
         self._logger.info(
             "Listing all orders. Pagination params: %s", pagination_params
         )
         async with self._uow as uow:
-            orders, total_records = await uow.orders_repo.list_all_orders(
-                pagination_params
+            orders, total_records = await uow.orders_repo.list_orders(
+                pagination_params, category
             )
         return [
-            InAppOrderExtendedDTO.model_validate(order) for order in orders
+            ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
-    async def get_order(self, order_id: UUID) -> InAppOrderExtendedDTO:
+    async def get_order(
+        self, order_id: UUID
+    ) -> InAppOrderExtendedDTO | SteamTopUpOrderExtendedDTO:
         self._logger.info("Fetching order by id: %s", order_id)
         try:
             async with self._uow as uow:
@@ -174,7 +184,11 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        return InAppOrderExtendedDTO.model_validate(order)
+        dto: InAppOrderExtendedDTO | SteamTopUpOrderExtendedDTO = {
+            OrderCategory.IN_APP: InAppOrderExtendedDTO,
+            OrderCategory.STEAM_TOP_UP: SteamTopUpOrderExtendedDTO,
+        }[order.category]
+        return dto.model_validate(order)
 
     async def create_steam_top_up_order(
         self, dto: CreateSteamTopUpOrderDTO, user_id: int | None

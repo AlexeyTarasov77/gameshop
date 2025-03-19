@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from sqlalchemy import CheckConstraint, ForeignKey, text
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
@@ -13,7 +13,7 @@ from products.models import Product
 from users.models import User
 
 
-class OrderStatus(Enum):
+class OrderStatus(StrEnum):
     COMPLETED = "COMPLETED"
     PENDING = "PENDING"
     CANCELLED = "CANCELLED"
@@ -32,7 +32,7 @@ class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
     id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
     order_date: Mapped[created_at_type]
     status: Mapped[OrderStatus] = mapped_column(
-        server_default=text(f"'{OrderStatus.PENDING.value}'")
+        server_default=text(f"'{OrderStatus.PENDING}'")
     )
     customer_email: Mapped[str | None]
     category: Mapped[OrderCategory]
@@ -55,7 +55,9 @@ class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
 
 
 class InAppOrder(BaseOrder):
-    id: Mapped[UUID] = mapped_column(ForeignKey("base_order.id"), primary_key=True)
+    id: Mapped[UUID] = mapped_column(
+        ForeignKey("base_order.id", ondelete="CASCADE"), primary_key=True
+    )
     user: Mapped[User | None] = relationship(
         back_populates="in_app_orders", lazy="joined", passive_deletes=True
     )
@@ -96,7 +98,9 @@ class InAppOrderItem(SqlAlchemyBaseModel):
 
 class SteamTopUpOrder(BaseOrder):
     __table_args__ = (CheckConstraint("amount > 0"),)
-    id: Mapped[UUID] = mapped_column(ForeignKey("base_order.id"), primary_key=True)
+    id: Mapped[UUID] = mapped_column(
+        ForeignKey("base_order.id", ondelete="CASCADE"), primary_key=True
+    )
     steam_login: Mapped[str]
     amount: Mapped[Decimal]
     percent_fee: Mapped[int]

@@ -7,12 +7,15 @@ import typing as t
 
 from core.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
+from orders.models import OrderCategory
 from orders.schemas import (
     CreateInAppOrderDTO,
     OrderPaymentDTO,
     InAppOrderDTO,
+    ShowBaseOrderDTO,
     SteamTopUpOrderDTO,
     CreateSteamTopUpOrderDTO,
+    SteamTopUpOrderExtendedDTO,
     UpdateOrderDTO,
     InAppOrderExtendedDTO,
 )
@@ -27,7 +30,7 @@ OrdersServiceDep = t.Annotated[OrdersService, Inject(OrdersService)]
     "/in-app",
     status_code=status.HTTP_201_CREATED,
 )
-async def create_order(
+async def create_in_app_order(
     dto: CreateInAppOrderDTO,
     user_id: t.Annotated[int | None, Depends(get_optional_user_id)],
     orders_service: OrdersServiceDep,
@@ -40,7 +43,7 @@ async def create_order(
 @router.patch("/update/{order_id}", dependencies=[Depends(require_admin)])
 async def update_order(
     dto: UpdateOrderDTO, order_id: UUID, orders_service: OrdersServiceDep
-):
+) -> ShowBaseOrderDTO:
     require_dto_not_empty(dto)
     return await orders_service.update_order(dto, order_id)
 
@@ -54,12 +57,18 @@ async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
     await orders_service.delete_order(order_id)
 
 
-@router.get("/list", dependencies=[Depends(require_admin)])
+@router.get(
+    "/list",
+    # dependencies=[Depends(require_admin)]
+)
 async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
-) -> PaginatedResponse[InAppOrderExtendedDTO]:
-    orders, total_records = await orders_service.list_all_orders(pagination_params)
+    category: OrderCategory | None = None,
+) -> PaginatedResponse[ShowBaseOrderDTO]:
+    orders, total_records = await orders_service.list_all_orders(
+        pagination_params, category
+    )
     return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
 
@@ -68,9 +77,10 @@ async def list_orders_for_user(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
     user_id: int = Depends(get_user_id_or_raise),
-) -> PaginatedResponse[InAppOrderExtendedDTO]:
+    category: OrderCategory | None = None,
+) -> PaginatedResponse[ShowBaseOrderDTO]:
     orders, total_records = await orders_service.list_orders_for_user(
-        pagination_params, user_id
+        pagination_params, user_id, category
     )
     return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
@@ -78,7 +88,7 @@ async def list_orders_for_user(
 @router.get("/detail/{order_id}")
 async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
-) -> InAppOrderExtendedDTO:
+) -> SteamTopUpOrderExtendedDTO | InAppOrderExtendedDTO:
     return await orders_service.get_order(order_id)
 
 

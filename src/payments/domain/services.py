@@ -49,7 +49,7 @@ class PaymentsService(BaseService):
     async def _process_in_app_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
     ) -> InAppOrder:
-        order = await uow.orders_repo.update_payment_details(
+        order = await uow.in_app_orders_repo.update_payment_details(
             **dto.model_dump(), check_is_pending=True
         )
         return order

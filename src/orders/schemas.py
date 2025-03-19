@@ -15,7 +15,7 @@ from payments.models import AvailablePaymentSystems
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO
-from orders.models import InAppOrder, OrderStatus
+from orders.models import InAppOrder, OrderCategory, OrderStatus
 
 
 def check_phone(value: str) -> str:
@@ -107,14 +107,20 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class BaseOrderDTO(BaseDTO):
+class _BaseOrderDTO(BaseDTO):
     id: UUID
     order_date: datetime
     status: OrderStatus
     total: Decimal
+    bill_id: str | None = None
+    paid_with: AvailablePaymentSystems | None = None
 
 
-class InAppOrderDTO(BaseOrderDTO):
+class ShowBaseOrderDTO(_BaseOrderDTO):
+    category: OrderCategory
+
+
+class InAppOrderDTO(_BaseOrderDTO):
     customer: InAppOrderCustomerWithUserIdDTO
 
     @model_validator(mode="before")
@@ -134,8 +140,6 @@ class OrderPaymentDTO[T: BaseDTO](BaseDTO):
 class InAppOrderExtendedDTO(InAppOrderDTO):
     items: list[InAppOrderItemDTO]
     customer: InAppOrderCustomerWithUserDTO  # type: ignore
-    bill_id: str
-    paid_with: AvailablePaymentSystems
 
     @model_validator(mode="before")
     @classmethod
@@ -158,10 +162,14 @@ class SteamTopUpOrderCustomerDTO(BaseDTO):
     steam_login: str
 
 
-class SteamTopUpOrderCustomerWithUserIdDTO(SteamTopUpOrderCustomerDTO):
+class _BaseSteamTopUpOrderDTO(_BaseOrderDTO):
+    amount: Decimal
+    percent_fee: int
+
+
+class SteamTopUpOrderDTO(_BaseSteamTopUpOrderDTO, SteamTopUpOrderCustomerDTO):
     user_id: Base64Int | None
 
 
-class SteamTopUpOrderDTO(BaseOrderDTO, SteamTopUpOrderCustomerWithUserIdDTO):
-    amount: Decimal
-    percent_fee: int
+class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO, SteamTopUpOrderCustomerDTO):
+    user: ShowUser | None
