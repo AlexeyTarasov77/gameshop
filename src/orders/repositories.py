@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
 from sqlalchemy import desc, insert, select
@@ -7,6 +8,7 @@ from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 from orders.models import (
+    BaseOrder,
     InAppOrder,
     InAppOrderItem,
     OrderStatus,
@@ -21,17 +23,34 @@ from payments.models import AvailablePaymentSystems
 from products.models import Product
 
 
-class OrdersRepository(PaginationRepository[InAppOrder]):
-    model = InAppOrder
-
-    def _get_select_stmt(self):
-        return (
-            select(self.model)
-            .join(self.model.user)
-            .options(selectinload(self.model.items))
+class OrdersRepositoryMixin[T: BaseOrder](SqlAlchemyRepository):
+    async def update_payment_details(
+        self,
+        bill_id: str,
+        paid_with: AvailablePaymentSystems,
+        order_id: UUID,
+        *,
+        check_is_pending: bool,
+    ) -> T:
+        filters: dict[str, Any] = {"id": order_id}
+        if check_is_pending:
+            filters["status"] = OrderStatus.PENDING
+        return await super().update(
+            {
+                "bill_id": bill_id,
+                "paid_with": paid_with,
+                "status": OrderStatus.COMPLETED,
+            },
+            **filters,
         )
 
-    async def create_from_dto(
+
+class InAppOrdersRepository(
+    OrdersRepositoryMixin[InAppOrder], PaginationRepository[InAppOrder]
+):
+    model = InAppOrder
+
+    async def create_with_items(
         self,
         dto: CreateInAppOrderDTO,
         user_id: int | None,
@@ -47,18 +66,26 @@ class OrdersRepository(PaginationRepository[InAppOrder]):
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder:
         return await super().update(dto.model_dump(), id=order_id)
 
-    async def update_for_payment(
-        self, bill_id: str, paid_with: AvailablePaymentSystems, order_id: UUID
-    ) -> InAppOrder:
-        return await super().update(
-            {
-                "bill_id": bill_id,
-                "paid_with": paid_with,
-                "status": OrderStatus.COMPLETED,
-            },
-            id=order_id,
-        )
-
+    # async def update_payment_details(
+    #     self,
+    #     bill_id: str,
+    #     paid_with: AvailablePaymentSystems,
+    #     order_id: UUID,
+    #     *,
+    #     check_is_pending: bool,
+    # ) -> InAppOrder:
+    #     filters: dict[str, Any] = {"id": order_id}
+    #     if check_is_pending:
+    #         filters["status"] = OrderStatus.PENDING
+    #     return await super().update(
+    #         {
+    #             "bill_id": bill_id,
+    #             "paid_with": paid_with,
+    #             "status": OrderStatus.COMPLETED,
+    #         },
+    #         **filters,
+    #     )
+    #
     async def delete_by_id(self, order_id: UUID) -> None:
         return await super().delete_or_raise_not_found(id=order_id)
 
@@ -104,17 +131,7 @@ class OrdersRepository(PaginationRepository[InAppOrder]):
         return order
 
 
-class OrderItemsRepository(SqlAlchemyRepository[InAppOrderItem]):
-    model = InAppOrderItem
-
-    async def save_many(self, entities: Sequence[InAppOrderItem]) -> None:
-        await self._session.execute(
-            insert(InAppOrderItem),
-            [ent.dump() for ent in entities],
-        )
-
-
-class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUpOrder]):
+class SteamTopUpRepository(OrdersRepositoryMixin[SteamTopUpOrder]):
     model = SteamTopUpOrder
 
     async def create_with_id(
@@ -124,16 +141,40 @@ class SteamTopUpRepository(SqlAlchemyRepository[SteamTopUpOrder]):
         percent_fee: int,
         user_id: int | None,
     ) -> SteamTopUpOrder:
-        return await super().create(
+        order_obj = SteamTopUpOrder(
             id=order_id,
             percent_fee=percent_fee,
             amount=dto.rub_amount,
             user_id=user_id,
             **dto.model_dump(include={"steam_login", "customer_email"}),
         )
+        self._session.add(order_obj)
+        await self._session.flush()
+        self._session.expunge(order_obj)
+        return order_obj
 
-    async def get_by_id(self, top_up_id: UUID) -> SteamTopUpOrder:
-        return await super().get_one(id=top_up_id)
+    async def get_by_id(self, order_id: UUID):
+        return await super().get_one(id=order_id)
+
+    # async def update_payment_details(
+    #     self,
+    #     bill_id: str,
+    #     paid_with: AvailablePaymentSystems,
+    #     order_id: UUID,
+    #     *,
+    #     check_is_pending: bool,
+    # ):
+    #     filters: dict[str, Any] = {"id": order_id}
+    #     if check_is_pending:
+    #         filters["status"] = OrderStatus.PENDING
+    #     return await super().update(
+    #         {
+    #             "bill_id": bill_id,
+    #             "paid_with": paid_with,
+    #             "status": OrderStatus.COMPLETED,
+    #         },
+    #         **filters,
+    #     )
 
 
 class TopUpFeeManager:

@@ -9,8 +9,11 @@ from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
 class OrdersRepositoryI(Protocol):
-    async def create_from_dto(
-        self, dto: CreateInAppOrderDTO, user_id: int | None, items
+    async def create_with_items(
+        self,
+        dto: CreateInAppOrderDTO,
+        user_id: int | None,
+        items: Sequence[InAppOrderItem],
     ) -> InAppOrder: ...
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder: ...
     async def update_payment_details(
@@ -31,10 +34,6 @@ class OrdersRepositoryI(Protocol):
     async def get_by_id(self, order_id: UUID) -> InAppOrder: ...
 
 
-class OrderItemsRepositoryI(Protocol):
-    async def save_many(self, entities: Sequence[InAppOrderItem]) -> None: ...
-
-
 class SteamAPIClientI(Protocol):
     async def create_top_up_request(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
@@ -45,12 +44,12 @@ class SteamTopUpRepositoryI(Protocol):
     async def create_with_id(
         self,
         dto: CreateSteamTopUpOrderDTO,
-        top_up_id: UUID,
+        order_id: UUID,
         percent_fee: int,
         user_id: int | None,
     ) -> SteamTopUpOrder: ...
 
-    async def get_by_id(self, top_up_id: UUID) -> SteamTopUpOrder: ...
+    async def get_by_id(self, order_id: UUID) -> SteamTopUpOrder: ...
     async def update_payment_details(
         self,
         bill_id: str,

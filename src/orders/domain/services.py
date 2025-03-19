@@ -102,7 +102,7 @@ class OrdersService(BaseService):
                         quantity=mapped_item.quantity,
                     )
                 )
-            order = await uow.orders_repo.create_from_dto(dto, user_id, order_items)
+            order = await uow.orders_repo.create_with_items(dto, user_id, order_items)
             payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
@@ -176,7 +176,7 @@ class OrdersService(BaseService):
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return InAppOrderExtendedDTO.model_validate(order)
 
-    async def steam_top_up(
+    async def create_steam_top_up_order(
         self, dto: CreateSteamTopUpOrderDTO, user_id: int | None
     ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
         try:
@@ -190,18 +190,18 @@ class OrdersService(BaseService):
             )
             percent_fee = self._top_up_default_fee
         async with self._uow as uow:
-            top_up = await uow.steam_top_up_repo.create_with_id(
+            order = await uow.steam_top_up_repo.create_with_id(
                 dto, top_up_id, percent_fee, user_id
             )
-            payment_dto = await self._create_payment_bill(dto.selected_ps, top_up)
+            payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         self._logger.info(
             "Succesfully created steam top up order. Top-Up id: %s, bill id: %s, client_email: %s",
-            top_up.id,
+            order.id,
             payment_dto.bill_id,
-            top_up.client_email,
+            order.client_email,
         )
         return OrderPaymentDTO(
-            order=SteamTopUpOrderDTO.model_validate(top_up),
+            order=SteamTopUpOrderDTO.model_validate(order),
             payment_url=payment_dto.payment_url,
         )
 

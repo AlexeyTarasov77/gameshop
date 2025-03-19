@@ -85,7 +85,7 @@ class NSGiftsAPIClient:
         usd_min_deposit = 0.13
         if usd_amount < usd_min_deposit:
             raise ValueError(
-                "amount_rub should be >= %s" % (usd_min_deposit * exchange_rate)
+                "deposit should be >= %s" % (usd_min_deposit * exchange_rate)
             )
         top_up_id = uuid.uuid4()
         resp = await self._client.post(

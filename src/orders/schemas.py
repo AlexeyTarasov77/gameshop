@@ -148,13 +148,13 @@ class InAppOrderExtendedDTO(InAppOrderDTO):
 
 class CreateSteamTopUpOrderDTO(BaseDTO):
     steam_login: str
-    rub_amount: Decimal
+    rub_amount: Decimal = Field(gt=0)
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
     customer_email: EmailStr
 
 
 class SteamTopUpOrderCustomerDTO(BaseDTO):
-    email: EmailStr | None = Field(validation_alias="customer_email", default=None)
+    customer_email: EmailStr | None = None
     steam_login: str
 
 
@@ -162,7 +162,6 @@ class SteamTopUpOrderCustomerWithUserIdDTO(SteamTopUpOrderCustomerDTO):
     user_id: Base64Int | None
 
 
-class SteamTopUpOrderDTO(BaseOrderDTO):
-    customer: SteamTopUpOrderCustomerWithUserIdDTO
+class SteamTopUpOrderDTO(BaseOrderDTO, SteamTopUpOrderCustomerWithUserIdDTO):
     amount: Decimal
     percent_fee: int

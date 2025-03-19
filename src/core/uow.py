@@ -11,13 +11,11 @@ from gateways.db.exceptions import DatabaseError, AbstractDatabaseExceptionMappe
 from news.domain.interfaces import NewsRepositoryI
 from news.repositories import NewsRepository
 from orders.domain.interfaces import (
-    OrderItemsRepositoryI,
     OrdersRepositoryI,
     SteamTopUpRepositoryI,
 )
 from orders.repositories import (
-    OrderItemsRepository,
-    OrdersRepository,
+    InAppOrdersRepository,
     SteamTopUpRepository,
 )
 from products.domain.interfaces import PricesRepositoryI, ProductsRepositoryI
@@ -44,7 +42,6 @@ class AbstractUnitOfWork[S](abc.ABC):
     users_repo: UsersRepositoryI
     tokens_repo: TokensRepositoryI
     orders_repo: OrdersRepositoryI
-    order_items_repo: OrderItemsRepositoryI
     steam_top_up_repo: SteamTopUpRepositoryI
 
     def __init__(self, session_factory: Callable[[], S]):
@@ -101,8 +98,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self.tokens_repo = self._register_repo(TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
         self.products_repo = self._register_repo(ProductsRepository)
-        self.orders_repo = self._register_repo(OrdersRepository)
-        self.order_items_repo = self._register_repo(OrderItemsRepository)
+        self.orders_repo = self._register_repo(InAppOrdersRepository)
         self.steam_top_up_repo = self._register_repo(SteamTopUpRepository)
         self._check_init_repos_correct()
 

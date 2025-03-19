@@ -24,7 +24,7 @@ OrdersServiceDep = t.Annotated[OrdersService, Inject(OrdersService)]
 
 
 @router.post(
-    "/create",
+    "/in-app",
     status_code=status.HTTP_201_CREATED,
 )
 async def create_order(
@@ -82,16 +82,16 @@ async def get_order(
     return await orders_service.get_order(order_id)
 
 
-@router.post("/steam/top-up")
+@router.post("/top-up")
 async def steam_top_up(
     dto: CreateSteamTopUpOrderDTO,
     orders_service: OrdersServiceDep,
     user_id: int | None = Depends(get_optional_user_id),
 ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
-    return await orders_service.steam_top_up(dto, user_id)
+    return await orders_service.create_steam_top_up_order(dto, user_id)
 
 
-@router.post("/steam/top-up/fee", dependencies=[Depends(require_admin)])
+@router.post("/top-up/fee", dependencies=[Depends(require_admin)])
 async def set_steam_top_up_fee(
     percent_fee: t.Annotated[int, Body(embed=True, gt=0)],
     orders_service: OrdersServiceDep,
@@ -100,7 +100,7 @@ async def set_steam_top_up_fee(
     return {"success": True}
 
 
-@router.get("/steam/top-up/fee")
+@router.get("/top-up/fee")
 async def get_steam_top_up_fee(
     orders_service: OrdersServiceDep,
 ) -> dict[str, int]:
