@@ -50,11 +50,13 @@ class NSGiftsAPIClient:
     def __init__(
         self,
         client: AsyncClient,
+        logger: Logger,
         steam_api_auth_email: str,
         steam_api_auth_password: str,
     ):
         self._base_url = "https://api.ns.gifts/api/v1"
         self._client = client
+        self._logger = logger
         self._auth = JWTAuth(
             self._base_url + "/get_token",
             {"email": steam_api_auth_email, "password": steam_api_auth_password},
@@ -64,6 +66,7 @@ class NSGiftsAPIClient:
         resp = await self._client.post(
             self._base_url + "/steam/get_currency_rate", auth=self._auth
         )
+        resp.raise_for_status()
         data = resp.json()
         data.pop("date")
         return ExchangeRatesMappingDTO.model_validate(data)
@@ -76,6 +79,7 @@ class NSGiftsAPIClient:
             json={"amount": str(rub_amount)},
             auth=self._auth,
         )
+        resp.raise_for_status()
         data = resp.json()
         return Decimal(data["usd_price"]), float(data["exchange_rate"])
 
@@ -98,12 +102,22 @@ class NSGiftsAPIClient:
             },
             auth=self._auth,
         )
+        self._logger.info(
+            "Create steam top up order response status: %s", resp.status_code
+        )
+        resp.raise_for_status()
         assert resp.json()["status"] == 1
         return top_up_id
 
     async def top_up_complete(self, top_up_id: uuid.UUID):
         resp = await self._client.post(
-            "/pay_order", json={"custom_id": top_up_id}, auth=self._auth
+            self._base_url + "/pay_order",
+            json={"custom_id": str(top_up_id)},
+            auth=self._auth,
         )
-        data = resp.json()
-        print(data)
+        self._logger.info(
+            "Top up complete response received. status: %s, text: %s",
+            resp.status_code,
+            resp.text,
+        )
+        resp.raise_for_status()
