@@ -2,8 +2,6 @@ from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from sqlalchemy.dialects.postgresql import ENUM
-
 from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
@@ -72,6 +70,7 @@ class ProductCategory(_BaseLabeledEnum):
 class ProductDeliveryMethod(_BaseLabeledEnum):
     KEY = "Ключ"
     ACCOUNT_PURCHASE = "Покупка на аккаунт"
+    NEW_ACCOUNT_PURCHASE = "Покупка на новый аккаунт"
     GIFT = "Передача подарком"
 
 
@@ -92,11 +91,8 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     id: Mapped[int_pk_type]
     name: Mapped[str]
     description: Mapped[str] = mapped_column(server_default="")
-    category: Mapped[ProductCategory] = mapped_column(ENUM(ProductCategory))
-    delivery_method: Mapped[ProductDeliveryMethod] = mapped_column(
-        ENUM(ProductDeliveryMethod)
-    )
-    platform: Mapped[ProductPlatform] = mapped_column(ENUM(ProductPlatform))
+    category: Mapped[ProductCategory]
+    platform: Mapped[ProductPlatform]
     image_url: Mapped[str]
     in_stock: Mapped[bool] = mapped_column(server_default=text("true"))
     discount: Mapped[int] = mapped_column(server_default=text("0"))
@@ -107,6 +103,24 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     prices: Mapped[list["RegionalPrice"]] = relationship(
         back_populates="product", lazy="selectin"
     )
+
+    @property
+    def delivery_methods(self) -> list[ProductDeliveryMethod]:
+        """Chooses delivery_methods based on product platform and price regions"""
+        match self.platform:
+            case ProductPlatform.PSN:
+                return [ProductDeliveryMethod.ACCOUNT_PURCHASE]
+            case ProductPlatform.STEAM:
+                return [ProductDeliveryMethod.KEY, ProductDeliveryMethod.GIFT]
+            case ProductPlatform.XBOX:
+                regions = [price.region_code.lower().strip() for price in self.prices]
+                assert len(regions) > 0
+                if XboxParseRegions.US in regions:
+                    methods = [ProductDeliveryMethod.KEY]
+                    if len(regions) > 1:  # if something except of us
+                        methods.append(ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE)
+                    return methods
+                return [ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE]
 
     @property
     def total_discount(self) -> int:

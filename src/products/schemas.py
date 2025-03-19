@@ -95,7 +95,7 @@ class ShowProduct(BaseProductDTO):
     in_stock: bool
     category: ProductCategoryField
     platform: ProductPlatformField
-    delivery_method: ProductDeliveryMethodField
+    delivery_methods: list[ProductDeliveryMethodField]
 
 
 class ProductForLoadDTO(BaseDTO):
@@ -136,9 +136,9 @@ class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
     discounted_price: Decimal
 
 
-class ShowProductWithPrices(ShowProduct):
+class ShowProductExtended(ShowProduct):
     prices: list[RegionalWithDiscountedPriceDTO]
 
 
-class ProductInCartDTO(ShowProductWithPrices):
+class ProductInCartDTO(ShowProductExtended):
     quantity: int = Field(gt=0)

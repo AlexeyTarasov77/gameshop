@@ -35,7 +35,7 @@ from products.schemas import (
     PlatformsListDTO,
     SalesDTO,
     ShowProduct,
-    ShowProductWithPrices,
+    ShowProductExtended,
     SteamItemDTO,
     UpdateProductDTO,
 )
@@ -166,24 +166,14 @@ class ProductsService(BaseService):
                         converted_from_curr=price.currency_code,
                     )
                 )
-            if item.platform == ProductPlatform.XBOX:
-                category = ProductCategory.XBOX_SALES
-                delivery_method = (
-                    ProductDeliveryMethod.ACCOUNT_PURCHASE
-                    if XboxParseRegions.TR in item.prices
-                    or XboxParseRegions.AR in item.prices
-                    else ProductDeliveryMethod.KEY
-                )
-            else:
-                category = ProductCategory.PSN_SALES
-                delivery_method = ProductDeliveryMethod.KEY
-
             products_for_save.append(
                 Product(
                     **item.model_dump(exclude={"prices"}),
                     prices=calculated_prices,
-                    category=category,
-                    delivery_method=delivery_method,
+                    category={
+                        ProductPlatform.XBOX: ProductCategory.XBOX_SALES,
+                        ProductPlatform.PSN: ProductCategory.PSN_SALES,
+                    }[item.platform],
                 )
             )
         async with self._uow as uow:
@@ -224,7 +214,7 @@ class ProductsService(BaseService):
         self,
         dto: ListProductsFilterDTO,
         pagination_params: PaginationParams,
-    ) -> PaginationResT[ShowProductWithPrices]:
+    ) -> PaginationResT[ShowProductExtended]:
         async with self._uow as uow:
             (
                 products,
@@ -233,16 +223,16 @@ class ProductsService(BaseService):
                 dto,
                 pagination_params,
             )
-        dtos: list[ShowProductWithPrices] = []
+        dtos: list[ShowProductExtended] = []
         for product in products:
             [
                 regional_price.calc_discounted_price(product.discount)
                 for regional_price in product.prices
             ]
-            dtos.append(ShowProductWithPrices.model_validate(product))
+            dtos.append(ShowProductExtended.model_validate(product))
         return dtos, total_records
 
-    async def get_product(self, product_id: int) -> ShowProductWithPrices:
+    async def get_product(self, product_id: int) -> ShowProductExtended:
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
@@ -252,7 +242,7 @@ class ProductsService(BaseService):
                 ]
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
-        return ShowProductWithPrices.model_validate(product)
+        return ShowProductExtended.model_validate(product)
 
     async def platforms_list(self) -> PlatformsListDTO:
         return PlatformsListDTO(platforms=list(ProductPlatform))

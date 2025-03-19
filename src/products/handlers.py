@@ -23,7 +23,7 @@ async def list_products(
     pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
     dto: t.Annotated[schemas.ListProductsFilterDTO, Query()] = {},  # type: ignore
-) -> PaginatedResponse[schemas.ShowProductWithPrices]:
+) -> PaginatedResponse[schemas.ShowProductExtended]:
     products, total_records = await products_service.list_products(
         dto,
         pagination_params,
@@ -34,7 +34,7 @@ async def list_products(
 @router.get("/detail/{product_id}")
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
-) -> schemas.ShowProductWithPrices:
+) -> schemas.ShowProductExtended:
     return await products_service.get_product(int(product_id))
 
 

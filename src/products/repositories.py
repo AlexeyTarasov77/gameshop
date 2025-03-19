@@ -68,11 +68,18 @@ class ProductsRepository(PaginationRepository[Product]):
             stmt = stmt.where(Product.category.in_(dto.categories))
         if dto.platforms:
             stmt = stmt.where(Product.platform.in_(dto.platforms))
-        if dto.delivery_methods:
-            stmt = stmt.where(Product.delivery_method.in_(dto.delivery_methods))
         res = await self._session.execute(stmt)
         products = res.scalars().all()
-        filtered_products = [rec for rec in products if rec.prices]
+        filtered_products = []
+        for product in products:
+            if not product.prices:
+                continue
+            if dto.delivery_methods and not any(
+                m in dto.delivery_methods for m in product.delivery_methods
+            ):
+                continue
+            filtered_products.append(product)
+
         offset = pagination_params.calc_offset()
         return filtered_products[offset : offset + pagination_params.page_size], len(
             filtered_products
