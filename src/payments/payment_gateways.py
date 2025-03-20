@@ -39,7 +39,7 @@ class PaypalychPaymentSystem:
             "order_id": str(order_id),
             "amount": str(order_total),
             "payer_email": customer_email,
-            "custom": payment_for,
+            "custom": int(payment_for.value),
         }
         resp = await self._client.post(
             self._base_url + "/bill/create",

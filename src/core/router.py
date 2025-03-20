@@ -26,12 +26,12 @@ router = APIRouter()
 router.include_router(api_router)
 
 
-@router.get("/ping")
+@router.get("/ping", include_in_schema=False)
 async def ping() -> dict[str, str | list[str]]:
     return {"status": "available", "version": Resolve(Config).api_version}
 
 
-@router.get("/media/{filename}")
+@router.get("/media/{filename}", include_in_schema=False)
 async def media_serve(filename: str):
     dir = get_upload_dir()
     if not (dir / filename).exists():

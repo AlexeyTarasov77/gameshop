@@ -1,5 +1,9 @@
 import asyncio
+from fastapi.encoders import jsonable_encoder
+from functools import partial
 from logging import Logger
+
+from fastapi.openapi.models import HTTPBearer
 from gateways.db import RedisClient, SqlAlchemyClient
 from shopping.sessions import SessionCreatorI, session_middleware
 from core.exception_mappers import HTTPExceptionsMapper
@@ -8,8 +12,34 @@ from config import Config
 import uvicorn
 from core.router import router
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+
+def custom_openapi(app: FastAPI, version: str):
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Gameshop API",
+        version=version,
+        routes=app.routes,
+    )
+    bearer_auth = jsonable_encoder(
+        HTTPBearer(
+            bearerFormat="JWT",
+            description="Enter your JWT token obtained from sign in endpoint",
+        )
+    )
+
+    openapi_schema["components"]["securitySchemes"] = {"BearerAuth": bearer_auth}
+    for path in openapi_schema["paths"]:
+        for method in openapi_schema["paths"][path]:
+            openapi_schema["paths"][path][method]["security"] = [
+                {"BearerAuth": bearer_auth}
+            ]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
 
 @asynccontextmanager
@@ -42,6 +72,7 @@ def app_factory() -> FastAPI:
             session_creator=Resolve(SessionCreatorI),
         )
     )
+    app.openapi = partial(custom_openapi, app, cfg.api_version)
     allow_origins = [
         "https://gamebazaar.ru",
         "http://gamebazaar.ru",

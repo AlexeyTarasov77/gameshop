@@ -8,6 +8,7 @@ from pydantic import (
     EmailStr,
     AliasChoices,
     Field,
+    PlainSerializer,
     field_validator,
     model_validator,
 )
@@ -47,6 +48,10 @@ def normalize_tg_username(value: str) -> str:
         value.replace("@", "")
     return value
 
+
+OrderCategoryField = Annotated[
+    OrderCategory, PlainSerializer(lambda v: {"name": v.value.label, "id": v.value})
+]
 
 PhoneNumber = Annotated[str, AfterValidator(check_phone)]
 CustomerName = Annotated[str, AfterValidator(check_name)]
@@ -95,7 +100,6 @@ class CreateInAppOrderDTO(BaseDTO):
     user: InAppOrderCustomerDTO
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
 
-    # TODO: check if that validator is redundant
     @field_validator("cart")
     @classmethod
     def check_cart(cls, value: list) -> list:
@@ -107,20 +111,17 @@ class UpdateOrderDTO(BaseDTO):
     status: OrderStatus
 
 
-class _BaseOrderDTO(BaseDTO):
+class ShowBaseOrderDTO(BaseDTO):
     id: UUID
     order_date: datetime
     status: OrderStatus
     total: Decimal
     bill_id: str | None = None
     paid_with: AvailablePaymentSystems | None = None
+    category: OrderCategoryField
 
 
-class ShowBaseOrderDTO(_BaseOrderDTO):
-    category: OrderCategory
-
-
-class InAppOrderDTO(_BaseOrderDTO):
+class InAppOrderDTO(ShowBaseOrderDTO):
     customer: InAppOrderCustomerWithUserIdDTO
 
     @model_validator(mode="before")
@@ -162,7 +163,7 @@ class SteamTopUpOrderCustomerDTO(BaseDTO):
     steam_login: str
 
 
-class _BaseSteamTopUpOrderDTO(_BaseOrderDTO):
+class _BaseSteamTopUpOrderDTO(ShowBaseOrderDTO):
     amount: Decimal
     percent_fee: int
 

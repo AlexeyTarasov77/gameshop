@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectin_polymorphic, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
@@ -52,32 +52,30 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> BaseOrder:
         return await super().update(dto.model_dump(), id=order_id)
 
-    def _get_category_filter(self, category: OrderCategory | None) -> dict:
-        filter_by = {}
+    async def _paginated_list(
+        self,
+        pagination_params: PaginationParams,
+        category: OrderCategory | None = None,
+        user_id: int | None = None,
+    ):
+        filters = {}
         if category is not None:
-            filter_by["category"] = category
-        return filter_by
-
-    async def list_orders(
-        self, pagination_params: PaginationParams, category: OrderCategory | None = None
-    ) -> PaginationResT[BaseOrder]:
+            filters["category"] = category
+        if user_id is not None:
+            filters["user_id"] = user_id
         stmt = (
             super()
             ._get_pagination_stmt(pagination_params)
             .options(selectin_polymorphic(BaseOrder, [InAppOrder, SteamTopUpOrder]))
-            .filter_by(**self._get_category_filter(category))
+            .filter_by(**filters)
         )
         res = await self._session.execute(stmt)
-        records = res.all()
-        # res = await self._session.execute(
-        #     select(InAppOrderItem).where(
-        #         InAppOrderItem.order_id.in_([rec[0].id for rec in records])
-        #     )
-        # )
-        return super()._split_records_and_count(records)
-        # return await super().paginated_list(
-        #     pagination_params, **self._get_category_filter(category)
-        # )
+        return super()._split_records_and_count(res.all())
+
+    async def list_orders(
+        self, pagination_params: PaginationParams, category: OrderCategory | None = None
+    ) -> PaginationResT[BaseOrder]:
+        return await self._paginated_list(pagination_params, category)
 
     async def list_orders_for_user(
         self,
@@ -85,17 +83,12 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         user_id: int,
         category: OrderCategory | None = None,
     ) -> PaginationResT[BaseOrder]:
-        return await super().paginated_list(
-            pagination_params,
-            user_id=user_id,
-            **self._get_category_filter(category),
-        )
+        return await self._paginated_list(pagination_params, category, user_id)
 
     async def delete_by_id(self, order_id: UUID) -> None:
         await super().delete_or_raise_not_found(id=order_id)
 
     async def get_by_id(self, order_id: UUID) -> BaseOrder:
-        print("SUBCLASSES", BaseOrder.__subclasses__())
         stmt = (
             select(self.model)
             .filter_by(id=order_id)

@@ -11,11 +11,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/signin", auto_error
 
 
 async def get_user_id_or_raise(
-    token: Annotated[str | None, Depends(oauth2_scheme)], users_service: UsersServiceDep
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    users_service: UsersServiceDep,
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Unauthorized",
         headers={"WWW-Authenticate": "Bearer"},
     )
     if not token:
@@ -24,7 +25,8 @@ async def get_user_id_or_raise(
 
 
 async def get_optional_user_id(
-    token: Annotated[str | None, Depends(oauth2_scheme)], users_service: UsersServiceDep
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    users_service: UsersServiceDep,
 ) -> int | None:
     if token:
         return await get_user_id_or_raise(token, users_service)

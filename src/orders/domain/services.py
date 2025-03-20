@@ -107,6 +107,10 @@ class OrdersService(BaseService):
             order = await uow.in_app_orders_repo.create_with_items(
                 dto, user_id, order_items
             )
+            if not dto.user.email:
+                assert user_id
+                user = await uow.users_repo.get_by_id(user_id)
+                order.set_user(user)
             payment_dto = await self._create_payment_bill(dto.selected_ps, order)
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",

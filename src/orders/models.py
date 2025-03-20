@@ -2,8 +2,9 @@ from decimal import Decimal
 from uuid import uuid4
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
-from enum import IntEnum, StrEnum
+from enum import StrEnum
 from sqlalchemy import CheckConstraint, ForeignKey, text
+from core.utils import LabeledEnum
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, declared_attr, relationship, mapped_column
@@ -19,9 +20,9 @@ class OrderStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
-class OrderCategory(IntEnum):
-    IN_APP = 1
-    STEAM_TOP_UP = 2
+class OrderCategory(LabeledEnum):
+    IN_APP = "Внутриигровая покупка"
+    STEAM_TOP_UP = "Пополнение steam"
 
 
 class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
@@ -52,6 +53,9 @@ class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
     __mapper_args__ = {
         "polymorphic_on": "category",
     }
+
+    def set_user(self, user: User):
+        self.__dict__["user"] = user  # to prevent lazy loading when accesing attribute
 
 
 class InAppOrder(BaseOrder):

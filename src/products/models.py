@@ -1,63 +1,23 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
 
 from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from enum import Enum, auto
+from enum import auto
 
-from core.utils import CIEnum
-
-
-class LabeledID(int):
-    def __new__(cls, value: int, *args, **kwargs):
-        if value <= 0:
-            raise ValueError("id should be > 0")
-        return super().__new__(cls, value)
-
-    def __init__(self, _, label: str) -> None:
-        super().__init__()
-        self.label = label
-
-    def __str__(self):
-        return self.label
+from core.utils import CIEnum, LabeledEnum
 
 
-class _BaseLabeledEnum(Enum):
-    def __new__(cls, value: str):
-        cls._next_id = getattr(cls, "_next_id", 0) + 1
-        obj = object.__new__(cls)
-        obj._value_ = LabeledID(cls._next_id, value)
-        return obj
-
-    @classmethod
-    def _missing_(cls, value: Any):
-        try:
-            if not isinstance(value, str):
-                raise ValueError()
-            # case-insensitive lookup in members first, then try to convert to int and find in values
-            found = cls.__members__.get(value.upper()) or (
-                int(value) in [member.value for member in cls.__members__.values()]
-                and cls(int(value))
-            )
-            if not found:
-                return None
-            return found
-        except ValueError:
-            # value is not str or failed to convert to integer
-            return None
-
-
-class ProductPlatform(_BaseLabeledEnum):
+class ProductPlatform(LabeledEnum):
     XBOX = "xbox"
     PSN = "psn"
     STEAM = "steam"
 
 
-class ProductCategory(_BaseLabeledEnum):
+class ProductCategory(LabeledEnum):
     GAMES = "Игры"
     SUBSCRIPTIONS = "Подписки"
     RECHARGE_CARDS = "Карты пополнения"
@@ -67,7 +27,7 @@ class ProductCategory(_BaseLabeledEnum):
     STEAM_KEYS = "Ключи Steam"
 
 
-class ProductDeliveryMethod(_BaseLabeledEnum):
+class ProductDeliveryMethod(LabeledEnum):
     KEY = "Ключ"
     ACCOUNT_PURCHASE = "Покупка на аккаунт"
     NEW_ACCOUNT_PURCHASE = "Покупка на новый аккаунт"
