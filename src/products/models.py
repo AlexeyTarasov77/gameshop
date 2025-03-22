@@ -1,6 +1,8 @@
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
+from pytz import UTC
+
 from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
@@ -86,7 +88,9 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     @property
     def total_discount(self) -> int:
         discount = self.discount
-        if self.deal_until and (datetime.now() >= self.deal_until):
+        if self.deal_until and (
+            datetime.now().replace(tzinfo=UTC) >= self.deal_until.replace(tzinfo=UTC)
+        ):
             discount = 0
         return discount
 
