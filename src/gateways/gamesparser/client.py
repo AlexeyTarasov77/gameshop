@@ -50,7 +50,7 @@ class SalesParser:
 
     async def parse_and_save(self, limit: int | None):
         try:
-            limit = int(sys.argv[1])
+            limit = int(sys.argv[1]) // 2
         except Exception:
             limit = None
         self._logger.info(

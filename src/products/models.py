@@ -46,7 +46,8 @@ class XboxParseRegions(CIEnum):
 
 
 class Product(SqlAlchemyBaseModel, TimestampMixin):
-    __table_args__ = (UniqueConstraint("name", "category", "platform"),)
+    unique_fields = ("name", "category", "platform")
+    __table_args__ = (UniqueConstraint(*unique_fields),)
 
     id: Mapped[int_pk_type]
     name: Mapped[str]

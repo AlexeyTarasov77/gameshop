@@ -10,6 +10,7 @@ from core.schemas import (
     DateTimeAfterNow,
     ImgUrl,
     ProductDiscount,
+    RoundedPrice,
     UploadImage,
 )
 from pydantic import (
@@ -41,7 +42,7 @@ ProductDeliveryMethodField = Annotated[
 
 
 class RegionalPriceDTO(BaseDTO):
-    base_price: Decimal
+    base_price: RoundedPrice
     region_code: str | None
 
 
@@ -66,7 +67,6 @@ class BaseProductDTO(BaseDTO):
 class CreateProductDTO(BaseProductDTO):
     category: ProductCategory
     platform: ProductPlatform
-    delivery_method: ProductDeliveryMethod
     discounted_price: Decimal
     deal_until: DateTimeAfterNow | None = None
     image: UploadImage
@@ -79,7 +79,6 @@ class UpdateProductDTO(BaseDTO):
     regular_price: Decimal | None = Field(ge=0, default=None)
     category: ProductCategory | None = None
     platform: ProductPlatform | None = None
-    delivery_method: ProductDeliveryMethod | None = None
     image: UploadImage | None = None
     discount: ProductDiscount | None = None
     deal_until: DateTimeAfterNow | None = None
@@ -113,7 +112,7 @@ class SalesDTO(ProductForLoadDTO):
     platform: ProductPlatform
     with_gp: bool | None = None
     deal_until: datetime | None = None
-    prices: dict[XboxParseRegions | PsnParseRegions, PriceUnitDTO]
+    prices: dict[PsnParseRegions | XboxParseRegions, PriceUnitDTO]
 
 
 class OrderByOption(StrEnum):
@@ -133,7 +132,7 @@ class ListProductsFilterDTO(BaseDTO):
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
-    discounted_price: Decimal
+    discounted_price: RoundedPrice
 
 
 class ShowProductExtended(ShowProduct):

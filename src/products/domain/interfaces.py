@@ -29,9 +29,15 @@ class CurrencyConverterI(t.Protocol):
 
 
 class ProductsRepositoryI(t.Protocol):
-    async def create_with_dto(self, dto: CreateProductDTO) -> Product: ...
+    async def create_with_price(
+        self, dto: CreateProductDTO, base_price: Decimal
+    ) -> Product: ...
+    async def update_by_name(
+        self, name: str, exclude_categories: Sequence[ProductCategory], **values
+    ): ...
+    async def save_ignore_conflict(self, product: Product): ...
 
-    async def update_by_id(
+    async def update_by_id_with_image(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
     ) -> Product: ...
 
@@ -58,6 +64,6 @@ class ProductsRepositoryI(t.Protocol):
 
 class PricesRepositoryI(t.Protocol):
     async def add_price(self, for_product_id: int, base_price: Decimal) -> None: ...
-    async def update_with_rate(
+    async def update_all_with_rate(
         self, for_currency: str, new_rate: float, old_rate: float
     ) -> None: ...

@@ -1,6 +1,7 @@
 import base64
 from contextlib import suppress
 from datetime import datetime
+from decimal import Decimal
 from fastapi import HTTPException, status
 import json
 from typing import Annotated
@@ -97,7 +98,7 @@ def _is_valid_url(s: str) -> bool:
     return True
 
 
-def float_ser_wrap(v: float, nxt: SerializerFunctionWrapHandler) -> str:
+def float_ser_wrap(v: Decimal, nxt: SerializerFunctionWrapHandler) -> str:
     return str(nxt(round(v)))
 
 
@@ -109,7 +110,9 @@ def check_currency(v: str) -> str:
     return v
 
 
-RoundedFloat = Annotated[float, WrapSerializer(float_ser_wrap, when_used="json")]
+RoundedPrice = Annotated[
+    Decimal | int, WrapSerializer(float_ser_wrap, when_used="json")
+]
 ExchangeRate = Annotated[str, AfterValidator(check_currency)]
 ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]

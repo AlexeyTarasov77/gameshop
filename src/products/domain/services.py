@@ -150,24 +150,25 @@ class ProductsService(BaseService):
         self._steam_api = steam_api
 
     async def load_new_sales(self, products: Sequence[SalesDTO]):
-        products_for_save: list[Product] = []
-        for item in products:
-            calculated_prices: list[RegionalPrice] = []
-            for region, price in item.prices.items():
-                if item.platform == ProductPlatform.XBOX:
-                    assert region in XboxParseRegions
-                    new_value = XboxPriceCalculator(price.value).calc_for_region(region)
-                    price.value = new_value
-                price_in_rub = await self._currency_converter.convert_to_rub(price)
-                calculated_prices.append(
-                    RegionalPrice(
-                        base_price=price_in_rub,
-                        region_code=region,
-                        converted_from_curr=price.currency_code,
+        async with self._uow as uow:
+            for item in products:
+                calculated_prices: list[RegionalPrice] = []
+                for region, price in item.prices.items():
+                    if item.platform == ProductPlatform.XBOX:
+                        assert region in XboxParseRegions
+                        new_value = XboxPriceCalculator(price.value).calc_for_region(
+                            region
+                        )
+                        price.value = new_value
+                    price_in_rub = await self._currency_converter.convert_to_rub(price)
+                    calculated_prices.append(
+                        RegionalPrice(
+                            base_price=price_in_rub,
+                            region_code=region,
+                            converted_from_curr=price.currency_code,
+                        )
                     )
-                )
-            products_for_save.append(
-                Product(
+                product = Product(
                     **item.model_dump(exclude={"prices"}),
                     prices=calculated_prices,
                     category={
@@ -175,19 +176,21 @@ class ProductsService(BaseService):
                         ProductPlatform.PSN: ProductCategory.PSN_SALES,
                     }[item.platform],
                 )
-            )
-        async with self._uow as uow:
-            await uow.products_repo.delete_for_categories(
-                [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES]
-            )
-            await uow.products_repo.save_many(products_for_save)
+                try:
+                    await uow.products_repo.update_by_name(
+                        product.name,
+                        [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
+                        discount=product.discount,
+                        deal_until=product.deal_until,
+                    )
+                except NotFoundError:
+                    await uow.products_repo.save_ignore_conflict(product)
 
     async def load_new_steam_items(self, items: Sequence[SteamItemDTO]):
         products_for_save = [
             Product(
                 **item.model_dump(exclude={"price_rub"}),
                 category=ProductCategory.STEAM_KEYS,
-                delivery_method=ProductDeliveryMethod.KEY,
                 platform=ProductPlatform.STEAM,
                 prices=[RegionalPrice(base_price=item.price_rub)],
             )
@@ -201,12 +204,11 @@ class ProductsService(BaseService):
         base_price = dto.discounted_price / (100 - dto.discount) * 100
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create_with_dto(dto)
-                await uow.prices_repo.add_price(product.id, base_price)
+                product = await uow.products_repo.create_with_price(dto, base_price)
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,
-                **dto.model_dump(include={"name", "category", "platform"}),
+                **dto.model_dump(include=set(Product.unique_fields)),
             ) from e
         return ShowProduct.model_validate(product)
 
@@ -258,15 +260,13 @@ class ProductsService(BaseService):
     ) -> ShowProduct:
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.update_by_id(
+                product = await uow.products_repo.update_by_id_with_image(
                     product_id, dto, cast(str | None, dto.image)
                 )
         except AlreadyExistsError:
             raise EntityAlreadyExistsError(
                 self.entity_name,
-                **dto.model_dump(
-                    include={"name", "category", "platform"}, exclude_none=True
-                ),
+                **dto.model_dump(include=set(Product.unique_fields), exclude_none=True),
             )
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
@@ -292,7 +292,7 @@ class ProductsService(BaseService):
         new_rate = dto.value
         # update existing prices with new rate (only that which was converted from updated rate)
         async with self._uow as uow:
-            await uow.prices_repo.update_with_rate(dto.from_, new_rate, old_rate)
+            await uow.prices_repo.update_all_with_rate(dto.from_, new_rate, old_rate)
 
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()
