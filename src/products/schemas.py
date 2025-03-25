@@ -15,6 +15,7 @@ from core.schemas import (
 from pydantic import (
     Field,
     PlainSerializer,
+    field_validator,
 )
 
 from gateways.currency_converter import PriceUnitDTO
@@ -83,6 +84,23 @@ class UpdateProductDTO(BaseDTO):
     image: UploadImage | None = None
     discount: ProductDiscount | None = None
     deal_until: DateTimeAfterNow | None = None
+
+
+class UpdatePricesDTO(BaseDTO):
+    for_platforms: list[ProductPlatform]
+    # percent can be > 0 to add or < 0 to subtract
+    percent: int
+
+    @field_validator("percent")
+    @classmethod
+    def check_percent(cls, val: int) -> int:
+        if val == 0:
+            raise ValueError("percent can't be equal to 0")
+        return val
+
+
+class UpdatePricesResDTO(BaseDTO):
+    updated_count: int
 
 
 class ShowProduct(BaseProductDTO):

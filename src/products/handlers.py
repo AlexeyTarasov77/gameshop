@@ -38,6 +38,13 @@ async def get_product(
     return await products_service.get_product(int(product_id))
 
 
+@router.patch("/update-prices", dependencies=[Depends(require_admin)])
+async def update_prices(
+    dto: schemas.UpdatePricesDTO, products_service: ProductsServiceDep
+) -> schemas.UpdatePricesResDTO:
+    return await products_service.update_prices(dto)
+
+
 @router.post(
     "/create",
     status_code=status.HTTP_201_CREATED,

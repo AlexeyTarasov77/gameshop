@@ -55,7 +55,7 @@ class SalesParser:
             limit = None
         self._logger.info(
             "Start parsing%ssales..."
-            % (f" up to {limit} " if limit is not None else " ")
+            % (f" up to {limit * 2} " if limit is not None else " ")
         )
         psn_parser = PsnParser(
             [el.value for el in PsnParseRegions], self._client, limit

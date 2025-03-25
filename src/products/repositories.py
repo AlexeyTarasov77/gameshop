@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
-from sqlalchemy import String, and_, asc, delete, desc, not_, or_, select, func, update
+import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.sqlalchemy_gateway import PaginationRepository
@@ -11,6 +11,7 @@ from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
 from products.models import (
     Product,
     ProductCategory,
+    ProductPlatform,
     RegionalPrice,
 )
 from products.schemas import (
@@ -30,14 +31,14 @@ class ProductsRepository(PaginationRepository[Product]):
         pagination_params: PaginationParams,
     ) -> PaginationResT[model]:
         stmt = (
-            select(self.model)
-            .order_by(desc(Product.created_at))
+            sa.select(self.model)
+            .order_by(sa.desc(Product.created_at))
             .options(
                 selectinload(
                     Product.prices
                     if not dto.regions
                     else Product.prices.and_(
-                        func.lower(cast(RegionalPrice.region_code, String)).in_(
+                        sa.func.lower(cast(RegionalPrice.region_code, sa.String)).in_(
                             [region.lower() for region in dto.regions]
                         )
                     )
@@ -45,7 +46,7 @@ class ProductsRepository(PaginationRepository[Product]):
             )
         )
         if dto.price_ordering:
-            option = {OrderByOption.ASC: asc, OrderByOption.DESC: desc}[
+            option = {OrderByOption.ASC: sa.asc, OrderByOption.DESC: sa.desc}[
                 dto.price_ordering
             ]
             stmt = stmt.join(self.model.prices).order_by(
@@ -54,14 +55,14 @@ class ProductsRepository(PaginationRepository[Product]):
         if dto.query:
             stmt = stmt.where(self.model.name.ilike(f"%{dto.query}%"))
         if dto.discounted is not None:
-            base_cond = and_(
-                or_(
+            base_cond = sa.and_(
+                sa.or_(
                     self.model.deal_until.is_(None),
                     self.model.deal_until >= datetime.now(),
                 ),
                 self.model.discount > 0,
             )
-            stmt = stmt.where(base_cond if dto.discounted else not_(base_cond))
+            stmt = stmt.where(base_cond if dto.discounted else sa.not_(base_cond))
         if dto.in_stock is not None:
             stmt = stmt.filter_by(in_stock=dto.in_stock)
         if dto.categories:
@@ -94,6 +95,20 @@ class ProductsRepository(PaginationRepository[Product]):
         )
         return product
 
+    async def fetch_ids_for_platforms(
+        self,
+        platforms: Sequence[ProductPlatform],
+        exclude_categories: Sequence[ProductCategory],
+    ) -> Sequence[int]:
+        stmt = sa.select(Product.id).where(
+            sa.and_(
+                Product.platform.in_(platforms),
+                Product.category.not_in(exclude_categories),
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
+
     async def update_by_id(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
     ) -> Product:
@@ -118,14 +133,14 @@ class ProductsRepository(PaginationRepository[Product]):
     async def list_by_ids(
         self, ids: Sequence[int], *, only_in_stock: bool = False
     ) -> Sequence[Product]:
-        stmt = select(Product).where(Product.id.in_(ids))
+        stmt = sa.select(Product).where(Product.id.in_(ids))
         if only_in_stock:
             stmt = stmt.filter_by(in_stock=True)
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
     async def check_in_stock(self, product_id: int) -> bool:
-        stmt = select(Product.id).filter_by(id=product_id, in_stock=True)
+        stmt = sa.select(Product.id).filter_by(id=product_id, in_stock=True)
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
 
@@ -134,7 +149,7 @@ class ProductsRepository(PaginationRepository[Product]):
         await self._session.flush()
 
     async def delete_for_categories(self, categories: Sequence[ProductCategory]):
-        stmt = delete(Product).where(Product.category.in_(categories))
+        stmt = sa.delete(Product).where(Product.category.in_(categories))
         await self._session.execute(stmt)
 
 
@@ -149,8 +164,23 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     ) -> None:
         update_price_clause = RegionalPrice.base_price / old_rate * new_rate
         stmt = (
-            update(self.model)
+            sa.update(self.model)
             .values(base_price=update_price_clause)
-            .where(func.lower(self.model.converted_from_curr) == for_currency.lower())
+            .where(
+                sa.func.lower(self.model.converted_from_curr) == for_currency.lower()
+            )
         )
         await self._session.execute(stmt)
+
+    async def add_percent_for_products(
+        self, products_ids: Sequence[int], percent: int
+    ) -> int:
+        stmt = (
+            sa.update(self.model)
+            .where(self.model.product_id.in_(products_ids))
+            .values(
+                base_price=self.model.base_price + self.model.base_price / 100 * percent
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.rowcount

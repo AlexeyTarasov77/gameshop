@@ -37,6 +37,8 @@ from products.schemas import (
     ShowProduct,
     ShowProductExtended,
     SteamItemDTO,
+    UpdatePricesDTO,
+    UpdatePricesResDTO,
     UpdateProductDTO,
 )
 
@@ -196,6 +198,17 @@ class ProductsService(BaseService):
         async with self._uow as uow:
             await uow.products_repo.delete_for_categories([ProductCategory.STEAM_KEYS])
             await uow.products_repo.save_many(products_for_save)
+
+    async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
+        async with self._uow as uow:
+            products_ids_for_update = await uow.products_repo.fetch_ids_for_platforms(
+                dto.for_platforms,
+                [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
+            )
+            updated_count = await uow.prices_repo.add_percent_for_products(
+                products_ids_for_update, dto.percent
+            )
+        return UpdatePricesResDTO(updated_count=updated_count)
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
         base_price = dto.discounted_price / (100 - dto.discount) * 100

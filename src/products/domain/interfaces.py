@@ -10,6 +10,7 @@ from gateways.currency_converter.schemas import (
 from products.models import (
     Product,
     ProductCategory,
+    ProductPlatform,
 )
 from products.schemas import (
     CreateProductDTO,
@@ -37,6 +38,12 @@ class ProductsRepositoryI(t.Protocol):
 
     async def delete_by_id(self, product_id: int) -> None: ...
 
+    async def fetch_ids_for_platforms(
+        self,
+        platforms: Sequence[ProductPlatform],
+        exclude_categories: Sequence[ProductCategory],
+    ) -> Sequence[int]: ...
+
     async def filter_paginated_list(
         self,
         dto: ListProductsFilterDTO,
@@ -61,3 +68,8 @@ class PricesRepositoryI(t.Protocol):
     async def update_with_rate(
         self, for_currency: str, new_rate: float, old_rate: float
     ) -> None: ...
+    async def add_percent_for_products(
+        self,
+        products_ids: Sequence[int],
+        percent: int,
+    ) -> int: ...
