@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 from config import Config
 from core.ioc import Resolve
-from core.utils import get_upload_dir
+from core.utils import FILES_UPLOAD_DIR
 from products.handlers import router as product_router
 from users.handlers import router as users_router
 from news.handlers import router as news_router
@@ -33,7 +33,7 @@ async def ping() -> dict[str, str | list[str]]:
 
 @router.get("/media/{filename}", include_in_schema=False)
 async def media_serve(filename: str):
-    dir = get_upload_dir()
+    dir = FILES_UPLOAD_DIR
     if not (dir / filename).exists():
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, f"File {filename} does not exist"

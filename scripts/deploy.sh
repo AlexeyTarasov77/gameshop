@@ -12,16 +12,19 @@ require_confirmation() {
 if [[ "$1" == "prod" ]]; then
   remote_host=gamebazaar.ru
   dest_dir="/home/www/projects/gameshop"
-  require_confirmation
 elif [[ "$1" == "test" ]]; then
-    remote_host=212.193.27.188
+    remote_host=subpack.fun
     dest_dir="/var/www/gamebazaar.ru/backend/gameshop"
-    require_confirmation
 else
   echo "Unsupported parameter: $1"
   exit 1
 fi
 
+require_confirmation
+version_fn=.last_${1}_version
+curr_version=$(git log -1 | cut -d ' ' -f 1)
+echo "Updating from $(cat $version_fn) to $curr_version"
+echo $curr_version > $version_fn
 
 rsync -aPzc --exclude '.git' --exclude 'media' --exclude '__pycache__' -e 'ssh' "$(pwd)/" \
   "$remote_username@$remote_host:$dest_dir" && \

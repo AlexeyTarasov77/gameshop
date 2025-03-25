@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
-from json import JSONDecoder
+from json import JSONDecoder, JSONEncoder
 from logging import Logger
 
 from redis.commands.search.field import Field
@@ -10,7 +10,13 @@ from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.asyncio import Redis, ResponseError
 from redis.commands.json import JSON
 
-from core.utils import CustomJSONEncoder
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, o):
+        try:
+            return str(o)
+        except Exception:
+            return super().default(o)
 
 
 @dataclass

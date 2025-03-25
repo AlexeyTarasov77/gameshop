@@ -9,10 +9,11 @@ from core.schemas import (
     BaseDTO,
     DateTimeAfterNow,
     ImgUrl,
-    ProductDiscount,
+    RoundedDecimal,
     UploadImage,
 )
 from pydantic import (
+    AfterValidator,
     Field,
     PlainSerializer,
     field_validator,
@@ -34,15 +35,21 @@ def _base_field_ser(v: Enum) -> dict[str, Any]:
     return {"name": name, "url": url, "id": v.value}
 
 
+def _check_discount[T: int](value: T) -> T:
+    assert 0 <= value <= 100, "Discount should be between 0 and 100"
+    return value
+
+
 ProductPlatformField = Annotated[ProductPlatform, PlainSerializer(_base_field_ser)]
 ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_ser)]
 ProductDeliveryMethodField = Annotated[
     ProductDeliveryMethod, PlainSerializer(_base_field_ser)
 ]
+ProductDiscount = Annotated[int, AfterValidator(lambda val: _check_discount)]
 
 
 class RegionalPriceDTO(BaseDTO):
-    base_price: Decimal
+    base_price: RoundedDecimal
     region_code: str | None
 
 
@@ -151,7 +158,7 @@ class ListProductsFilterDTO(BaseDTO):
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
-    discounted_price: Decimal
+    discounted_price: RoundedDecimal
 
 
 class ShowProductExtended(ShowProduct):

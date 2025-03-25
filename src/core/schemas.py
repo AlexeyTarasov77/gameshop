@@ -1,6 +1,7 @@
 import base64
 from contextlib import suppress
 from datetime import datetime
+from decimal import Decimal
 from fastapi import HTTPException, status
 import json
 from typing import Annotated
@@ -64,11 +65,6 @@ def _check_datetime[T: datetime](value: T) -> T:
     return value
 
 
-def _check_discount[T: int](value: T) -> T:
-    assert 0 <= value <= 100, "Discount should be between 0 and 100"
-    return value
-
-
 def _parse_int(s: str | int) -> int:
     if isinstance(s, int):
         return s
@@ -109,7 +105,9 @@ def check_currency(v: str) -> str:
     return v
 
 
-RoundedFloat = Annotated[float, WrapSerializer(float_ser_wrap, when_used="json")]
+RoundedDecimal = Annotated[
+    Decimal | int, WrapSerializer(float_ser_wrap, when_used="json")
+]
 ExchangeRate = Annotated[str, AfterValidator(check_currency)]
 ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s)
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
@@ -133,5 +131,3 @@ Base64IntOptionalIDParam = Annotated[
     _base64int_serializer,
 ]
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
-ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
-Unset = object()
