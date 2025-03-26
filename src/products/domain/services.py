@@ -199,8 +199,8 @@ class ProductsService(BaseService):
             for item in items
         ]
         async with self._uow as uow:
-            await uow.products_repo.delete_for_categories([ProductCategory.STEAM_KEYS])
-            await uow.products_repo.save_many(products_for_save)
+            for product in products_for_save:
+                await uow.products_repo.save_ignore_conflict(product)
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
         async with self._uow as uow:

@@ -60,9 +60,7 @@ class SalesParser:
         psn_parser = PsnParser(
             [el.value for el in PsnParseRegions], self._client, limit
         )
-        xbox_parser = XboxParser(
-            [el.value for el in XboxParseRegions], self._client, limit
-        )
+        xbox_parser = XboxParser([XboxParseRegions.US], self._client, limit)
         t1 = time.perf_counter()
         psn_sales, xbox_sales = await asyncio.gather(
             psn_parser.parse(), xbox_parser.parse()

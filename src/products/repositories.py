@@ -185,14 +185,6 @@ class ProductsRepository(PaginationRepository[Product]):
             [{**price.dump(), "product_id": product_id} for price in product.prices],
         )
 
-    async def save_many(self, products: Sequence[Product]):
-        self._session.add_all(products)
-        await self._session.flush()
-
-    async def delete_for_categories(self, categories: Sequence[ProductCategory]):
-        stmt = sa.delete(Product).where(Product.category.in_(categories))
-        await self._session.execute(stmt)
-
 
 class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     model = RegionalPrice
