@@ -93,7 +93,7 @@ def _is_valid_url(s: str) -> bool:
     return True
 
 
-def float_ser_wrap(v: float, nxt: SerializerFunctionWrapHandler) -> str:
+def float_ser_wrap(v: Decimal, nxt: SerializerFunctionWrapHandler) -> str:
     return str(nxt(round(v)))
 
 

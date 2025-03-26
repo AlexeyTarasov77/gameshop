@@ -1,10 +1,12 @@
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
 import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
+from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
 from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
@@ -86,13 +88,24 @@ class ProductsRepository(PaginationRepository[Product]):
             filtered_products
         )
 
-    async def create_with_dto(self, dto: CreateProductDTO) -> Product:
-        product = await super().create(
+    async def create_with_price(
+        self, dto: CreateProductDTO, base_price: Decimal
+    ) -> Product:
+        product = Product(
             image_url=dto.image,
             **dto.model_dump(
                 exclude={"image", "discounted_price"},
             ),
+            prices=[RegionalPrice(base_price=base_price)],
         )
+        # product = await super().create(
+        #     image_url=dto.image,
+        #     **dto.model_dump(
+        #         exclude={"image", "discounted_price"},
+        #     ),
+        # )
+        self._session.add(product)
+        await self._session.flush()
         return product
 
     async def fetch_ids_for_platforms(
@@ -109,7 +122,7 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
-    async def update_by_id(
+    async def update_by_id_with_image(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
     ) -> Product:
         data = dto.model_dump(
@@ -144,6 +157,40 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
 
+    async def update_by_name(
+        self, name: str, exclude_categories: Sequence[ProductCategory], **values
+    ):
+        res = await self._session.execute(
+            sa.update(Product)
+            .where(
+                sa.and_(
+                    sa.func.lower(Product.name) == name.lower(),
+                    Product.category.not_in(exclude_categories),
+                )
+            )
+            .values(**values)
+            .returning(Product.id)
+        )
+        updated_id: int | None = res.scalar_one_or_none()
+        if updated_id is None:
+            raise NotFoundError()
+
+    async def save_ignore_conflict(self, product: Product):
+        """Inserts product and its related prices. If product already exists - ignores it"""
+        product_data = {k: v for k, v in product.dump().items() if v is not None}
+        product_id = await self._session.scalar(
+            insert(Product)
+            .values(**product_data)
+            .on_conflict_do_nothing()
+            .returning(Product.id),
+        )
+        if product_id is None:
+            return
+        await self._session.execute(
+            insert(RegionalPrice),
+            [{**price.dump(), "product_id": product_id} for price in product.prices],
+        )
+
     async def save_many(self, products: Sequence[Product]):
         self._session.add_all(products)
         await self._session.flush()
@@ -159,7 +206,7 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     async def add_price(self, for_product_id: int, base_price: Decimal) -> None:
         await super().create(product_id=for_product_id, base_price=base_price)
 
-    async def update_with_rate(
+    async def update_all_with_rate(
         self, for_currency: str, new_rate: float, old_rate: float
     ) -> None:
         update_price_clause = RegionalPrice.base_price / old_rate * new_rate
