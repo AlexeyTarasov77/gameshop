@@ -54,11 +54,12 @@ class _Payments(BaseModel):
 class _Server(BaseModel):
     host: str = Field(default="0.0.0.0")
     port: PORT = Field(default=8000)
+    ssl_enabled: bool = Field(default=True)
     sessions: _HTTPSessions = Field(default=_HTTPSessions())
 
     @property
     def addr(self):
-        return f"https://{self.host}"
+        return f"http{self.ssl_enabled and "s"}://{self.host}:{self.port}"
 
 
 class _SMTP(BaseModel):
@@ -90,7 +91,7 @@ class _ClientsConfig(BaseModel):
 class Config(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
     api_version: str = "1.0.0"
-    mode: t.Literal["local", "prod", "tests"]
+    mode: t.Literal["local", "prod", "local-test", "prod-test"]
     server: _Server = Field(default=_Server())
     smtp: _SMTP
     clients: _ClientsConfig
@@ -120,7 +121,7 @@ class Config(BaseSettings):
 
     @property
     def debug(self):
-        return self.mode in ["local", "tests", "prod_test"]
+        return self.mode in ["local", "local-test", "prod-test"]
 
 
 def init_config(

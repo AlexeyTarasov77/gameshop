@@ -17,7 +17,7 @@ services:
       - ./src:/app/src
       - ./media:/app/media
     environment:
-      - MODE=prod
+      - MODE=${MODE:?error}
     healthcheck:
       test: ["CMD-SHELL", "curl", "http://0.0.0.0:8000/ping"]
       interval: 2s
@@ -27,13 +27,11 @@ services:
     container_name: gameshop_parse_sales
     build: 
       dockerfile: Dockerfile.parser
-    volumes: 
-      - ./src/sales/parsing.py:/app/src/sales/parsing.py
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      - MODE=prod
+      - MODE=${MODE:?error}
   postgres:
     container_name: gameshop_db
     image: postgres:17.1-alpine

@@ -85,21 +85,19 @@ class OrdersService(BaseService):
                     item for item in dto.cart if item.product_id == product.id
                 ]
                 # find price for provided region
-                region = (
-                    mapped_item.region.lower().strip() if mapped_item.region else ""
-                )
-                mapped_price_by_region = None
+                region = mapped_item.region.lower().strip()
+                mapped_price = None
                 for regional_price in product.prices:
                     if regional_price.region_code.lower().strip() == region:
-                        mapped_price_by_region = regional_price.calc_discounted_price(
+                        mapped_price = regional_price.calc_discounted_price(
                             product.discount
                         )
-                if mapped_price_by_region is None:
-                    raise UnavailableProductError(product.name)
+                if mapped_price is None:
+                    raise UnavailableProductError(product.name, region)
                 order_items.append(
                     InAppOrderItem(
-                        region=region or None,
-                        price=mapped_price_by_region,
+                        region=region,
+                        price=mapped_price,
                         product_id=product.id,
                         quantity=mapped_item.quantity,
                     )

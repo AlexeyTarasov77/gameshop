@@ -17,16 +17,19 @@ from pydantic import (
     Field,
     PlainSerializer,
     field_validator,
+    model_validator,
 )
 
 from gateways.currency_converter import PriceUnitDTO
 from products.models import (
+    Product,
     ProductCategory,
     ProductDeliveryMethod,
     PsnParseRegions,
     XboxParseRegions,
     ProductPlatform,
 )
+from shopping.schemas import ProductRegion
 
 
 def _base_field_ser(v: Enum) -> dict[str, Any]:
@@ -45,12 +48,12 @@ ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_se
 ProductDeliveryMethodField = Annotated[
     ProductDeliveryMethod, PlainSerializer(_base_field_ser)
 ]
-ProductDiscount = Annotated[int, AfterValidator(lambda val: _check_discount)]
+ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
 
 
 class RegionalPriceDTO(BaseDTO):
     base_price: RoundedDecimal
-    region_code: str | None
+    region_code: ProductRegion
 
 
 class CategoriesListDTO(BaseDTO):
@@ -161,6 +164,14 @@ class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
 
 class ShowProductExtended(ShowProduct):
     prices: list[RegionalWithDiscountedPriceDTO]
+
+    @model_validator(mode="before")
+    @classmethod
+    def calc_discounted_prices(cls, obj):
+        if not isinstance(obj, Product):
+            return obj
+        [price.calc_discounted_price(obj.discount) for price in obj.prices]
+        return obj
 
 
 class ProductInCartDTO(ShowProductExtended):

@@ -238,23 +238,14 @@ class ProductsService(BaseService):
                 dto,
                 pagination_params,
             )
-        dtos: list[ShowProductExtended] = []
-        for product in products:
-            [
-                regional_price.calc_discounted_price(product.discount)
-                for regional_price in product.prices
-            ]
-            dtos.append(ShowProductExtended.model_validate(product))
-        return dtos, total_records
+        return [
+            ShowProductExtended.model_validate(product) for product in products
+        ], total_records
 
     async def get_product(self, product_id: int) -> ShowProductExtended:
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
-                [
-                    price.calc_discounted_price(product.discount)
-                    for price in product.prices
-                ]
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
         return ShowProductExtended.model_validate(product)

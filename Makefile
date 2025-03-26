@@ -5,17 +5,11 @@ MODE ?= local
 api/run:
 	MODE=$(MODE) poetry run python src/main.py 
 
-api/run/test:
-	MODE="tests" poetry run python src/main.py 
-
-api/run/prod:
-	MODE="prod" poetry run python src/main.py 
-
 run/tests:
-	MODE="tests" poetry run pytest
+	MODE="local-test" poetry run pytest
 
 run/tests/docker:
-	MODE="tests" docker exec gameshop_web "sh poetry run pytest"
+	MODE="prod-test" docker exec gameshop_web "sh poetry run pytest"
 
 migrations/new:
 	MODE=local poetry run alembic revision --autogenerate -m "$(msg)"
@@ -28,4 +22,4 @@ api/deploy/prod:
 	bash scripts/deploy.sh prod
 
 api/deploy/test:
-	bash scripts/deploy.sh test
+	bash scripts/deploy.sh prod-test

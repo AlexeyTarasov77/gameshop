@@ -73,19 +73,19 @@ def app_factory() -> FastAPI:
         )
     )
     app.openapi = partial(custom_openapi, app, cfg.api_version)
-    allow_origins = [
-        "https://gamebazaar.ru",
-        "http://gamebazaar.ru",
-        "https://www.gamebazaar.ru",
-        "http://www.gamebazaar.ru",
-    ]
     if cfg.debug:
-        allow_origins.extend(
-            [
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-            ]
-        )
+        allow_origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+    else:
+        allow_origins = [
+            "https://gamebazaar.ru",
+            "http://gamebazaar.ru",
+            "https://www.gamebazaar.ru",
+            "http://www.gamebazaar.ru",
+        ]
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allow_origins,

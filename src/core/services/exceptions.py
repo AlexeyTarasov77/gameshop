@@ -10,8 +10,11 @@ class ServiceError(Exception):
 
 
 class UnavailableProductError(ServiceError):
-    def __init__(self, product_name: str):
-        super().__init__(f"Can't create order! Product {product_name} is not available")
+    def __init__(self, product_name: str, region: str | None = None):
+        msg = f"Can't create order! Product {product_name} is not available"
+        if region:
+            msg += " in region: " + region.strip()
+        super().__init__(msg)
 
 
 class ClientError(ServiceError):

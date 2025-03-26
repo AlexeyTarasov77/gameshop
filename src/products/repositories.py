@@ -98,12 +98,6 @@ class ProductsRepository(PaginationRepository[Product]):
             ),
             prices=[RegionalPrice(base_price=base_price)],
         )
-        # product = await super().create(
-        #     image_url=dto.image,
-        #     **dto.model_dump(
-        #         exclude={"image", "discounted_price"},
-        #     ),
-        # )
         self._session.add(product)
         await self._session.flush()
         return product
