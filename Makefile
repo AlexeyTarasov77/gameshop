@@ -8,6 +8,10 @@ api/run:
 run/tests:
 	MODE="local-test" poetry run pytest
 
+run/redis:
+	docker run -v gameshop_redis-data:/data -p 6379:6379 -d --rm --name redis-stack redis/redis-stack:latest
+
+
 run/tests/docker:
 	MODE="prod-test" docker exec gameshop_web "sh poetry run pytest"
 

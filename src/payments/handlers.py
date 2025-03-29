@@ -48,7 +48,12 @@ async def paypalych_webhook(
     payload: t.Annotated[PayPalychSigVerifier, Depends()],
 ) -> dict[str, bool]:
     await payments_service.process_payment(
-        Status, payload.order_id, TrsId, AvailablePaymentSystems.PAYPALYCH, custom
+        Status,
+        payload.order_id,
+        payload.order_total,
+        TrsId,
+        AvailablePaymentSystems.PAYPALYCH,
+        custom,
     )
     return {"success": True}
 

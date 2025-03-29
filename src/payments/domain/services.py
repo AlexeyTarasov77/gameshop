@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable
+from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.services.base import BaseService
@@ -11,8 +12,9 @@ from orders.domain.interfaces import SteamAPIClientI
 from orders.models import InAppOrder, OrderCategory, SteamTopUpOrder
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
-    PaymentEmailTemplatesI,
+    EmailTemplatesI,
     PaymentSystemFactoryI,
+    TelegramClientI,
 )
 from payments.schemas import ProcessOrderPaymentDTO
 
@@ -26,9 +28,11 @@ class PaymentsService(BaseService):
         logger: Logger,
         payment_system_factory: PaymentSystemFactoryI,
         mailing_service: MailingService,
-        email_templates: PaymentEmailTemplatesI,
+        email_templates: EmailTemplatesI,
         order_details_link_builder: Callable[[UUID], str],
         steam_api: SteamAPIClientI,
+        admin_tg_chat_id: int,
+        tg_client: TelegramClientI,
     ) -> None:
         super().__init__(uow, logger)
         self._mailing_service = mailing_service
@@ -36,6 +40,8 @@ class PaymentsService(BaseService):
         self._email_templates = email_templates
         self._order_details_link_builder = order_details_link_builder
         self._steam_api = steam_api
+        self._tg_client = tg_client
+        self._admin_tg_chat_id = admin_tg_chat_id
 
     async def _process_steam_top_up_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
@@ -58,6 +64,7 @@ class PaymentsService(BaseService):
         self,
         status: str,
         order_id: UUID,
+        order_total: Decimal,
         bill_id: str,
         ps_name: AvailablePaymentSystems,
         payment_for: OrderCategory,
@@ -83,6 +90,26 @@ class PaymentsService(BaseService):
                         order = await self._process_steam_top_up_order(
                             process_order_dto, uow
                         )
+            admin_notification_msg = (
+                f"Заказ #{order.id} успешно оплачен!\n"
+                f"Сумма: {order_total} ₽\n"
+                f"Email заказчика: {order.customer_email} 📧\n"
+                f"Дата заказа: {order.order_date} 📆\n"
+                f"Тип заказа: {str(order.category.value)}\n"
+            )
+            await self._tg_client.send_msg(
+                self._admin_tg_chat_id, admin_notification_msg
+            )
+            email_body = await self._email_templates.order_checkout(
+                self._order_details_link_builder(order_id), order_id
+            )
+            asyncio.create_task(
+                self._mailing_service.send_mail(
+                    "Спасибо за заказ!",
+                    email_body,
+                    to=order.client_email,
+                )
+            )
 
         except NotFoundError:
             self._logger.error(
@@ -90,14 +117,3 @@ class PaymentsService(BaseService):
                 order_id,
             )
             raise ActionForbiddenError("Order not found")
-
-        email_body = await self._email_templates.order_checkout(
-            self._order_details_link_builder(order_id), order_id
-        )
-        asyncio.create_task(
-            self._mailing_service.send_mail(
-                "Спасибо за заказ!",
-                email_body,
-                to=order.client_email,
-            )
-        )

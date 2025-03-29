@@ -84,8 +84,14 @@ class _SteamAPIClient(BaseModel):
     auth_password: str
 
 
+class _TelegramAPIClient(BaseModel):
+    token: str
+    admin_chat_id: int
+
+
 class _ClientsConfig(BaseModel):
     steam_api: _SteamAPIClient
+    tg_api: _TelegramAPIClient
 
 
 class Config(BaseSettings):

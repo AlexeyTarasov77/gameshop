@@ -8,7 +8,11 @@ import punq
 from fastapi import Depends
 from mailing.domain.services import MailingService
 from orders.repositories import TopUpFeeManager
-from payments.domain.interfaces import PaymentEmailTemplatesI, PaymentSystemFactoryI
+from payments.domain.interfaces import (
+    EmailTemplatesI as PaymentEmailTemplatesI,
+    PaymentSystemFactoryI,
+    TelegramClientI,
+)
 from payments.domain.services import PaymentsService
 from payments.payment_gateways import PaymentSystemFactoryImpl
 from products.domain.interfaces import CurrencyConverterI
@@ -33,12 +37,13 @@ from gateways.db.exceptions import (
 )
 from shopping.sessions import RedisSessionCreator, RedisSessionManager, SessionCreatorI
 from gateways.db import SqlAlchemyClient, RedisClient
+from gateways.tg_client import TelegramClient
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
 from orders.domain.interfaces import SteamAPIClientI
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
-    UserEmailTemplatesI,
+    EmailTemplatesI as UsersEmailTemplatesI,
     PasswordHasherI,
     StatefullTokenProviderI,
     TokenHasherI,
@@ -106,7 +111,8 @@ def _init_container() -> punq.Container:
         SqlAlchemyUnitOfWork,
         session_factory=db.session_factory,
     )
-    container.register(UserEmailTemplatesI, EmailTemplates)
+    container.register(UsersEmailTemplatesI, EmailTemplates)
+    container.register(TelegramClientI, TelegramClient, token=cfg.clients.tg_api.token)
     container.register(PaymentEmailTemplatesI, EmailTemplates)
     container.register(ProductsService)
     container.register(NewsService)
@@ -133,6 +139,7 @@ def _init_container() -> punq.Container:
         PaymentsService,
         PaymentsService,
         order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
+        admin_tg_chat_id=cfg.clients.tg_api.admin_chat_id,
     )
     container.register(
         SteamAPIClientI,

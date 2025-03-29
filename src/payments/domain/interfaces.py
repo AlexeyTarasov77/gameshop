@@ -23,9 +23,13 @@ class PaymentSystemI(Protocol):
     ) -> bool: ...
 
 
-class PaymentEmailTemplatesI(Protocol):
+class EmailTemplatesI(Protocol):
     async def order_checkout(self, order_details_link: str, order_id: UUID) -> str: ...
 
 
 class PaymentSystemFactoryI(Protocol):
     def choose_by_name(self, name: AvailablePaymentSystems) -> PaymentSystemI: ...
+
+
+class TelegramClientI(Protocol):
+    async def send_msg(self, chat_id: int, text: str): ...

@@ -15,7 +15,7 @@ from gateways.db.exceptions import AlreadyExistsError, NotFoundError
 from mailing.domain.services import MailingService
 from shopping.domain.interfaces import SessionCopierI
 from users.domain.interfaces import (
-    UserEmailTemplatesI,
+    EmailTemplatesI,
     PasswordHasherI,
     StatefullTokenProviderI,
     TokenHasherI,
@@ -40,7 +40,7 @@ class UsersService(BaseService):
         self,
         uow: AbstractUnitOfWork,
         logger: Logger,
-        email_templates: UserEmailTemplatesI,
+        email_templates: EmailTemplatesI,
         token_hasher: TokenHasherI,
         password_hasher: PasswordHasherI,
         jwt_token_provider: StatelessTokenProviderI,
