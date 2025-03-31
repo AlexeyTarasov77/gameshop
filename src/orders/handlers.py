@@ -10,6 +10,7 @@ from orders.domain.services import OrdersService
 from orders.models import OrderCategory
 from orders.schemas import (
     CreateInAppOrderDTO,
+    CreateSteamGiftOrderDTO,
     OrderPaymentDTO,
     InAppOrderDTO,
     ShowBaseOrderDTO,
@@ -92,13 +93,22 @@ async def get_order(
     return await orders_service.get_order(order_id)
 
 
-@router.post("/top-up")
+@router.post("/steam/top-up")
 async def steam_top_up(
     dto: CreateSteamTopUpOrderDTO,
     orders_service: OrdersServiceDep,
     user_id: int | None = Depends(get_optional_user_id),
 ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
     return await orders_service.create_steam_top_up_order(dto, user_id)
+
+
+@router.post("/steam/gift")
+async def steam_send_gift(
+    dto: CreateSteamGiftOrderDTO,
+    orders_service: OrdersServiceDep,
+    user_id: int | None = Depends(get_optional_user_id),
+) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
+    return await orders_service.create_steam_gift_order(dto, user_id)
 
 
 @router.post("/top-up/fee", dependencies=[Depends(require_admin)])

@@ -1,15 +1,9 @@
-from typing import Annotated, Literal
-from pydantic import BeforeValidator, Field
-from pydantic_extra_types.country import CountryAlpha2
-from core.schemas import Base64Int, BaseDTO
-
-ProductRegion = Annotated[
-    CountryAlpha2 | Literal[""],
-    BeforeValidator(lambda s: s.strip() if isinstance(s, str) else s),
-]
+from pydantic import Field
+from core.schemas import Base64Int, BaseDTO, ProductRegion
+from products.models import EMPTY_REGION
 
 
 class ItemInCartDTO(BaseDTO):
     product_id: Base64Int
-    region: ProductRegion = ""
+    region: ProductRegion = EMPTY_REGION
     quantity: int | None = Field(gt=0, default=1)

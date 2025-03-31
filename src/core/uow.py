@@ -10,24 +10,12 @@ from core.services.exceptions import ServiceError
 from gateways.db.exceptions import DatabaseError, AbstractDatabaseExceptionMapper
 from news.domain.interfaces import NewsRepositoryI
 from news.repositories import NewsRepository
-from orders.domain.interfaces import (
-    InAppOrdersRepositoryI,
-    SteamTopUpRepositoryI,
-    OrdersRepositoryI,
-)
-from orders.repositories import (
-    InAppOrdersRepository,
-    SteamTopUpRepository,
-    OrdersRepository,
-)
-from products.domain.interfaces import PricesRepositoryI, ProductsRepositoryI
-from products.repositories import PricesRepository, ProductsRepository
-from users.domain.interfaces import (
-    AdminsRepositoryI,
-    TokensRepositoryI,
-    UsersRepositoryI,
-)
-from users.repositories import AdminsRepository, TokensRepository, UsersRepository
+from orders.domain import interfaces as orders_i
+from orders import repositories as orders_repos
+from products.domain import interfaces as products_i
+from products import repositories as products_repos
+from users.domain import interfaces as users_i
+from users import repositories as users_repos
 
 
 class AcceptsSessionI(t.Protocol):
@@ -38,14 +26,15 @@ class AbstractUnitOfWork[S](abc.ABC):
     exception_mapper: AbstractDatabaseExceptionMapper
 
     news_repo: NewsRepositoryI
-    products_repo: ProductsRepositoryI
-    prices_repo: PricesRepositoryI
-    admins_repo: AdminsRepositoryI
-    users_repo: UsersRepositoryI
-    tokens_repo: TokensRepositoryI
-    in_app_orders_repo: InAppOrdersRepositoryI
-    steam_top_up_repo: SteamTopUpRepositoryI
-    orders_repo: OrdersRepositoryI
+    products_repo: products_i.ProductsRepositoryI
+    products_prices_repo: products_i.PricesRepositoryI
+    admins_repo: users_i.AdminsRepositoryI
+    users_repo: users_i.UsersRepositoryI
+    tokens_repo: users_i.TokensRepositoryI
+    in_app_orders_repo: orders_i.InAppOrdersRepositoryI
+    steam_top_up_repo: orders_i.SteamTopUpRepositoryI
+    steam_gifts_repo: orders_i.SteamGiftsRepositoryI
+    orders_repo: orders_i.AllOrdersRepositoryI
 
     def __init__(self, session_factory: Callable[[], S]):
         self._session_factory = session_factory
@@ -95,15 +84,18 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
 
     def _init_repos(self):
         # initializing repositories using created session
-        self.users_repo = self._register_repo(UsersRepository)
-        self.admins_repo = self._register_repo(AdminsRepository)
-        self.prices_repo = self._register_repo(PricesRepository)
-        self.tokens_repo = self._register_repo(TokensRepository)
+        self.users_repo = self._register_repo(users_repos.UsersRepository)
+        self.admins_repo = self._register_repo(users_repos.AdminsRepository)
+        self.products_prices_repo = self._register_repo(products_repos.PricesRepository)
+        self.tokens_repo = self._register_repo(users_repos.TokensRepository)
         self.news_repo = self._register_repo(NewsRepository)
-        self.products_repo = self._register_repo(ProductsRepository)
-        self.in_app_orders_repo = self._register_repo(InAppOrdersRepository)
-        self.steam_top_up_repo = self._register_repo(SteamTopUpRepository)
-        self.orders_repo = self._register_repo(OrdersRepository)
+        self.products_repo = self._register_repo(products_repos.ProductsRepository)
+        self.in_app_orders_repo = self._register_repo(
+            orders_repos.InAppOrdersRepository
+        )
+        self.steam_top_up_repo = self._register_repo(orders_repos.SteamTopUpRepository)
+        self.steam_gifts_repo = self._register_repo(orders_repos.SteamGiftsRepository)
+        self.orders_repo = self._register_repo(orders_repos.OrdersRepository)
         self._check_init_repos_correct()
 
     def _check_init_repos_correct(self):

@@ -43,6 +43,15 @@ class PaymentsService(BaseService):
         self._tg_client = tg_client
         self._admin_tg_chat_id = admin_tg_chat_id
 
+    async def _process_steam_gift_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> SteamTopUpOrder:
+        order = await uow.steam_top_up_repo.update_payment_details(
+            **dto.model_dump(), check_is_pending=True
+        )
+        await self._steam_api.pay_gift_order(dto.order_id)
+        return order
+
     async def _process_steam_top_up_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
     ) -> SteamTopUpOrder:
@@ -90,6 +99,11 @@ class PaymentsService(BaseService):
                         order = await self._process_steam_top_up_order(
                             process_order_dto, uow
                         )
+                    case OrderCategory.STEAM_GIFT:
+                        order = await self._process_steam_gift_order(
+                            process_order_dto, uow
+                        )
+
             admin_notification_msg = (
                 f"Заказ #{order.id} успешно оплачен!\n"
                 f"Сумма: {order_total} ₽\n"

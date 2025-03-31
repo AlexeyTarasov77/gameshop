@@ -4,32 +4,11 @@ from decimal import Decimal
 from enum import Enum, StrEnum
 from typing import Any, Annotated
 
-from core.schemas import (
-    Base64Int,
-    BaseDTO,
-    DateTimeAfterNow,
-    ImgUrl,
-    RoundedDecimal,
-    UploadImage,
-)
-from pydantic import (
-    AfterValidator,
-    Field,
-    PlainSerializer,
-    field_validator,
-    model_validator,
-)
+from core import schemas
+import pydantic
 
 from gateways.currency_converter import PriceUnitDTO
-from products.models import (
-    Product,
-    ProductCategory,
-    ProductDeliveryMethod,
-    PsnParseRegions,
-    XboxParseRegions,
-    ProductPlatform,
-)
-from shopping.schemas import ProductRegion
+from products import models
 
 
 def _base_field_ser(v: Enum) -> dict[str, Any]:
@@ -43,63 +22,67 @@ def _check_discount[T: int](value: T) -> T:
     return value
 
 
-ProductPlatformField = Annotated[ProductPlatform, PlainSerializer(_base_field_ser)]
-ProductCategoryField = Annotated[ProductCategory, PlainSerializer(_base_field_ser)]
-ProductDeliveryMethodField = Annotated[
-    ProductDeliveryMethod, PlainSerializer(_base_field_ser)
+ProductPlatformField = Annotated[
+    models.ProductPlatform, pydantic.PlainSerializer(_base_field_ser)
 ]
-ProductDiscount = Annotated[int, AfterValidator(_check_discount)]
+ProductCategoryField = Annotated[
+    models.ProductCategory, pydantic.PlainSerializer(_base_field_ser)
+]
+ProductDeliveryMethodField = Annotated[
+    models.ProductDeliveryMethod, pydantic.PlainSerializer(_base_field_ser)
+]
+ProductDiscount = Annotated[int, pydantic.AfterValidator(_check_discount)]
 
 
-class RegionalPriceDTO(BaseDTO):
-    base_price: RoundedDecimal
-    region_code: ProductRegion
+class RegionalPriceDTO(schemas.BaseDTO):
+    base_price: schemas.RoundedDecimal
+    region_code: schemas.ProductRegion
 
 
-class CategoriesListDTO(BaseDTO):
+class CategoriesListDTO(schemas.BaseDTO):
     categories: list[ProductCategoryField]
 
 
-class PlatformsListDTO(BaseDTO):
+class PlatformsListDTO(schemas.BaseDTO):
     platforms: list[ProductPlatformField]
 
 
-class DeliveryMethodsListDTO(BaseDTO):
+class DeliveryMethodsListDTO(schemas.BaseDTO):
     delivery_methods: list[ProductDeliveryMethodField]
 
 
-class BaseProductDTO(BaseDTO):
-    name: str = Field(min_length=3)
+class BaseProductDTO(schemas.BaseDTO):
+    name: str = pydantic.Field(min_length=3)
     description: str
     discount: ProductDiscount
 
 
 class CreateProductDTO(BaseProductDTO):
-    category: ProductCategory
-    platform: ProductPlatform
+    category: models.ProductCategory
+    platform: models.ProductPlatform
     discounted_price: Decimal
-    deal_until: DateTimeAfterNow | None = None
-    image: UploadImage
+    deal_until: schemas.DateTimeAfterNow | None = None
+    image: schemas.UploadImage
 
 
-class UpdateProductDTO(BaseDTO):
-    name: str | None = Field(min_length=3, default=None)
+class UpdateProductDTO(schemas.BaseDTO):
+    name: str | None = pydantic.Field(min_length=3, default=None)
     in_stock: bool | None = None
-    description: str | None = Field(min_length=10, default=None)
-    regular_price: Decimal | None = Field(ge=0, default=None)
-    category: ProductCategory | None = None
-    platform: ProductPlatform | None = None
-    image: UploadImage | None = None
+    description: str | None = pydantic.Field(min_length=10, default=None)
+    regular_price: Decimal | None = pydantic.Field(ge=0, default=None)
+    category: models.ProductCategory | None = None
+    platform: models.ProductPlatform | None = None
+    image: schemas.UploadImage | None = None
     discount: ProductDiscount | None = None
-    deal_until: DateTimeAfterNow | None = None
+    deal_until: schemas.DateTimeAfterNow | None = None
 
 
-class UpdatePricesDTO(BaseDTO):
-    for_platforms: list[ProductPlatform]
+class UpdatePricesDTO(schemas.BaseDTO):
+    for_platforms: list[models.ProductPlatform]
     # percent can be > 0 to add or < 0 to subtract
     percent: int
 
-    @field_validator("percent")
+    @pydantic.field_validator("percent")
     @classmethod
     def check_percent(cls, val: int) -> int:
         if val == 0:
@@ -107,24 +90,24 @@ class UpdatePricesDTO(BaseDTO):
         return val
 
 
-class UpdatePricesResDTO(BaseDTO):
+class UpdatePricesResDTO(schemas.BaseDTO):
     updated_count: int
 
 
 class ShowProduct(BaseProductDTO):
-    id: Base64Int
+    id: schemas.Base64Int
     deal_until: datetime | None
     total_discount: int
     created_at: datetime
     updated_at: datetime
-    image_url: ImgUrl
+    image_url: schemas.ImgUrl
     in_stock: bool
     category: ProductCategoryField
     platform: ProductPlatformField
     delivery_methods: list[ProductDeliveryMethodField]
 
 
-class ProductForLoadDTO(BaseDTO):
+class ProductForLoadDTO(schemas.BaseDTO):
     name: str
     discount: int
     image_url: str
@@ -136,10 +119,10 @@ class SteamItemDTO(ProductForLoadDTO):
 
 
 class SalesDTO(ProductForLoadDTO):
-    platform: ProductPlatform
+    platform: models.ProductPlatform
     with_gp: bool | None = None
     deal_until: datetime | None = None
-    prices: dict[PsnParseRegions | XboxParseRegions, PriceUnitDTO]
+    prices: dict[models.PsnParseRegions | models.XboxParseRegions, PriceUnitDTO]
 
 
 class OrderByOption(StrEnum):
@@ -147,32 +130,32 @@ class OrderByOption(StrEnum):
     DESC = "desc"
 
 
-class ListProductsFilterDTO(BaseDTO):
+class ListProductsFilterDTO(schemas.BaseDTO):
     query: str | None = None
     discounted: bool | None = None
     in_stock: bool | None = None
-    categories: list[ProductCategory] | None = None
-    platforms: list[ProductPlatform] | None = None
-    delivery_methods: list[ProductDeliveryMethod] | None = None
+    categories: list[models.ProductCategory] | None = None
+    platforms: list[models.ProductPlatform] | None = None
+    delivery_methods: list[models.ProductDeliveryMethod] | None = None
     regions: list[CountryAlpha2] | None = None
     price_ordering: OrderByOption | None = None
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):
-    discounted_price: RoundedDecimal
+    discounted_price: schemas.RoundedDecimal
 
 
 class ShowProductExtended(ShowProduct):
     prices: list[RegionalWithDiscountedPriceDTO]
 
-    @model_validator(mode="before")
+    @pydantic.model_validator(mode="before")
     @classmethod
     def calc_discounted_prices(cls, obj):
-        if not isinstance(obj, Product):
+        if not isinstance(obj, models.Product):
             return obj
         [price.calc_discounted_price(obj.discount) for price in obj.prices]
         return obj
 
 
 class ProductInCartDTO(ShowProductExtended):
-    quantity: int = Field(gt=0)
+    quantity: int = pydantic.Field(gt=0)

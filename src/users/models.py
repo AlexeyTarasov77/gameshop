@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 if TYPE_CHECKING:
-    from orders.models import InAppOrder, SteamTopUpOrder
+    from orders.models import InAppOrder, SteamTopUpOrder, SteamGiftOrder
 
 
 class User(SqlAlchemyBaseModel, TimestampMixin):
@@ -24,6 +24,9 @@ class User(SqlAlchemyBaseModel, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(default=False)
     in_app_orders: Mapped[list["InAppOrder"]] = relationship(back_populates="user")
     steam_top_up_orders: Mapped[list["SteamTopUpOrder"]] = relationship(
+        back_populates="user"
+    )
+    steam_gift_orders: Mapped[list["SteamGiftOrder"]] = relationship(
         back_populates="user"
     )
 

@@ -13,10 +13,12 @@ from orders.models import (
     InAppOrderItem,
     OrderCategory,
     OrderStatus,
+    SteamGiftOrder,
     SteamTopUpOrder,
 )
 from orders.schemas import (
     CreateInAppOrderDTO,
+    CreateSteamGiftOrderDTO,
     CreateSteamTopUpOrderDTO,
     UpdateOrderDTO,
 )
@@ -45,6 +47,12 @@ class OrdersRepositoryMixin[T: BaseOrder](SqlAlchemyRepository):
             **filters,
         )
 
+    async def save_order(self, order_obj: T) -> T:
+        self._session.add(order_obj)
+        await self._session.flush()
+        self._session.expunge(order_obj)
+        return order_obj
+
 
 class OrdersRepository(PaginationRepository[BaseOrder]):
     model = BaseOrder
@@ -66,7 +74,7 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         stmt = (
             super()
             ._get_pagination_stmt(pagination_params)
-            .options(selectin_polymorphic(BaseOrder, [InAppOrder, SteamTopUpOrder]))
+            .options(selectin_polymorphic(BaseOrder, BaseOrder.__subclasses__()))
             .filter_by(**filters)
         )
         res = await self._session.execute(stmt)
@@ -122,26 +130,6 @@ class InAppOrdersRepository(
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> InAppOrder:
         return await super().update(dto.model_dump(), id=order_id)
 
-    # async def update_payment_details(
-    #     self,
-    #     bill_id: str,
-    #     paid_with: AvailablePaymentSystems,
-    #     order_id: UUID,
-    #     *,
-    #     check_is_pending: bool,
-    # ) -> InAppOrder:
-    #     filters: dict[str, Any] = {"id": order_id}
-    #     if check_is_pending:
-    #         filters["status"] = OrderStatus.PENDING
-    #     return await super().update(
-    #         {
-    #             "bill_id": bill_id,
-    #             "paid_with": paid_with,
-    #             "status": OrderStatus.COMPLETED,
-    #         },
-    #         **filters,
-    #     )
-    #
     async def delete_by_id(self, order_id: UUID) -> None:
         return await super().delete_or_raise_not_found(id=order_id)
 
@@ -204,33 +192,29 @@ class SteamTopUpRepository(OrdersRepositoryMixin[SteamTopUpOrder]):
             user_id=user_id,
             **dto.model_dump(include={"steam_login", "customer_email"}),
         )
-        self._session.add(order_obj)
-        await self._session.flush()
-        self._session.expunge(order_obj)
-        return order_obj
+        return await super().save_order(order_obj)
 
     async def get_by_id(self, order_id: UUID):
         return await super().get_one(id=order_id)
 
-    # async def update_payment_details(
-    #     self,
-    #     bill_id: str,
-    #     paid_with: AvailablePaymentSystems,
-    #     order_id: UUID,
-    #     *,
-    #     check_is_pending: bool,
-    # ):
-    #     filters: dict[str, Any] = {"id": order_id}
-    #     if check_is_pending:
-    #         filters["status"] = OrderStatus.PENDING
-    #     return await super().update(
-    #         {
-    #             "bill_id": bill_id,
-    #             "paid_with": paid_with,
-    #             "status": OrderStatus.COMPLETED,
-    #         },
-    #         **filters,
-    #     )
+
+class SteamGiftsRepository(OrdersRepositoryMixin[SteamGiftOrder]):
+    model = SteamGiftOrder
+
+    async def create_with_id(
+        self,
+        dto: CreateSteamGiftOrderDTO,
+        order_id: UUID,
+        percent_fee: int,
+        user_id: int | None,
+    ) -> SteamGiftOrder:
+        order_obj = SteamGiftOrder(
+            id=order_id,
+            percent_fee=percent_fee,
+            user_id=user_id,
+            **dto.model_dump(),
+        )
+        return await super().save_order(order_obj)
 
 
 class TopUpFeeManager:

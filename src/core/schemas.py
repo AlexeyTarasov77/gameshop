@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from fastapi import HTTPException, status
 import json
-from typing import Annotated
+from typing import Annotated, Final, Literal
 from fastapi import UploadFile, Path as PathParam
 from pydantic import (
     AfterValidator,
@@ -18,6 +18,7 @@ from pydantic import (
     ValidationError,
     WrapSerializer,
 )
+from pydantic_extra_types.country import CountryAlpha2
 from pydantic_extra_types.currency_code import Currency
 
 from core.utils import (
@@ -131,3 +132,12 @@ Base64IntOptionalIDParam = Annotated[
     _base64int_serializer,
 ]
 DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
+
+type EmptyRegionT = Literal[""]
+
+EMPTY_REGION: Final[EmptyRegionT] = ""
+
+ProductRegion = Annotated[
+    CountryAlpha2 | EmptyRegionT,
+    BeforeValidator(lambda s: s.strip() if isinstance(s, str) else s),
+]

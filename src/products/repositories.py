@@ -217,3 +217,17 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
         )
         res = await self._session.execute(stmt)
         return res.rowcount
+
+    async def get_price_for_region(self, product_id: int, region: str) -> RegionalPrice:
+        stmt = sa.select(self.model).where(
+            sa.and_(
+                sa.func.lower(sa.func.trim(self.model.region_code))
+                == region.lower().strip(),
+                self.model.product_id == product_id,
+            )
+        )
+        res = await self._session.execute(stmt)
+        price = res.scalar_one_or_none()
+        if not price:
+            raise NotFoundError("price not found")
+        return price

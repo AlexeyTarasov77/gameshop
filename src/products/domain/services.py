@@ -208,7 +208,7 @@ class ProductsService(BaseService):
                 dto.for_platforms,
                 [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
             )
-            updated_count = await uow.prices_repo.add_percent_for_products(
+            updated_count = await uow.products_prices_repo.add_percent_for_products(
                 products_ids_for_update, dto.percent
             )
         return UpdatePricesResDTO(updated_count=updated_count)
@@ -296,7 +296,9 @@ class ProductsService(BaseService):
         new_rate = dto.value
         # update existing prices with new rate (only that which was converted from updated rate)
         async with self._uow as uow:
-            await uow.prices_repo.update_all_with_rate(dto.from_, new_rate, old_rate)
+            await uow.products_prices_repo.update_all_with_rate(
+                dto.from_, new_rate, old_rate
+            )
 
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()

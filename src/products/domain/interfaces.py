@@ -11,6 +11,7 @@ from products.models import (
     Product,
     ProductCategory,
     ProductPlatform,
+    RegionalPrice,
 )
 from products.schemas import (
     CreateProductDTO,
@@ -75,3 +76,6 @@ class PricesRepositoryI(t.Protocol):
         products_ids: Sequence[int],
         percent: int,
     ) -> int: ...
+    async def get_price_for_region(
+        self, product_id: int, region: str
+    ) -> RegionalPrice: ...

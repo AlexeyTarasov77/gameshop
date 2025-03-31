@@ -2,19 +2,25 @@ from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
-from orders.schemas import CreateInAppOrderDTO, CreateSteamTopUpOrderDTO, UpdateOrderDTO
+from orders.schemas import (
+    CreateInAppOrderDTO,
+    CreateSteamGiftOrderDTO,
+    CreateSteamTopUpOrderDTO,
+    UpdateOrderDTO,
+)
 from orders.models import (
     BaseOrder,
     InAppOrder,
     InAppOrderItem,
     OrderCategory,
+    SteamGiftOrder,
     SteamTopUpOrder,
 )
 from payments.models import AvailablePaymentSystems
 from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
-class OrdersRepositoryI(Protocol):
+class AllOrdersRepositoryI(Protocol):
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> BaseOrder: ...
     async def delete_by_id(self, order_id: UUID) -> None: ...
     async def get_by_id(self, order_id: UUID) -> BaseOrder: ...
@@ -29,13 +35,7 @@ class OrdersRepositoryI(Protocol):
     ) -> PaginationResT[BaseOrder]: ...
 
 
-class InAppOrdersRepositoryI(Protocol):
-    async def create_with_items(
-        self,
-        dto: CreateInAppOrderDTO,
-        user_id: int | None,
-        items: Sequence[InAppOrderItem],
-    ) -> InAppOrder: ...
+class _BaseOrderRepoI[T: BaseOrder](Protocol):
     async def update_payment_details(
         self,
         bill_id: str,
@@ -43,16 +43,27 @@ class InAppOrdersRepositoryI(Protocol):
         order_id: UUID,
         *,
         check_is_pending: bool,
+    ) -> T: ...
+
+
+class InAppOrdersRepositoryI(_BaseOrderRepoI[InAppOrder], Protocol):
+    async def create_with_items(
+        self,
+        dto: CreateInAppOrderDTO,
+        user_id: int | None,
+        items: Sequence[InAppOrderItem],
     ) -> InAppOrder: ...
 
 
 class SteamAPIClientI(Protocol):
-    async def create_top_up_request(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
+    async def create_top_up_order(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
+    async def create_gift_order(self, dto: CreateSteamGiftOrderDTO) -> UUID: ...
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
-    async def top_up_complete(self, top_up_id: UUID): ...
+    async def top_up_complete(self, order_id: UUID): ...
+    async def pay_gift_order(self, order_id: UUID): ...
 
 
-class SteamTopUpRepositoryI(Protocol):
+class SteamTopUpRepositoryI(_BaseOrderRepoI[SteamTopUpOrder], Protocol):
     async def create_with_id(
         self,
         dto: CreateSteamTopUpOrderDTO,
@@ -60,14 +71,16 @@ class SteamTopUpRepositoryI(Protocol):
         percent_fee: int,
         user_id: int | None,
     ) -> SteamTopUpOrder: ...
-    async def update_payment_details(
+
+
+class SteamGiftsRepositoryI(_BaseOrderRepoI[SteamGiftOrder], Protocol):
+    async def create_with_id(
         self,
-        bill_id: str,
-        paid_with: AvailablePaymentSystems,
+        dto: CreateSteamGiftOrderDTO,
         order_id: UUID,
-        *,
-        check_is_pending: bool,
-    ) -> SteamTopUpOrder: ...
+        percent_fee: int,
+        user_id: int | None,
+    ) -> SteamGiftOrder: ...
 
 
 class TopUpFeeManagerI(Protocol):

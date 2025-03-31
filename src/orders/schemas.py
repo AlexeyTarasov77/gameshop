@@ -1,13 +1,14 @@
 from datetime import datetime
 from decimal import Decimal
 import re
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 from pydantic import (
     AfterValidator,
     EmailStr,
     AliasChoices,
     Field,
+    HttpUrl,
     PlainSerializer,
     field_validator,
     model_validator,
@@ -49,6 +50,10 @@ def normalize_tg_username(value: str) -> str:
     return value
 
 
+def check_steam_friend_link(value: HttpUrl):
+    assert value.host == "s.team", "Friend link domain should be equal to: s.team"
+
+
 OrderCategoryField = Annotated[
     OrderCategory, PlainSerializer(lambda v: {"name": v.value.label, "id": v.value})
 ]
@@ -56,6 +61,16 @@ OrderCategoryField = Annotated[
 PhoneNumber = Annotated[str, AfterValidator(check_phone)]
 CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
+SteamFriendLink = Annotated[HttpUrl, AfterValidator(check_steam_friend_link)]
+SteamGiftRegions = Literal["ua", "ru", "kz"]
+
+
+class _WithOptionalUserId(BaseDTO):
+    user_id: Base64Int | None
+
+
+class _WithOptionalUser(BaseDTO):
+    user: ShowUser | None
 
 
 class _InAppOrderItemProduct(BaseDTO):
@@ -87,12 +102,10 @@ class InAppOrderCustomerDTO(BaseDTO):
     )
 
 
-class InAppOrderCustomerWithUserIdDTO(InAppOrderCustomerDTO):
-    user_id: Base64Int | None
+class InAppOrderCustomerWithUserIdDTO(InAppOrderCustomerDTO, _WithOptionalUserId): ...
 
 
-class InAppOrderCustomerWithUserDTO(InAppOrderCustomerDTO):
-    user: ShowUser | None
+class InAppOrderCustomerWithUserDTO(InAppOrderCustomerDTO, _WithOptionalUser): ...
 
 
 class CreateInAppOrderDTO(BaseDTO):
@@ -151,11 +164,20 @@ class InAppOrderExtendedDTO(InAppOrderDTO):
         return obj
 
 
-class CreateSteamTopUpOrderDTO(BaseDTO):
-    steam_login: str
-    rub_amount: Decimal = Field(gt=0)
+class CreateSteamOrderBaseDTO(BaseDTO):
     selected_ps: AvailablePaymentSystems = AvailablePaymentSystems.PAYPALYCH
     customer_email: EmailStr
+
+
+class CreateSteamTopUpOrderDTO(CreateSteamOrderBaseDTO):
+    steam_login: str
+    rub_amount: Decimal = Field(gt=0)
+
+
+class CreateSteamGiftOrderDTO(CreateSteamOrderBaseDTO):
+    friend_link: SteamFriendLink
+    product_id: Base64Int
+    region: SteamGiftRegions
 
 
 class SteamTopUpOrderCustomerDTO(BaseDTO):
@@ -163,14 +185,15 @@ class SteamTopUpOrderCustomerDTO(BaseDTO):
     steam_login: str
 
 
-class _BaseSteamTopUpOrderDTO(ShowBaseOrderDTO):
+class _BaseSteamTopUpOrderDTO(SteamTopUpOrderCustomerDTO, ShowBaseOrderDTO):
     amount: Decimal
     percent_fee: int
 
 
-class SteamTopUpOrderDTO(_BaseSteamTopUpOrderDTO, SteamTopUpOrderCustomerDTO):
-    user_id: Base64Int | None
+class SteamTopUpOrderDTO(_BaseSteamTopUpOrderDTO, _WithOptionalUser): ...
 
 
-class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO, SteamTopUpOrderCustomerDTO):
-    user: ShowUser | None
+class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO, _WithOptionalUser): ...
+
+
+class SteamGiftOrderDTO(CreateSteamGiftOrderDTO, _WithOptionalUserId): ...

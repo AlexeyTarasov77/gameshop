@@ -3,9 +3,7 @@ __pycache__/
 venv/
 .env
 .env.*
-config/*
-config
-config/*.yaml
+config/
 pyrightconfig.json
 poetry.lock
 .ruff_cache

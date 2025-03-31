@@ -1,6 +1,8 @@
+from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
+from core.schemas import EMPTY_REGION
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
@@ -11,13 +13,13 @@ from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from orders.domain.interfaces import SteamAPIClientI, TopUpFeeManagerI
 from orders.models import (
-    InAppOrder,
+    BaseOrder,
     InAppOrderItem,
     OrderCategory,
-    SteamTopUpOrder,
 )
 from orders.schemas import (
     CreateInAppOrderDTO,
+    CreateSteamGiftOrderDTO,
     OrderPaymentDTO,
     InAppOrderDTO,
     InAppOrderExtendedDTO,
@@ -52,17 +54,14 @@ class OrdersService(BaseService):
     async def _create_payment_bill(
         self,
         ps_name: AvailablePaymentSystems,
-        order_like_obj: InAppOrder | SteamTopUpOrder,
+        order: BaseOrder,
+        total: Decimal,
+        category: OrderCategory,
     ) -> PaymentBillDTO:
         payment_system = self._payment_system_factory.choose_by_name(ps_name)
         self._logger.info("Creating payment bill for %s payment system", ps_name)
         return await payment_system.create_bill(
-            order_like_obj.id,
-            order_like_obj.total,
-            order_like_obj.client_email,
-            OrderCategory.IN_APP
-            if isinstance(order_like_obj, InAppOrder)
-            else OrderCategory.STEAM_TOP_UP,
+            order.id, total, order.client_email, category
         )
 
     async def create_in_app_order(
@@ -109,7 +108,9 @@ class OrdersService(BaseService):
                 assert user_id
                 user = await uow.users_repo.get_by_id(user_id)
                 order.set_user(user)
-            payment_dto = await self._create_payment_bill(dto.selected_ps, order)
+            payment_dto = await self._create_payment_bill(
+                dto.selected_ps, order, order.total, OrderCategory.IN_APP
+            )
         self._logger.info(
             "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
             order.client_email,
@@ -161,7 +162,6 @@ class OrdersService(BaseService):
             ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
-    # TODO: Return both in app and steam top up orders
     async def list_all_orders(
         self, pagination_params: PaginationParams, category: OrderCategory | None
     ) -> PaginationResT[ShowBaseOrderDTO]:
@@ -196,7 +196,7 @@ class OrdersService(BaseService):
         self, dto: CreateSteamTopUpOrderDTO, user_id: int | None
     ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
         try:
-            top_up_id = await self._steam_api.create_top_up_request(dto)
+            top_up_id = await self._steam_api.create_top_up_order(dto)
         except ValueError as e:
             raise ClientError(str(e))
         percent_fee = await self._top_up_fee_manager.get_current_fee()
@@ -209,7 +209,9 @@ class OrdersService(BaseService):
             order = await uow.steam_top_up_repo.create_with_id(
                 dto, top_up_id, percent_fee, user_id
             )
-            payment_dto = await self._create_payment_bill(dto.selected_ps, order)
+            payment_dto = await self._create_payment_bill(
+                dto.selected_ps, order, order.total, OrderCategory.STEAM_TOP_UP
+            )
         self._logger.info(
             "Succesfully created steam top up order. Top-Up id: %s, bill id: %s, client_email: %s",
             order.id,
@@ -227,4 +229,39 @@ class OrdersService(BaseService):
     async def get_steam_top_up_fee(self) -> int:
         return (
             await self._top_up_fee_manager.get_current_fee() or self._top_up_default_fee
+        )
+
+    async def create_steam_gift_order(
+        self, dto: CreateSteamGiftOrderDTO, user_id: int | None
+    ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
+        try:
+            order_id = await self._steam_api.create_gift_order(dto)
+        except ValueError as e:
+            raise ClientError(str(e))
+        percent_fee = await self._top_up_fee_manager.get_current_fee()
+        if percent_fee is None:
+            self._logger.warning(
+                "Steam top up fee is unset. Using default: %s", self._top_up_default_fee
+            )
+            percent_fee = self._top_up_default_fee
+        async with self._uow as uow:
+            order_amount = await uow.products_prices_repo.get_price_for_region(
+                int(dto.product_id), EMPTY_REGION
+            )
+            order_total = order_amount.total_price
+            order = await uow.steam_gifts_repo.create_with_id(
+                dto, order_id, percent_fee, user_id
+            )
+            payment_dto = await self._create_payment_bill(
+                dto.selected_ps, order, order_total, OrderCategory.STEAM_GIFT
+            )
+        self._logger.info(
+            "Succesfully created steam gift order. Order id: %s, bill id: %s, client_email: %s",
+            order.id,
+            payment_dto.bill_id,
+            order.client_email,
+        )
+        return OrderPaymentDTO(
+            order=SteamTopUpOrderDTO.model_validate(order),
+            payment_url=payment_dto.payment_url,
         )

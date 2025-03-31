@@ -23,6 +23,7 @@ class OrderStatus(StrEnum):
 class OrderCategory(LabeledEnum):
     IN_APP = "Внутриигровая покупка"
     STEAM_TOP_UP = "Пополнение steam"
+    STEAM_GIFT = "Подарок стим"
 
 
 class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
@@ -118,4 +119,24 @@ class SteamTopUpOrder(BaseOrder):
 
     __mapper_args__ = {
         "polymorphic_identity": OrderCategory.STEAM_TOP_UP,
+    }
+
+
+class SteamGiftOrder(BaseOrder):
+    id: Mapped[UUID] = mapped_column(
+        ForeignKey("base_order.id", ondelete="CASCADE"), primary_key=True
+    )
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("product.id", ondelete="RESTRICT")
+    )
+    percent_fee: Mapped[int]
+    region: Mapped[str]
+    product: Mapped[Product] = relationship(lazy="joined")
+    user: Mapped[User | None] = relationship(
+        back_populates="steam_gift_orders", lazy="joined", passive_deletes=True
+    )
+    friend_link: Mapped[str]
+
+    __mapper_args__ = {
+        "polymorphic_identity": OrderCategory.STEAM_GIFT,
     }

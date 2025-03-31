@@ -3,9 +3,10 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pytz import UTC
 
+from core.schemas import EMPTY_REGION
 from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
-from sqlalchemy import CHAR, ForeignKey, UniqueConstraint, text
+from sqlalchemy import CHAR, CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from enum import auto
@@ -49,7 +50,14 @@ class XboxParseRegions(CIEnum):
 
 class Product(SqlAlchemyBaseModel, TimestampMixin):
     unique_fields = ("name", "category", "platform")
-    __table_args__ = (UniqueConstraint(*unique_fields),)
+    __table_args__ = (
+        UniqueConstraint(*unique_fields),
+        CheckConstraint(
+            text(
+                "(platform = :steam_platform AND sub_id IS NOT NULL) OR (platform != :steam_platform AND sub_id IS NULL)"
+            ).bindparams(steam_platform=ProductPlatform.STEAM.name)
+        ),
+    )
 
     id: Mapped[int_pk_type]
     name: Mapped[str]
@@ -66,6 +74,7 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     prices: Mapped[list["RegionalPrice"]] = relationship(
         back_populates="product", lazy="selectin"
     )
+    sub_id: Mapped[int | None]
 
     @property
     def delivery_methods(self) -> list[ProductDeliveryMethod]:
@@ -106,7 +115,7 @@ class RegionalPrice(SqlAlchemyBaseModel):
     base_price: Mapped[Decimal]  # price in rub
     # use empty string instead of nullable field to create primary key on that field
     region_code: Mapped[str] = mapped_column(
-        CHAR(3), primary_key=True, server_default=text("")
+        CHAR(3), primary_key=True, server_default=text(EMPTY_REGION)
     )
     converted_from_curr: Mapped[str | None] = mapped_column(CHAR(3))
 
