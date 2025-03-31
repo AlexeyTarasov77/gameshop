@@ -8,7 +8,6 @@ from pydantic import (
     EmailStr,
     AliasChoices,
     Field,
-    HttpUrl,
     PlainSerializer,
     field_validator,
     model_validator,
@@ -50,8 +49,12 @@ def normalize_tg_username(value: str) -> str:
     return value
 
 
-def check_steam_friend_link(value: HttpUrl):
-    assert value.host == "s.team", "Friend link domain should be equal to: s.team"
+def check_steam_friend_link(value: str):
+    if not re.match(r"https:\/\/s\.team\/p\/[a-z]{4}-[a-z]{4}\/[A-Z]{8}", value):
+        raise ValueError(
+            "Ссылка должна иметь формат: https://s.team/p/xxxx-xxxx/XXXXXXX"
+        )
+    return value
 
 
 OrderCategoryField = Annotated[
@@ -61,7 +64,7 @@ OrderCategoryField = Annotated[
 PhoneNumber = Annotated[str, AfterValidator(check_phone)]
 CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
-SteamFriendLink = Annotated[HttpUrl, AfterValidator(check_steam_friend_link)]
+SteamFriendLink = Annotated[str, AfterValidator(check_steam_friend_link)]
 SteamGiftRegions = Literal["ua", "ru", "kz"]
 
 

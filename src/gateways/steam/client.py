@@ -4,7 +4,7 @@ from logging import Logger
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
-from orders.schemas import CreateSteamTopUpOrderDTO
+from orders.schemas import CreateSteamGiftOrderDTO, CreateSteamTopUpOrderDTO
 from products.domain.services import ProductsService
 from products.schemas import SteamItemDTO
 from gateways.currency_converter import ExchangeRatesMappingDTO
@@ -106,7 +106,6 @@ class NSGiftsAPIClient:
             "Create steam top up order response status: %s", resp.status_code
         )
         resp.raise_for_status()
-        assert resp.json()["status"] == 1
         return top_up_id
 
     async def top_up_complete(self, top_up_id: uuid.UUID):
@@ -117,6 +116,42 @@ class NSGiftsAPIClient:
         )
         self._logger.info(
             "Top up complete response received. status: %s, text: %s",
+            resp.status_code,
+            resp.text,
+        )
+        resp.raise_for_status()
+
+    async def create_gift_order(
+        self, dto: CreateSteamGiftOrderDTO, sub_id: int
+    ) -> uuid.UUID:
+        self._logger.info("Creating steam gift order. sub_id: %d", sub_id)
+        resp = await self._client.post(
+            self._base_url + "/steam_gift/create_order",
+            json={
+                "sub_id": sub_id,
+                "friendLink": dto.friend_link,
+                "region": dto.region,
+            },
+            auth=self._auth,
+        )
+        self._logger.info(
+            "Create steam gift response received. status: %s, text: %s",
+            resp.status_code,
+            resp.text,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return uuid.UUID(data["custom_id"])
+
+    async def pay_gift_order(self, order_id: uuid.UUID):
+        self._logger.info("Paying gift order. order_id: %d", order_id)
+        resp = await self._client.post(
+            self._base_url + "/pay_order",
+            json={"custom_id": str(order_id)},
+            auth=self._auth,
+        )
+        self._logger.info(
+            "Pay gift order response received. status: %s, text: %s",
             resp.status_code,
             resp.text,
         )
