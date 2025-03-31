@@ -17,8 +17,8 @@ class UnavailableProductError(ServiceError):
         super().__init__(msg)
 
 
-class ClientError(ServiceError):
-    _msg = "client error"
+class GatewayError(ServiceError):
+    _msg = "gateway error"
 
 
 class TokenError(ServiceError): ...

@@ -185,6 +185,14 @@ class ProductsRepository(PaginationRepository[Product]):
             [{**price.dump(), "product_id": product_id} for price in product.prices],
         )
 
+    async def get_sub_id_by_id(self, product_id: int) -> int:
+        stmt = sa.select(Product.sub_id).filter_by(id=product_id)
+        res = await self._session.execute(stmt)
+        sub_id = res.scalar_one_or_none()
+        if sub_id is None:
+            raise NotFoundError()
+        return sub_id
+
 
 class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     model = RegionalPrice

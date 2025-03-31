@@ -8,8 +8,14 @@ from core.services.exceptions import ActionForbiddenError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
-from orders.domain.interfaces import SteamAPIClientI
-from orders.models import InAppOrder, OrderCategory, SteamTopUpOrder
+from orders.domain.interfaces import BaseOrderRepoI, SteamAPIClientI
+from orders.models import (
+    BaseOrder,
+    InAppOrder,
+    OrderCategory,
+    SteamGiftOrder,
+    SteamTopUpOrder,
+)
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
     EmailTemplatesI,
@@ -43,30 +49,31 @@ class PaymentsService(BaseService):
         self._tg_client = tg_client
         self._admin_tg_chat_id = admin_tg_chat_id
 
-    async def _process_steam_gift_order(
-        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
-    ) -> SteamTopUpOrder:
-        order = await uow.steam_top_up_repo.update_payment_details(
+    async def _mark_order_as_paid[T: BaseOrder](
+        self, dto: ProcessOrderPaymentDTO, repo: BaseOrderRepoI[T]
+    ):
+        return await repo.update_payment_details(
             **dto.model_dump(), check_is_pending=True
         )
+
+    async def _process_steam_gift_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> SteamGiftOrder:
+        order = await self._mark_order_as_paid(dto, uow.steam_gifts_repo)
         await self._steam_api.pay_gift_order(dto.order_id)
         return order
 
     async def _process_steam_top_up_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
     ) -> SteamTopUpOrder:
-        order = await uow.steam_top_up_repo.update_payment_details(
-            **dto.model_dump(), check_is_pending=True
-        )
+        order = await self._mark_order_as_paid(dto, uow.steam_top_up_repo)
         await self._steam_api.top_up_complete(dto.order_id)
         return order
 
     async def _process_in_app_order(
         self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
     ) -> InAppOrder:
-        order = await uow.in_app_orders_repo.update_payment_details(
-            **dto.model_dump(), check_is_pending=True
-        )
+        order = await self._mark_order_as_paid(dto, uow.in_app_orders_repo)
         return order
 
     async def process_payment(
@@ -124,7 +131,6 @@ class PaymentsService(BaseService):
                     to=order.client_email,
                 )
             )
-
         except NotFoundError:
             self._logger.error(
                 "Trying to pay for not active or not found order. Order id: %s",

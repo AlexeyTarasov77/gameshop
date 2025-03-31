@@ -35,7 +35,7 @@ class AllOrdersRepositoryI(Protocol):
     ) -> PaginationResT[BaseOrder]: ...
 
 
-class _BaseOrderRepoI[T: BaseOrder](Protocol):
+class BaseOrderRepoI[T: BaseOrder](Protocol):
     async def update_payment_details(
         self,
         bill_id: str,
@@ -46,7 +46,7 @@ class _BaseOrderRepoI[T: BaseOrder](Protocol):
     ) -> T: ...
 
 
-class InAppOrdersRepositoryI(_BaseOrderRepoI[InAppOrder], Protocol):
+class InAppOrdersRepositoryI(BaseOrderRepoI[InAppOrder], Protocol):
     async def create_with_items(
         self,
         dto: CreateInAppOrderDTO,
@@ -57,13 +57,15 @@ class InAppOrdersRepositoryI(_BaseOrderRepoI[InAppOrder], Protocol):
 
 class SteamAPIClientI(Protocol):
     async def create_top_up_order(self, dto: CreateSteamTopUpOrderDTO) -> UUID: ...
-    async def create_gift_order(self, dto: CreateSteamGiftOrderDTO) -> UUID: ...
+    async def create_gift_order(
+        self, dto: CreateSteamGiftOrderDTO, sub_id: int
+    ) -> UUID: ...
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO: ...
     async def top_up_complete(self, order_id: UUID): ...
     async def pay_gift_order(self, order_id: UUID): ...
 
 
-class SteamTopUpRepositoryI(_BaseOrderRepoI[SteamTopUpOrder], Protocol):
+class SteamTopUpRepositoryI(BaseOrderRepoI[SteamTopUpOrder], Protocol):
     async def create_with_id(
         self,
         dto: CreateSteamTopUpOrderDTO,
@@ -73,7 +75,7 @@ class SteamTopUpRepositoryI(_BaseOrderRepoI[SteamTopUpOrder], Protocol):
     ) -> SteamTopUpOrder: ...
 
 
-class SteamGiftsRepositoryI(_BaseOrderRepoI[SteamGiftOrder], Protocol):
+class SteamGiftsRepositoryI(BaseOrderRepoI[SteamGiftOrder], Protocol):
     async def create_with_id(
         self,
         dto: CreateSteamGiftOrderDTO,

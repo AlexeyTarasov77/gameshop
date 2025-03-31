@@ -6,7 +6,7 @@ from core.schemas import EMPTY_REGION
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
-    ClientError,
+    GatewayError,
     UnavailableProductError,
 )
 from core.uow import AbstractUnitOfWork
@@ -25,6 +25,7 @@ from orders.schemas import (
     InAppOrderExtendedDTO,
     CreateSteamTopUpOrderDTO,
     ShowBaseOrderDTO,
+    SteamGiftOrderDTO,
     SteamTopUpOrderDTO,
     SteamTopUpOrderExtendedDTO,
     UpdateOrderDTO,
@@ -198,7 +199,7 @@ class OrdersService(BaseService):
         try:
             top_up_id = await self._steam_api.create_top_up_order(dto)
         except ValueError as e:
-            raise ClientError(str(e))
+            raise GatewayError(str(e))
         percent_fee = await self._top_up_fee_manager.get_current_fee()
         if percent_fee is None:
             self._logger.warning(
@@ -233,28 +234,34 @@ class OrdersService(BaseService):
 
     async def create_steam_gift_order(
         self, dto: CreateSteamGiftOrderDTO, user_id: int | None
-    ) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
-        try:
-            order_id = await self._steam_api.create_gift_order(dto)
-        except ValueError as e:
-            raise ClientError(str(e))
+    ) -> OrderPaymentDTO[SteamGiftOrderDTO]:
+        # TODO: Change to gift fee managing
         percent_fee = await self._top_up_fee_manager.get_current_fee()
         if percent_fee is None:
             self._logger.warning(
                 "Steam top up fee is unset. Using default: %s", self._top_up_default_fee
             )
             percent_fee = self._top_up_default_fee
-        async with self._uow as uow:
-            order_amount = await uow.products_prices_repo.get_price_for_region(
-                int(dto.product_id), EMPTY_REGION
-            )
-            order_total = order_amount.total_price
-            order = await uow.steam_gifts_repo.create_with_id(
-                dto, order_id, percent_fee, user_id
-            )
-            payment_dto = await self._create_payment_bill(
-                dto.selected_ps, order, order_total, OrderCategory.STEAM_GIFT
-            )
+        product_id = int(dto.product_id)
+        try:
+            async with self._uow as uow:
+                sub_id = await uow.products_repo.get_sub_id_by_id(product_id)
+                try:
+                    gift_id = await self._steam_api.create_gift_order(dto, sub_id)
+                except ValueError as e:
+                    raise GatewayError(str(e))
+                order_amount = await uow.products_prices_repo.get_price_for_region(
+                    product_id, EMPTY_REGION
+                )
+                order_total = order_amount.total_price
+                order = await uow.steam_gifts_repo.create_with_id(
+                    dto, gift_id, percent_fee, user_id
+                )
+                payment_dto = await self._create_payment_bill(
+                    dto.selected_ps, order, order_total, OrderCategory.STEAM_GIFT
+                )
+        except NotFoundError:
+            raise EntityNotFoundError("Product", id=dto.product_id)
         self._logger.info(
             "Succesfully created steam gift order. Order id: %s, bill id: %s, client_email: %s",
             order.id,
@@ -262,6 +269,6 @@ class OrdersService(BaseService):
             order.client_email,
         )
         return OrderPaymentDTO(
-            order=SteamTopUpOrderDTO.model_validate(order),
+            order=SteamGiftOrderDTO.model_validate(order),
             payment_url=payment_dto.payment_url,
         )

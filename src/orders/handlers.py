@@ -14,6 +14,7 @@ from orders.schemas import (
     OrderPaymentDTO,
     InAppOrderDTO,
     ShowBaseOrderDTO,
+    SteamGiftOrderDTO,
     SteamTopUpOrderDTO,
     CreateSteamTopUpOrderDTO,
     SteamTopUpOrderExtendedDTO,
@@ -107,7 +108,7 @@ async def steam_send_gift(
     dto: CreateSteamGiftOrderDTO,
     orders_service: OrdersServiceDep,
     user_id: int | None = Depends(get_optional_user_id),
-) -> OrderPaymentDTO[SteamTopUpOrderDTO]:
+) -> OrderPaymentDTO[SteamGiftOrderDTO]:
     return await orders_service.create_steam_gift_order(dto, user_id)
 
 
