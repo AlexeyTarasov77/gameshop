@@ -1,3 +1,6 @@
+from core.utils.helpers import normalize_s
+
+
 class ServiceError(Exception):
     _msg = "unexpected service error"
 
@@ -13,12 +16,12 @@ class UnavailableProductError(ServiceError):
     def __init__(self, product_name: str, region: str | None = None):
         msg = f"Can't create order! Product {product_name} is not available"
         if region:
-            msg += " in region: " + region.strip()
+            msg += " in region: " + normalize_s(region)
         super().__init__(msg)
 
 
-class GatewayError(ServiceError):
-    _msg = "gateway error"
+class ClientError(ServiceError):
+    _msg = "client error"
 
 
 class TokenError(ServiceError): ...

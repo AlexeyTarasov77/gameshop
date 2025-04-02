@@ -38,7 +38,7 @@ class HTTPExceptionsMapper:
         service_exc.EntityNotFoundError: status.HTTP_404_NOT_FOUND,
         service_exc.EntityAlreadyExistsError: status.HTTP_409_CONFLICT,
         service_exc.EntityRelationshipNotFoundError: status.HTTP_400_BAD_REQUEST,
-        service_exc.GatewayError: status.HTTP_400_BAD_REQUEST,
+        service_exc.ClientError: status.HTTP_400_BAD_REQUEST,
         service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,
         service_exc.UnavailableProductError: status.HTTP_422_UNPROCESSABLE_ENTITY,
         service_exc.InvalidTokenError: status.HTTP_401_UNAUTHORIZED,

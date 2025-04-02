@@ -63,6 +63,18 @@ class CreateProductDTO(BaseProductDTO):
     discounted_price: Decimal
     deal_until: schemas.DateTimeAfterNow | None = None
     image: schemas.UploadImage
+    sub_id: int | None = None
+
+    @pydantic.field_validator("sub_id", mode="after")
+    @classmethod
+    def check_sub_id(
+        cls, value: int | None, info: pydantic.ValidationInfo
+    ) -> int | None:
+        if info.data["platform"] == models.ProductPlatform.STEAM and not value:
+            raise ValueError(
+                f"For {models.ProductPlatform.STEAM.name} platform sub_id must be supplied"
+            )
+        return value
 
 
 class UpdateProductDTO(schemas.BaseDTO):

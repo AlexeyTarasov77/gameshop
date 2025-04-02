@@ -190,7 +190,7 @@ class SteamTopUpRepository(OrdersRepositoryMixin[SteamTopUpOrder]):
             percent_fee=percent_fee,
             amount=dto.rub_amount,
             user_id=user_id,
-            **dto.model_dump(include={"steam_login", "customer_email"}),
+            **dto.model_dump(exclude={"rub_amount", "selected_ps"}),
         )
         return await super().save_order(order_obj)
 
@@ -205,14 +205,12 @@ class SteamGiftsRepository(OrdersRepositoryMixin[SteamGiftOrder]):
         self,
         dto: CreateSteamGiftOrderDTO,
         order_id: UUID,
-        percent_fee: int,
         user_id: int | None,
     ) -> SteamGiftOrder:
         order_obj = SteamGiftOrder(
             id=order_id,
-            percent_fee=percent_fee,
             user_id=user_id,
-            **dto.model_dump(),
+            **dto.model_dump(exclude={"rub_amount", "selected_ps"}),
         )
         return await super().save_order(order_obj)
 

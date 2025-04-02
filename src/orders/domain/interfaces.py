@@ -80,7 +80,6 @@ class SteamGiftsRepositoryI(BaseOrderRepoI[SteamGiftOrder], Protocol):
         self,
         dto: CreateSteamGiftOrderDTO,
         order_id: UUID,
-        percent_fee: int,
         user_id: int | None,
     ) -> SteamGiftOrder: ...
 

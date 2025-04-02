@@ -6,6 +6,7 @@ from decimal import Decimal
 import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
+from core.utils import normalize_s
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
@@ -226,16 +227,15 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
         res = await self._session.execute(stmt)
         return res.rowcount
 
-    async def get_price_for_region(self, product_id: int, region: str) -> RegionalPrice:
+    async def get_price_for_region(
+        self, product_id: int, region: str
+    ) -> RegionalPrice | None:
         stmt = sa.select(self.model).where(
             sa.and_(
                 sa.func.lower(sa.func.trim(self.model.region_code))
-                == region.lower().strip(),
+                == normalize_s(region),
                 self.model.product_id == product_id,
             )
         )
         res = await self._session.execute(stmt)
-        price = res.scalar_one_or_none()
-        if not price:
-            raise NotFoundError("price not found")
-        return price
+        return res.scalar_one_or_none()

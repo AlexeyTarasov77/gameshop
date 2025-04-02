@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pytz import UTC
 
 from core.schemas import EMPTY_REGION
+from core.utils.helpers import normalize_s
 from gateways.db.sqlalchemy_gateway import int_pk_type
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
 from sqlalchemy import CHAR, CheckConstraint, ForeignKey, UniqueConstraint, text
@@ -85,7 +86,7 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
             case ProductPlatform.STEAM:
                 return [ProductDeliveryMethod.KEY, ProductDeliveryMethod.GIFT]
             case ProductPlatform.XBOX:
-                regions = [price.region_code.lower().strip() for price in self.prices]
+                regions = [normalize_s(price.region_code) for price in self.prices]
                 assert len(regions) > 0
                 if XboxParseRegions.US in regions:
                     methods = [ProductDeliveryMethod.KEY]

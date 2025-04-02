@@ -4,7 +4,9 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
 from enum import StrEnum
 from sqlalchemy import CheckConstraint, ForeignKey, text
+from core.schemas import EMPTY_REGION
 from core.utils import LabeledEnum
+from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, declared_attr, relationship, mapped_column
@@ -31,6 +33,7 @@ class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
         CheckConstraint("customer_email IS NOT NULL OR user_id IS NOT NULL"),
     )
     user = None
+    total: Decimal | property = Decimal(-1)  # suborders should overwrite that
     id: Mapped[UUID] = mapped_column(PostgresUUID, default=uuid4, primary_key=True)
     order_date: Mapped[created_at_type]
     status: Mapped[OrderStatus] = mapped_column(
@@ -129,7 +132,6 @@ class SteamGiftOrder(BaseOrder):
     product_id: Mapped[int] = mapped_column(
         ForeignKey("product.id", ondelete="RESTRICT")
     )
-    percent_fee: Mapped[int]
     region: Mapped[str]
     product: Mapped[Product] = relationship(lazy="joined")
     user: Mapped[User | None] = relationship(
@@ -140,3 +142,10 @@ class SteamGiftOrder(BaseOrder):
     __mapper_args__ = {
         "polymorphic_identity": OrderCategory.STEAM_GIFT,
     }
+
+    @property
+    def total(self) -> Decimal:
+        for price in self.product.prices:
+            if normalize_s(price.region_code) == EMPTY_REGION:
+                return price.total_price
+        raise Exception("Unable to find product price for order's region")

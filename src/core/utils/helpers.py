@@ -15,3 +15,7 @@ def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
     with ThreadPoolExecutor(1) as pool:
         future = pool.submit(run_in_new_loop)
         return future.result()
+
+
+def normalize_s(s: str) -> str:
+    return s.strip().lower()

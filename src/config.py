@@ -59,7 +59,7 @@ class _Server(BaseModel):
 
     @property
     def addr(self):
-        return f"http{self.ssl_enabled and "s"}://{self.host}:{self.port}"
+        return f"http{"s" if self.ssl_enabled else ""}://{self.host}:{self.port}"
 
 
 class _SMTP(BaseModel):

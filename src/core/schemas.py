@@ -75,7 +75,7 @@ def _parse_int(s: str | int) -> int:
         return int(base64.b64decode(str(s)).decode())
     except ValueError:
         raise ValueError(
-            'Invalid id, it should be either valid int or int in str form ("1") or valid int base64 encoded'
+            'Invalid id, it should be either valid int, int in str form ("1") or valid int base64 encoded'
         )
 
 
@@ -118,7 +118,9 @@ ImgUrl = Annotated[
 ]
 UploadImage = Annotated[UploadFile, AfterValidator(_check_and_save_image)]
 _base64int_serializer = PlainSerializer(
-    lambda n: base64.b64encode(str(n).encode()).decode(), return_type=str
+    lambda n: base64.b64encode(str(n).encode()).decode(),
+    return_type=str,
+    when_used="json",
 )
 Base64Int = Annotated[
     str | int,
