@@ -46,6 +46,7 @@ class HTTPExceptionsMapper:
         service_exc.InvalidCredentialsError: status.HTTP_401_UNAUTHORIZED,
         service_exc.UserIsNotActivatedError: status.HTTP_403_FORBIDDEN,
         service_exc.UserAlreadyActivatedError: status.HTTP_403_FORBIDDEN,
+        service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,
     }
 
     def __init__(self, app: FastAPI, logger: logging.Logger):

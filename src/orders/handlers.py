@@ -112,7 +112,7 @@ async def steam_send_gift(
     return await orders_service.create_steam_gift_order(dto, user_id)
 
 
-@router.post("/top-up/fee", dependencies=[Depends(require_admin)])
+@router.post("/steam/top-up/fee", dependencies=[Depends(require_admin)])
 async def set_steam_top_up_fee(
     percent_fee: t.Annotated[int, Body(embed=True, gt=0)],
     orders_service: OrdersServiceDep,
@@ -121,7 +121,7 @@ async def set_steam_top_up_fee(
     return {"success": True}
 
 
-@router.get("/top-up/fee")
+@router.get("/steam/top-up/fee")
 async def get_steam_top_up_fee(
     orders_service: OrdersServiceDep,
 ) -> dict[str, int]:
