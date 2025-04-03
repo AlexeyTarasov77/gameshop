@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, update
 from sqlalchemy.orm import joinedload, selectin_polymorphic, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
@@ -26,7 +26,7 @@ from payments.models import AvailablePaymentSystems
 from products.models import Product
 
 
-class OrdersRepositoryMixin[T: BaseOrder](SqlAlchemyRepository):
+class BaseOrdersRepository[T: BaseOrder](SqlAlchemyRepository):
     async def update_payment_details(
         self,
         bill_id: str,
@@ -34,18 +34,21 @@ class OrdersRepositoryMixin[T: BaseOrder](SqlAlchemyRepository):
         order_id: UUID,
         *,
         check_is_pending: bool,
-    ) -> T:
+    ) -> BaseOrder:
         filters: dict[str, Any] = {"id": order_id}
         if check_is_pending:
             filters["status"] = OrderStatus.PENDING
-        return await super().update(
-            {
-                "bill_id": bill_id,
-                "paid_with": paid_with,
-                "status": OrderStatus.COMPLETED,
-            },
-            **filters,
+        stmt = (
+            update(BaseOrder)
+            .filter_by(**filters)
+            .values(bill_id=bill_id, paid_with=paid_with, status=OrderStatus.COMPLETED)
+            .returning(BaseOrder)
         )
+        res = await self._session.execute(stmt)
+        order = res.scalars().one_or_none()
+        if not order:
+            raise NotFoundError()
+        return order
 
     async def save_order(self, order_obj: T) -> T:
         self._session.add(order_obj)
@@ -110,7 +113,7 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
 
 
 class InAppOrdersRepository(
-    OrdersRepositoryMixin[InAppOrder], PaginationRepository[InAppOrder]
+    BaseOrdersRepository[InAppOrder], PaginationRepository[InAppOrder]
 ):
     model = InAppOrder
 
@@ -175,7 +178,7 @@ class InAppOrdersRepository(
         return order
 
 
-class SteamTopUpRepository(OrdersRepositoryMixin[SteamTopUpOrder]):
+class SteamTopUpRepository(BaseOrdersRepository[SteamTopUpOrder]):
     model = SteamTopUpOrder
 
     async def create_with_id(
@@ -198,7 +201,7 @@ class SteamTopUpRepository(OrdersRepositoryMixin[SteamTopUpOrder]):
         return await super().get_one(id=order_id)
 
 
-class SteamGiftsRepository(OrdersRepositoryMixin[SteamGiftOrder]):
+class SteamGiftsRepository(BaseOrdersRepository[SteamGiftOrder]):
     model = SteamGiftOrder
 
     async def create_with_id(

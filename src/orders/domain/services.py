@@ -1,7 +1,6 @@
 from logging import Logger
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
-from core.schemas import EMPTY_REGION
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
