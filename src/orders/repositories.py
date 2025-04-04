@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, select
 from sqlalchemy.orm import joinedload, selectin_polymorphic, selectinload
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
@@ -26,7 +26,17 @@ from payments.models import AvailablePaymentSystems
 from products.models import Product
 
 
-class BaseOrdersRepository[T: BaseOrder](SqlAlchemyRepository):
+class OrdersRepoMixin[T: BaseOrder](SqlAlchemyRepository[T]):
+    async def _save_order(self, order_obj: T) -> T:
+        self._session.add(order_obj)
+        await self._session.flush()
+        self._session.expunge(order_obj)
+        return order_obj
+
+
+class OrdersRepository(PaginationRepository[BaseOrder]):
+    model = BaseOrder
+
     async def update_payment_details(
         self,
         bill_id: str,
@@ -38,27 +48,14 @@ class BaseOrdersRepository[T: BaseOrder](SqlAlchemyRepository):
         filters: dict[str, Any] = {"id": order_id}
         if check_is_pending:
             filters["status"] = OrderStatus.PENDING
-        stmt = (
-            update(BaseOrder)
-            .filter_by(**filters)
-            .values(bill_id=bill_id, paid_with=paid_with, status=OrderStatus.COMPLETED)
-            .returning(BaseOrder)
+        return await super().update(
+            {
+                "bill_id": bill_id,
+                "paid_with": paid_with,
+                "status": OrderStatus.COMPLETED,
+            },
+            **filters,
         )
-        res = await self._session.execute(stmt)
-        order = res.scalars().one_or_none()
-        if not order:
-            raise NotFoundError()
-        return order
-
-    async def save_order(self, order_obj: T) -> T:
-        self._session.add(order_obj)
-        await self._session.flush()
-        self._session.expunge(order_obj)
-        return order_obj
-
-
-class OrdersRepository(PaginationRepository[BaseOrder]):
-    model = BaseOrder
 
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> BaseOrder:
         return await super().update(dto.model_dump(), id=order_id)
@@ -113,7 +110,7 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
 
 
 class InAppOrdersRepository(
-    BaseOrdersRepository[InAppOrder], PaginationRepository[InAppOrder]
+    OrdersRepoMixin[InAppOrder], PaginationRepository[InAppOrder]
 ):
     model = InAppOrder
 
@@ -177,8 +174,16 @@ class InAppOrdersRepository(
             raise NotFoundError()
         return order
 
+    async def get_customer_tg_by_id(self, order_id: UUID) -> str:
+        customer_tg = await self._session.scalar(
+            select(self.model.customer_tg_username).filter_by(id=order_id)
+        )
+        if customer_tg is None:
+            raise NotFoundError()
+        return customer_tg
 
-class SteamTopUpRepository(BaseOrdersRepository[SteamTopUpOrder]):
+
+class SteamTopUpRepository(OrdersRepoMixin[SteamTopUpOrder]):
     model = SteamTopUpOrder
 
     async def create_with_id(
@@ -195,13 +200,13 @@ class SteamTopUpRepository(BaseOrdersRepository[SteamTopUpOrder]):
             user_id=user_id,
             **dto.model_dump(exclude={"rub_amount", "selected_ps"}),
         )
-        return await super().save_order(order_obj)
+        return await super()._save_order(order_obj)
 
     async def get_by_id(self, order_id: UUID):
         return await super().get_one(id=order_id)
 
 
-class SteamGiftsRepository(BaseOrdersRepository[SteamGiftOrder]):
+class SteamGiftsRepository(OrdersRepoMixin[SteamGiftOrder]):
     model = SteamGiftOrder
 
     async def create_with_id(
@@ -215,7 +220,7 @@ class SteamGiftsRepository(BaseOrdersRepository[SteamGiftOrder]):
             user_id=user_id,
             **dto.model_dump(exclude={"rub_amount", "selected_ps"}),
         )
-        return await super().save_order(order_obj)
+        return await super()._save_order(order_obj)
 
 
 class TopUpFeeManager:

@@ -6,6 +6,7 @@ from functools import lru_cache
 from httpx import AsyncClient
 import punq
 from fastapi import Depends
+from core.tasks import BackgroundJobs
 from mailing.domain.services import MailingService
 from orders.repositories import TopUpFeeManager
 from payments.domain.interfaces import (
@@ -153,6 +154,7 @@ def _init_container() -> punq.Container:
     container.register(
         SessionCreatorI, RedisSessionCreator, ttl=cfg.server.sessions.ttl
     )
+    container.register(BackgroundJobs, BackgroundJobs)
     return container
 
 

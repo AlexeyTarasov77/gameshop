@@ -174,7 +174,7 @@ class ProductsRepository(PaginationRepository[Product]):
         """Inserts product and its related prices. If product already exists - ignores it"""
         product_data = {k: v for k, v in product.dump().items() if v is not None}
         product_id = await self._session.scalar(
-            insert(Product)
+            insert(self.model)
             .values(**product_data)
             .on_conflict_do_nothing()
             .returning(Product.id),
@@ -186,13 +186,27 @@ class ProductsRepository(PaginationRepository[Product]):
             [{**price.dump(), "product_id": product_id} for price in product.prices],
         )
 
-    async def get_sub_id_by_id(self, product_id: int) -> int:
-        stmt = sa.select(Product.sub_id).filter_by(id=product_id)
+    async def update_category_for_expired_sales(
+        self, categories: Sequence[ProductCategory], new_category: ProductCategory
+    ) -> int:
+        stmt = (
+            sa.update(self.model)
+            .where(
+                sa.and_(
+                    self.model.category.in_(categories),
+                    sa.and_(
+                        self.model.deal_until != None,  # noqa: E711
+                        (
+                            sa.func.now().op("at time zone")("UTC")
+                            >= self.model.deal_until.op("at time zone")("UTC")
+                        ),
+                    ),
+                )
+            )
+            .values(category=new_category)
+        )
         res = await self._session.execute(stmt)
-        sub_id = res.scalar_one_or_none()
-        if sub_id is None:
-            raise NotFoundError()
-        return sub_id
+        return res.rowcount
 
 
 class PricesRepository(SqlAlchemyRepository[RegionalPrice]):

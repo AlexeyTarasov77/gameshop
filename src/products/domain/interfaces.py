@@ -65,6 +65,10 @@ class ProductsRepositoryI(t.Protocol):
         self, ids: Sequence[int], *, only_in_stock: bool = False
     ) -> Sequence[Product]: ...
 
+    async def update_category_for_expired_sales(
+        self, categories: Sequence[ProductCategory], new_category: ProductCategory
+    ) -> int: ...
+
 
 class PricesRepositoryI(t.Protocol):
     async def add_price(self, for_product_id: int, base_price: Decimal) -> None: ...

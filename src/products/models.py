@@ -5,8 +5,12 @@ from pytz import UTC
 
 from core.schemas import EMPTY_REGION
 from core.utils.helpers import normalize_s
-from gateways.db.sqlalchemy_gateway import int_pk_type
-from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
+from gateways.db.sqlalchemy_gateway import (
+    int_pk_type,
+    timestamptz,
+    SqlAlchemyBaseModel,
+    TimestampMixin,
+)
 from sqlalchemy import CHAR, CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -71,7 +75,7 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     with_gp: Mapped[
         bool | None
     ]  # indicates whether discount applies to game pass (only for xbox sales)
-    deal_until: Mapped[datetime | None]
+    deal_until: Mapped[timestamptz | None]
     prices: Mapped[list["RegionalPrice"]] = relationship(
         back_populates="product", lazy="selectin"
     )
@@ -96,11 +100,17 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
                 return [ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE]
 
     @property
+    def is_discount_expired(self) -> bool:
+        if self.deal_until and (
+            datetime.now(UTC) >= self.deal_until.replace(tzinfo=UTC)
+        ):
+            return True
+        return False
+
+    @property
     def total_discount(self) -> int:
         discount = self.discount
-        if self.deal_until and (
-            datetime.now().replace(tzinfo=UTC) >= self.deal_until.replace(tzinfo=UTC)
-        ):
+        if self.is_discount_expired:
             discount = 0
         return discount
 

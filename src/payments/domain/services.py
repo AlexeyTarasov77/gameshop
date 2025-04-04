@@ -8,13 +8,10 @@ from core.services.exceptions import ActionForbiddenError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
-from orders.domain.interfaces import BaseOrderRepoI, SteamAPIClientI
+from orders.domain.interfaces import SteamAPIClientI
 from orders.models import (
     BaseOrder,
-    InAppOrder,
     OrderCategory,
-    SteamGiftOrder,
-    SteamTopUpOrder,
 )
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
@@ -49,31 +46,25 @@ class PaymentsService(BaseService):
         self._tg_client = tg_client
         self._admin_tg_chat_id = admin_tg_chat_id
 
-    async def _mark_order_as_paid[T: BaseOrder](
-        self, dto: ProcessOrderPaymentDTO, repo: BaseOrderRepoI[T]
-    ):
-        return await repo.update_payment_details(
+    async def _mark_order_as_paid(self, dto: ProcessOrderPaymentDTO):
+        return await self._uow.orders_repo.update_payment_details(
             **dto.model_dump(), check_is_pending=True
         )
 
-    async def _process_steam_gift_order(
-        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
-    ) -> SteamGiftOrder:
-        order = await self._mark_order_as_paid(dto, uow.steam_gifts_repo)
+    async def _process_steam_gift_order(self, dto: ProcessOrderPaymentDTO) -> BaseOrder:
+        order = await self._mark_order_as_paid(dto)
         await self._steam_api.pay_gift_order(dto.order_id)
         return order
 
     async def _process_steam_top_up_order(
-        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
-    ) -> SteamTopUpOrder:
-        order = await self._mark_order_as_paid(dto, uow.steam_top_up_repo)
+        self, dto: ProcessOrderPaymentDTO
+    ) -> BaseOrder:
+        order = await self._mark_order_as_paid(dto)
         await self._steam_api.top_up_complete(dto.order_id)
         return order
 
-    async def _process_in_app_order(
-        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
-    ) -> InAppOrder:
-        order = await self._mark_order_as_paid(dto, uow.in_app_orders_repo)
+    async def _process_in_app_order(self, dto: ProcessOrderPaymentDTO) -> BaseOrder:
+        order = await self._mark_order_as_paid(dto)
         return order
 
     async def process_payment(
@@ -97,26 +88,31 @@ class PaymentsService(BaseService):
         process_order_dto = ProcessOrderPaymentDTO(
             paid_with=ps_name, order_id=order_id, bill_id=bill_id
         )
+        additional_msg = ""
         try:
             async with self._uow as uow:
                 match payment_for:
                     case OrderCategory.IN_APP:
-                        order = await self._process_in_app_order(process_order_dto, uow)
+                        order = await self._process_in_app_order(process_order_dto)
+                        customer_tg = (
+                            await uow.in_app_orders_repo.get_customer_tg_by_id(order.id)
+                        )
+                        if customer_tg[0] != "@":
+                            customer_tg = "@" + customer_tg
+                        additional_msg = f"Телеграм заказчика: {customer_tg}"
                     case OrderCategory.STEAM_TOP_UP:
                         order = await self._process_steam_top_up_order(
-                            process_order_dto, uow
+                            process_order_dto
                         )
                     case OrderCategory.STEAM_GIFT:
-                        order = await self._process_steam_gift_order(
-                            process_order_dto, uow
-                        )
+                        order = await self._process_steam_gift_order(process_order_dto)
 
             admin_notification_msg = (
                 f"Заказ #{order.id} успешно оплачен!\n"
                 f"Сумма: {order_total} ₽\n"
                 f"Email заказчика: {order.customer_email} 📧\n"
                 f"Дата заказа: {order.order_date} 📆\n"
-                f"Тип заказа: {str(order.category.value)}\n"
+                f"Тип заказа: {str(order.category.value)}\n" + additional_msg
             )
             await self._tg_client.send_msg(
                 self._admin_tg_chat_id, admin_notification_msg

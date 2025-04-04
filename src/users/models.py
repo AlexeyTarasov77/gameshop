@@ -1,9 +1,12 @@
-from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey
-from gateways.db.sqlalchemy_gateway import int_pk_type
-from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel, TimestampMixin
+from gateways.db.sqlalchemy_gateway import (
+    int_pk_type,
+    timestamptz,
+    SqlAlchemyBaseModel,
+    TimestampMixin,
+)
 from sqlalchemy.dialects.postgresql import BYTEA, CITEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,4 +49,4 @@ class Token(SqlAlchemyBaseModel):
     scope: Mapped[TokenScopes]
     hash: Mapped[bytes] = mapped_column(BYTEA, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("user.id", ondelete="CASCADE"))
-    expiry: Mapped[datetime]
+    expiry: Mapped[timestamptz]
