@@ -2,15 +2,22 @@ import typing as t
 from datetime import timedelta
 
 from core.utils import UnspecifiedType
+from mailing.domain.interfaces import MailingTemplate
 from users.models import Token, TokenScopes, User
 from users.schemas import CreateUserDTO
 
 
 class EmailTemplatesI(t.Protocol):
-    async def signup(self, username: str, link: str) -> str: ...
-    async def password_reset(self, username: str, link: str) -> str: ...
-    async def new_activation_token(self, token: str, link: str) -> str: ...
-    async def email_verification(self, link: str) -> str: ...
+    async def signup(self, username: str, link: str) -> str | MailingTemplate: ...
+    async def password_reset(
+        self, username: str, link: str
+    ) -> str | MailingTemplate: ...
+    async def new_activation_token(
+        self, username: str, token: str, link: str
+    ) -> str | MailingTemplate: ...
+    async def email_verification(
+        self, username: str, link: str
+    ) -> str | MailingTemplate: ...
 
 
 class UsersRepositoryI(t.Protocol):

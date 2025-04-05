@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Заказ оформлен</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        p {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .order-id {
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 20px;
+            margin-top: 10px;
+            font-size: 16px;
+            color: #ffffff;
+            background-color: #17a2b8;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .button:hover {
+            background-color: #117a8b;
+        }
+
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Заказ успешно оформлен</h1>
+        <p>Здравствуйте, дорогой покупатель!</p>
+        <p>Ваш заказ был успешно оформлен и принят в обработку.</p>
+        <p>Уникальный номер вашего заказа:</p>
+        <div class="order-id">$order_id</div>
+        <p>Для просмотра деталей заказа и отслеживания его статуса нажмите на кнопку ниже:</p>
+        <a href="$order_details_link" class="button">Перейти к заказу</a>
+        <div class="footer">
+            <p>Спасибо за покупку!<br>Команда поддержки</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -245,7 +245,7 @@ class UsersService(BaseService):
                 self._email_verification_token_ttl,
             )
             email_body = await self._email_templates.email_verification(
-                self._email_verification_link_builder(token)
+                user.username, self._email_verification_link_builder(token)
             )
             asyncio.create_task(
                 self._mailing_service.send_mail(
@@ -316,7 +316,7 @@ class UsersService(BaseService):
             self._logger.info("User with email: %s not found", email)
             raise exc.EntityNotFoundError(self.entity_name, email=email)
         email_body = await self._email_templates.new_activation_token(
-            plain_token, self._activation_link_builder(plain_token)
+            user.username, plain_token, self._activation_link_builder(plain_token)
         )
         asyncio.create_task(
             self._mailing_service.send_mail(
