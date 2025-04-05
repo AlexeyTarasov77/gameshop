@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
 
+from mailing.domain.interfaces import MailingTemplate
 from orders.models import OrderCategory
 from payments.models import AvailablePaymentSystems
 from payments.schemas import PaymentBillDTO
@@ -24,7 +25,9 @@ class PaymentSystemI(Protocol):
 
 
 class EmailTemplatesI(Protocol):
-    async def order_checkout(self, order_details_link: str, order_id: UUID) -> str: ...
+    async def order_checkout(
+        self, order_details_link: str, order_id: UUID
+    ) -> MailingTemplate | str: ...
 
 
 class PaymentSystemFactoryI(Protocol):
