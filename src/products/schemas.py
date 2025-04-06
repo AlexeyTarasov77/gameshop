@@ -57,22 +57,45 @@ class BaseProductDTO(schemas.BaseDTO):
     discount: ProductDiscount
 
 
+def check_sub_id(value: int | None, info: pydantic.ValidationInfo) -> int | None:
+    print("RUNNING VALIDATOR")
+    print(info.data, info.data["platform"], models.ProductPlatform.STEAM)
+    if (
+        info.data["platform"] == models.ProductPlatform.STEAM
+        and info.data["category"] == models.ProductCategory.GAMES
+        and not value
+    ):
+        raise ValueError(
+            "For product with steam platform and 'games' category - sub_id must be supplied"
+        )
+    return value
+
+
+SubId = Annotated[int | None, pydantic.AfterValidator(check_sub_id)]
+
+
 class CreateProductDTO(BaseProductDTO):
     category: models.ProductCategory
     platform: models.ProductPlatform
     discounted_price: Decimal
     deal_until: schemas.DateTimeAfterNow | None = None
     image: schemas.UploadImage
-    sub_id: int | None = None
+    sub_id: SubId = None
 
     @pydantic.field_validator("sub_id", mode="after")
     @classmethod
     def check_sub_id(
         cls, value: int | None, info: pydantic.ValidationInfo
     ) -> int | None:
-        if info.data["platform"] == models.ProductPlatform.STEAM and not value:
+        print("RUNNING VALIDATOR")
+        print(info.data, info.data["platform"], models.ProductPlatform.STEAM)
+        if (
+            info.data["platform"] == models.ProductPlatform.STEAM
+            and info.data["category"] == models.ProductCategory.GAMES
+            and not value
+        ):
             raise ValueError(
-                f"For {models.ProductPlatform.STEAM.name} platform sub_id must be supplied"
+                "For product with steam platform and 'games' category - sub_id must be supplied"
             )
         return value
 

@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI | None = None):
     logger = Resolve(Logger)
     db = Resolve(SqlAlchemyClient)
     redis_client = Resolve(RedisClient)
-    bg_jobs = Resolve(BackgroundJobs)
+    # bg_jobs = Resolve(BackgroundJobs)
     logger.info("Pinging database...")
     done_tasks, _ = await asyncio.wait(
         [asyncio.create_task(redis_client.ping()), asyncio.create_task(db.ping())],
@@ -57,8 +57,8 @@ async def lifespan(app: FastAPI | None = None):
     [await task for task in done_tasks]
     await redis_client.setup()
     logger.info("Gateways are ready to accept connections!")
-    bg_jobs.run()
-    logger.info("Background jobs succesfully launched!")
+    # bg_jobs.run()
+    # logger.info("Background jobs succesfully launched!")
     try:
         yield
     finally:

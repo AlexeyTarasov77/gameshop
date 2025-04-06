@@ -59,8 +59,11 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
         UniqueConstraint(*unique_fields),
         CheckConstraint(
             text(
-                "(platform = :steam_platform AND sub_id IS NOT NULL) OR (platform != :steam_platform AND sub_id IS NULL)"
-            ).bindparams(steam_platform=ProductPlatform.STEAM.name)
+                "(platform = :steam_platform AND category = :games_cat AND sub_id IS NOT NULL) OR (platform != :steam_platform OR category != :games_cat AND sub_id IS NULL)"
+            ).bindparams(
+                steam_platform=ProductPlatform.STEAM.name,
+                games_cat=ProductCategory.GAMES.name,
+            )
         ),
     )
 

@@ -11,7 +11,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-from products.models import ProductPlatform
+from products.models import ProductCategory, ProductPlatform
 
 
 # revision identifiers, used by Alembic.
@@ -49,8 +49,11 @@ def upgrade() -> None:
         "product_sub_id_check",
         "product",
         sa.text(
-            "(platform = :steam_platform AND sub_id IS NOT NULL) OR (platform != :steam_platform AND sub_id IS NULL)"
-        ).bindparams(steam_platform=ProductPlatform.STEAM.name),
+            "(platform = :steam_platform AND category = :games_cat AND sub_id IS NOT NULL) OR (platform != :steam_platform OR category != :games_cat AND sub_id IS NULL)"
+        ).bindparams(
+            steam_platform=ProductPlatform.STEAM.name,
+            games_cat=ProductCategory.GAMES.name,
+        ),
     )
     # ### end Alembic commands ###
 

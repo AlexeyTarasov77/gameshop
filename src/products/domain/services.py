@@ -214,6 +214,15 @@ class ProductsService(BaseService):
         return UpdatePricesResDTO(updated_count=updated_count)
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
+        if (
+            dto.platform == ProductPlatform.STEAM
+            and dto.category == ProductCategory.GAMES
+            and not dto.sub_id
+        ):
+            raise ValueError(
+                "For product with steam platform and 'games' category - sub_id must be supplied"
+            )
+
         base_price = dto.discounted_price / (100 - dto.discount) * 100
         try:
             async with self._uow as uow:
