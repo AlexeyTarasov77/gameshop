@@ -49,4 +49,8 @@ def get_uploaded_file_url(filename: str) -> str:
     from core.ioc import Resolve
 
     cfg = Resolve(Config)
-    return f"{cfg.server.addr}/media/{filename}"
+    base_url = cfg.server.addr
+    # assume that in not local environment server works behind proxy, e.g nginx which uses default port
+    if cfg.mode != "local":
+        base_url = base_url[: base_url.rfind(":")]
+    return f"{base_url}/media/{filename}"
