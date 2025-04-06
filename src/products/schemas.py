@@ -81,7 +81,7 @@ class UpdateProductDTO(schemas.BaseDTO):
     name: str | None = pydantic.Field(min_length=3, default=None)
     in_stock: bool | None = None
     description: str | None = pydantic.Field(min_length=10, default=None)
-    regular_price: Decimal | None = pydantic.Field(ge=0, default=None)
+    base_price: Decimal | None = pydantic.Field(ge=0, default=None)
     category: models.ProductCategory | None = None
     platform: models.ProductPlatform | None = None
     image: schemas.UploadImage | None = None

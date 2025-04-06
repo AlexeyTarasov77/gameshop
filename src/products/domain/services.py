@@ -267,6 +267,10 @@ class ProductsService(BaseService):
                 product = await uow.products_repo.update_by_id_with_image(
                     product_id, dto, cast(str | None, dto.image)
                 )
+                if dto.base_price is not None:
+                    await uow.products_prices_repo.update_for_product(
+                        product.id, dto.base_price
+                    )
         except AlreadyExistsError:
             raise EntityAlreadyExistsError(
                 self.entity_name,

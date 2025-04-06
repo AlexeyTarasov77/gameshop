@@ -121,7 +121,7 @@ class ProductsRepository(PaginationRepository[Product]):
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
     ) -> Product:
         data = dto.model_dump(
-            exclude={"image"},
+            exclude={"image", "base_price"},
             exclude_unset=True,
         )
         if image_url:
@@ -253,3 +253,6 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def update_for_product(self, product_id: int, new_price: Decimal) -> None:
+        await super().update({"base_price": new_price}, product_id=product_id)
