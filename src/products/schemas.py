@@ -1,17 +1,18 @@
 from datetime import datetime
 from pydantic_extra_types.country import CountryAlpha2
 from decimal import Decimal
-from enum import Enum, StrEnum
+from enum import StrEnum
 from typing import Any, Annotated
 
 from core import schemas
 import pydantic
 
+from core.utils.enums import LabeledEnum
 from gateways.currency_converter import PriceUnitDTO
 from products import models
 
 
-def _base_field_ser(v: Enum) -> dict[str, Any]:
+def _base_field_ser(v: LabeledEnum) -> dict[str, Any]:
     name = v.value.label
     url = v.name.replace("_", "-").lower()
     return {"name": name, "url": url, "id": v.value}
@@ -31,6 +32,9 @@ ProductCategoryField = Annotated[
 ProductDeliveryMethodField = Annotated[
     models.ProductDeliveryMethod, pydantic.PlainSerializer(_base_field_ser)
 ]
+SalesCategoryField = Annotated[
+    models.SalesCategories, pydantic.PlainSerializer(_base_field_ser)
+]
 ProductDiscount = Annotated[int, pydantic.AfterValidator(_check_discount)]
 
 
@@ -40,7 +44,7 @@ class RegionalPriceDTO(schemas.BaseDTO):
 
 
 class CategoriesListDTO(schemas.BaseDTO):
-    categories: list[ProductCategoryField]
+    categories: list[ProductCategoryField | SalesCategoryField]
 
 
 class PlatformsListDTO(schemas.BaseDTO):

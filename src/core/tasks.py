@@ -9,8 +9,6 @@ class BackgroundJobs:
         self._logger = logger
 
     async def _remove_products_from_sale(self):
-        """Changes product category from *_SALES to GAMES if discount expired.
-        After every change waits for specified time interval"""
         timeout_sec = 60 * 60 * 6  # 6 hours
         while True:
             async with self._uow as uow:

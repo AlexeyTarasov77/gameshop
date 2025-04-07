@@ -25,6 +25,7 @@ from products.models import (
     ProductDeliveryMethod,
     ProductPlatform,
     RegionalPrice,
+    SalesCategories,
     XboxParseRegions,
 )
 from products.schemas import (
@@ -236,7 +237,9 @@ class ProductsService(BaseService):
         return PlatformsListDTO(platforms=list(ProductPlatform))
 
     async def categories_list(self) -> CategoriesListDTO:
-        return CategoriesListDTO(categories=list(ProductCategory))
+        return CategoriesListDTO(
+            categories=list(ProductCategory) + list(SalesCategories)
+        )
 
     async def delivery_methods_list(self) -> DeliveryMethodsListDTO:
         return DeliveryMethodsListDTO(delivery_methods=list(ProductDeliveryMethod))

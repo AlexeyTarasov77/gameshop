@@ -24,6 +24,11 @@ class ProductPlatform(LabeledEnum):
     STEAM = "steam"
 
 
+class SalesCategories(LabeledEnum):
+    XBOX_SALES = "Распродажи xbox"
+    PSN_SALES = "Распродажи psn"
+
+
 class ProductCategory(LabeledEnum):
     GAMES = "Игры"
     SUBSCRIPTIONS = "Подписки"
