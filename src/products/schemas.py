@@ -57,47 +57,27 @@ class BaseProductDTO(schemas.BaseDTO):
     discount: ProductDiscount
 
 
-def check_sub_id(value: int | None, info: pydantic.ValidationInfo) -> int | None:
-    print("RUNNING VALIDATOR")
-    print(info.data, info.data["platform"], models.ProductPlatform.STEAM)
-    if (
-        info.data["platform"] == models.ProductPlatform.STEAM
-        and info.data["category"] == models.ProductCategory.GAMES
-        and not value
-    ):
-        raise ValueError(
-            "For product with steam platform and 'games' category - sub_id must be supplied"
-        )
-    return value
-
-
-SubId = Annotated[int | None, pydantic.AfterValidator(check_sub_id)]
-
-
 class CreateProductDTO(BaseProductDTO):
     category: models.ProductCategory
     platform: models.ProductPlatform
+    delivery_method: models.ProductDeliveryMethod
     discounted_price: Decimal
     deal_until: schemas.DateTimeAfterNow | None = None
     image: schemas.UploadImage
-    sub_id: SubId = None
+    sub_id: int | None = None
 
-    @pydantic.field_validator("sub_id", mode="after")
-    @classmethod
-    def check_sub_id(
-        cls, value: int | None, info: pydantic.ValidationInfo
-    ) -> int | None:
-        print("RUNNING VALIDATOR")
-        print(info.data, info.data["platform"], models.ProductPlatform.STEAM)
+    @pydantic.model_validator(mode="after")
+    def check_fields(self):
         if (
-            info.data["platform"] == models.ProductPlatform.STEAM
-            and info.data["category"] == models.ProductCategory.GAMES
-            and not value
+            self.platform == models.ProductPlatform.STEAM
+            and self.category == models.ProductCategory.GAMES
+            and not self.sub_id
         ):
             raise ValueError(
                 "For product with steam platform and 'games' category - sub_id must be supplied"
             )
-        return value
+
+        return self
 
 
 class UpdateProductDTO(schemas.BaseDTO):
@@ -139,7 +119,7 @@ class ShowProduct(BaseProductDTO):
     in_stock: bool
     category: ProductCategoryField
     platform: ProductPlatformField
-    delivery_methods: list[ProductDeliveryMethodField]
+    delivery_method: ProductDeliveryMethodField
 
 
 class ProductForLoadDTO(schemas.BaseDTO):

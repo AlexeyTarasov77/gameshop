@@ -1,4 +1,3 @@
-from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
@@ -27,6 +26,11 @@ from products.schemas import (
 
 class ProductsRepository(PaginationRepository[Product]):
     model = Product
+
+    def _is_deal_until_expired_stmt(self):
+        return sa.func.now().op("at time zone")("UTC") >= self.model.deal_until.op(
+            "at time zone"
+        )("UTC")
 
     async def filter_paginated_list(
         self,
@@ -61,7 +65,7 @@ class ProductsRepository(PaginationRepository[Product]):
             base_cond = sa.and_(
                 sa.or_(
                     self.model.deal_until.is_(None),
-                    self.model.deal_until >= datetime.now(),
+                    sa.not_(self._is_deal_until_expired_stmt()),
                 ),
                 self.model.discount > 0,
             )
@@ -72,17 +76,14 @@ class ProductsRepository(PaginationRepository[Product]):
             stmt = stmt.where(Product.category.in_(dto.categories))
         if dto.platforms:
             stmt = stmt.where(Product.platform.in_(dto.platforms))
+        if dto.delivery_methods:
+            stmt = stmt.where(Product.delivery_method.in_(dto.delivery_methods))
         res = await self._session.execute(stmt)
         products = res.scalars().all()
         filtered_products = []
         for product in products:
-            if not product.prices:
-                continue
-            if dto.delivery_methods and not any(
-                m in dto.delivery_methods for m in product.delivery_methods
-            ):
-                continue
-            filtered_products.append(product)
+            if product.prices:
+                filtered_products.append(product)
 
         offset = pagination_params.calc_offset()
         return filtered_products[offset : offset + pagination_params.page_size], len(
@@ -90,14 +91,22 @@ class ProductsRepository(PaginationRepository[Product]):
         )
 
     async def create_with_price(
-        self, dto: CreateProductDTO, base_price: Decimal
+        self,
+        dto: CreateProductDTO,
+        base_price: Decimal,
+        original_curr: str | None = None,
     ) -> Product:
         product = Product(
             image_url=dto.image,
             **dto.model_dump(
                 exclude={"image", "discounted_price"},
             ),
-            prices=[RegionalPrice(base_price=base_price)],
+            prices=[
+                RegionalPrice(
+                    base_price=base_price,
+                    original_curr=normalize_s(original_curr) if original_curr else None,
+                )
+            ],
         )
         self._session.add(product)
         await self._session.flush()
@@ -170,36 +179,55 @@ class ProductsRepository(PaginationRepository[Product]):
         if updated_id is None:
             raise NotFoundError()
 
-    async def save_ignore_conflict(self, product: Product):
+    async def save_on_conflict_update_discount(self, product: Product):
         """Inserts product and its related prices. If product already exists - ignores it"""
         product_data = {k: v for k, v in product.dump().items() if v is not None}
-        product_id = await self._session.scalar(
+        res = await self._session.execute(
             insert(self.model)
             .values(**product_data)
-            .on_conflict_do_nothing()
-            .returning(Product.id),
+            .on_conflict_do_update(
+                index_elements=["name", "category", "platform"],
+                set_={"discount": product.discount, "deal_until": product.deal_until},
+            )
+            .returning(
+                Product.id, sa.text("xmax=0")
+            ),  # xmax is a postgres specific field, which indicates whether row was deleted (updated) or no
         )
-        if product_id is None:
-            return
-        await self._session.execute(
-            insert(RegionalPrice),
-            [{**price.dump(), "product_id": product_id} for price in product.prices],
+        product_id, inserted = res.all()[0]
+        if inserted:
+            await self._session.execute(
+                insert(RegionalPrice),
+                [
+                    {**price.dump(), "product_id": product_id}
+                    for price in product.prices
+                ],
+            )
+
+    async def update_with_expired_discount(self, **values) -> int:
+        stmt = (
+            sa.update(self.model)
+            .where(
+                sa.and_(
+                    self.model.deal_until.isnot(None),
+                    self._is_deal_until_expired_stmt(),
+                ),
+            )
+            .values(**values)
         )
+        res = await self._session.execute(stmt)
+        return res.rowcount
 
     async def update_category_for_expired_sales(
-        self, categories: Sequence[ProductCategory], new_category: ProductCategory
+        self, for_categories: Sequence[ProductCategory], new_category: ProductCategory
     ) -> int:
         stmt = (
             sa.update(self.model)
             .where(
                 sa.and_(
-                    self.model.category.in_(categories),
+                    self.model.category.in_(for_categories),
                     sa.and_(
-                        self.model.deal_until != None,  # noqa: E711
-                        (
-                            sa.func.now().op("at time zone")("UTC")
-                            >= self.model.deal_until.op("at time zone")("UTC")
-                        ),
+                        self.model.deal_until.isnot(None),
+                        self._is_deal_until_expired_stmt(),
                     ),
                 )
             )
@@ -222,9 +250,7 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
         stmt = (
             sa.update(self.model)
             .values(base_price=update_price_clause)
-            .where(
-                sa.func.lower(self.model.converted_from_curr) == for_currency.lower()
-            )
+            .where(sa.func.lower(self.model.original_curr) == for_currency.lower())
         )
         await self._session.execute(stmt)
 

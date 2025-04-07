@@ -1,7 +1,6 @@
 import asyncio
 from logging import Logger
 from core.uow import AbstractUnitOfWork
-from products.models import ProductCategory
 
 
 class BackgroundJobs:
@@ -15,11 +14,8 @@ class BackgroundJobs:
         timeout_sec = 60 * 60 * 6  # 6 hours
         while True:
             async with self._uow as uow:
-                updated_count = (
-                    await uow.products_repo.update_category_for_expired_sales(
-                        [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
-                        ProductCategory.GAMES,
-                    )
+                updated_count = await uow.products_repo.update_with_expired_discount(
+                    deal_until=None, discount=0
                 )
                 self._logger.info("%d products removed from sale", updated_count)
             await asyncio.sleep(timeout_sec)

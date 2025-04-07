@@ -4,7 +4,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from pytz import UTC
 
 from core.schemas import EMPTY_REGION
-from core.utils.helpers import normalize_s
 from gateways.db.sqlalchemy_gateway import (
     int_pk_type,
     timestamptz,
@@ -30,8 +29,6 @@ class ProductCategory(LabeledEnum):
     SUBSCRIPTIONS = "Подписки"
     RECHARGE_CARDS = "Карты пополнения"
     DONATE = "Внутриигровая валюта"
-    XBOX_SALES = "Распродажа XBOX"
-    PSN_SALES = "Распродажа PSN"
     STEAM_KEYS = "Ключи Steam"
 
 
@@ -72,6 +69,7 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     description: Mapped[str] = mapped_column(server_default="")
     category: Mapped[ProductCategory]
     platform: Mapped[ProductPlatform]
+    delivery_method: Mapped[ProductDeliveryMethod]
     image_url: Mapped[str]
     in_stock: Mapped[bool] = mapped_column(server_default=text("true"))
     discount: Mapped[int] = mapped_column(server_default=text("0"))
@@ -84,23 +82,23 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
     )
     sub_id: Mapped[int | None]
 
-    @property
-    def delivery_methods(self) -> list[ProductDeliveryMethod]:
-        """Chooses delivery_methods based on product platform and price regions"""
-        match self.platform:
-            case ProductPlatform.PSN:
-                return [ProductDeliveryMethod.ACCOUNT_PURCHASE]
-            case ProductPlatform.STEAM:
-                return [ProductDeliveryMethod.KEY, ProductDeliveryMethod.GIFT]
-            case ProductPlatform.XBOX:
-                regions = [normalize_s(price.region_code) for price in self.prices]
-                assert len(regions) > 0
-                if XboxParseRegions.US in regions:
-                    methods = [ProductDeliveryMethod.KEY]
-                    if len(regions) > 1:  # if something except of us
-                        methods.append(ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE)
-                    return methods
-                return [ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE]
+    # @property
+    # def delivery_methods(self) -> list[ProductDeliveryMethod]:
+    #     """Chooses delivery_methods based on product platform and price regions"""
+    #     match self.platform:
+    #         case ProductPlatform.PSN:
+    #             return [ProductDeliveryMethod.ACCOUNT_PURCHASE]
+    #         case ProductPlatform.STEAM:
+    #             return [ProductDeliveryMethod.KEY, ProductDeliveryMethod.GIFT]
+    #         case ProductPlatform.XBOX:
+    #             regions = [normalize_s(price.region_code) for price in self.prices]
+    #             assert len(regions) > 0
+    #             if XboxParseRegions.US in regions:
+    #                 methods = [ProductDeliveryMethod.KEY]
+    #                 if len(regions) > 1:  # if something except of us
+    #                     methods.append(ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE)
+    #                 return methods
+    #             return [ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE]
 
     @property
     def is_discount_expired(self) -> bool:
@@ -131,7 +129,7 @@ class RegionalPrice(SqlAlchemyBaseModel):
     region_code: Mapped[str] = mapped_column(
         CHAR(3), primary_key=True, server_default=text(EMPTY_REGION)
     )
-    converted_from_curr: Mapped[str | None] = mapped_column(CHAR(3))
+    original_curr: Mapped[str | None] = mapped_column(CHAR(3))
 
     @property
     def total_price(self) -> Decimal:

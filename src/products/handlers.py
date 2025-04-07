@@ -4,7 +4,7 @@ from core.ioc import Inject
 from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep, restrict_content_type
-from fastapi import APIRouter, Form, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Form, Depends, Query, status
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
@@ -57,10 +57,7 @@ async def create_product(
     dto: t.Annotated[schemas.CreateProductDTO, Form(media_type="multipart/form-data")],
     products_service: ProductsServiceDep,
 ) -> schemas.ShowProduct:
-    try:
-        return await products_service.create_product(dto)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
+    return await products_service.create_product(dto)
 
 
 @router.put(

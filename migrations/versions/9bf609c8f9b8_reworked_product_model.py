@@ -48,7 +48,7 @@ def upgrade() -> None:
         sa.Column("product_id", sa.Integer(), nullable=False),
         sa.Column("base_price", sa.Numeric(), nullable=False),
         sa.Column("region_code", sa.CHAR(length=3), server_default="", nullable=False),
-        sa.Column("converted_from_curr", sa.CHAR(length=3), nullable=True),
+        sa.Column("original_curr", sa.CHAR(length=3), nullable=True),
         sa.ForeignKeyConstraint(["product_id"], ["product.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("product_id", "region_code"),
     )

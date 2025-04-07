@@ -167,26 +167,19 @@ class ProductsService(BaseService):
                         RegionalPrice(
                             base_price=price_in_rub,
                             region_code=region,
-                            converted_from_curr=price.currency_code,
+                            original_curr=price.currency_code,
                         )
                     )
                 product = Product(
                     **item.model_dump(exclude={"prices"}),
                     prices=calculated_prices,
-                    category={
-                        ProductPlatform.XBOX: ProductCategory.XBOX_SALES,
-                        ProductPlatform.PSN: ProductCategory.PSN_SALES,
+                    category=ProductCategory.GAMES,
+                    delivery_method={
+                        ProductPlatform.XBOX: ProductDeliveryMethod.KEY,
+                        ProductPlatform.PSN: ProductDeliveryMethod.ACCOUNT_PURCHASE,
                     }[item.platform],
                 )
-                try:
-                    await uow.products_repo.update_by_name(
-                        product.name,
-                        [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
-                        discount=product.discount,
-                        deal_until=product.deal_until,
-                    )
-                except NotFoundError:
-                    await uow.products_repo.save_ignore_conflict(product)
+                await uow.products_repo.save_ignore_conflict(product)
 
     async def load_new_steam_items(self, items: Sequence[SteamItemDTO]):
         products_for_save = [
@@ -194,6 +187,7 @@ class ProductsService(BaseService):
                 **item.model_dump(exclude={"price_rub"}),
                 category=ProductCategory.STEAM_KEYS,
                 platform=ProductPlatform.STEAM,
+                delivery_method=ProductDeliveryMethod.GIFT,
                 prices=[RegionalPrice(base_price=item.price_rub)],
             )
             for item in items
@@ -206,7 +200,6 @@ class ProductsService(BaseService):
         async with self._uow as uow:
             products_ids_for_update = await uow.products_repo.fetch_ids_for_platforms(
                 dto.for_platforms,
-                [ProductCategory.XBOX_SALES, ProductCategory.PSN_SALES],
             )
             updated_count = await uow.products_prices_repo.add_percent_for_products(
                 products_ids_for_update, dto.percent
@@ -214,19 +207,15 @@ class ProductsService(BaseService):
         return UpdatePricesResDTO(updated_count=updated_count)
 
     async def create_product(self, dto: CreateProductDTO) -> ShowProduct:
-        if (
-            dto.platform == ProductPlatform.STEAM
-            and dto.category == ProductCategory.GAMES
-            and not dto.sub_id
-        ):
-            raise ValueError(
-                "For product with steam platform and 'games' category - sub_id must be supplied"
-            )
-
         base_price = dto.discounted_price / (100 - dto.discount) * 100
+        original_curr = None
+        if dto.platform in [ProductPlatform.XBOX, ProductPlatform.PSN]:
+            original_curr = "usd"
         try:
             async with self._uow as uow:
-                product = await uow.products_repo.create_with_price(dto, base_price)
+                product = await uow.products_repo.create_with_price(
+                    dto, base_price, original_curr
+                )
         except AlreadyExistsError as e:
             raise EntityAlreadyExistsError(
                 self.entity_name,

@@ -32,12 +32,15 @@ class CurrencyConverterI(t.Protocol):
 
 class ProductsRepositoryI(t.Protocol):
     async def create_with_price(
-        self, dto: CreateProductDTO, base_price: Decimal
+        self,
+        dto: CreateProductDTO,
+        base_price: Decimal,
+        original_curr: str | None = None,
     ) -> Product: ...
     async def update_by_name(
         self, name: str, exclude_categories: Sequence[ProductCategory], **values
     ): ...
-    async def save_ignore_conflict(self, product: Product): ...
+    async def save_on_conflict_update_discount(self, product: Product): ...
 
     async def update_by_id_with_image(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
@@ -46,9 +49,7 @@ class ProductsRepositoryI(t.Protocol):
     async def delete_by_id(self, product_id: int) -> None: ...
 
     async def fetch_ids_for_platforms(
-        self,
-        platforms: Sequence[ProductPlatform],
-        exclude_categories: Sequence[ProductCategory],
+        self, platforms: Sequence[ProductPlatform]
     ) -> Sequence[int]: ...
 
     async def filter_paginated_list(
@@ -65,9 +66,7 @@ class ProductsRepositoryI(t.Protocol):
         self, ids: Sequence[int], *, only_in_stock: bool = False
     ) -> Sequence[Product]: ...
 
-    async def update_category_for_expired_sales(
-        self, categories: Sequence[ProductCategory], new_category: ProductCategory
-    ) -> int: ...
+    async def update_with_expired_discount(self, **values) -> int: ...
 
 
 class PricesRepositoryI(t.Protocol):
