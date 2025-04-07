@@ -11,13 +11,13 @@ class CIEnum(StrEnum):
         return (isinstance(value, str) and cls.__members__.get(value.upper())) or None
 
 
-class _labeledID(int):
+class IntWithLabel(int):
     def __new__(cls, value: int, *args, **kwargs):
         if value <= 0:
             raise ValueError("id should be > 0")
         return super().__new__(cls, value)
 
-    def __init__(self, _, label: str) -> None:
+    def __init__(self, value: int, label: str) -> None:
         super().__init__()
         self.label = label
 
@@ -29,7 +29,7 @@ class LabeledEnum(Enum):
     def __new__(cls, value: str):
         cls._next_id = getattr(cls, "_next_id", 0) + 1
         obj = object.__new__(cls)
-        obj._value_ = _labeledID(cls._next_id, value)
+        obj._value_ = IntWithLabel(cls._next_id, value)
         return obj
 
     @classmethod

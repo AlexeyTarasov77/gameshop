@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pytz import UTC
 
 from core.schemas import EMPTY_REGION
+from core.utils.enums import IntWithLabel
 from gateways.db.sqlalchemy_gateway import (
     int_pk_type,
     timestamptz,
@@ -12,8 +13,8 @@ from gateways.db.sqlalchemy_gateway import (
 )
 from sqlalchemy import CHAR, CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from enum import auto
+from random import randint
+from enum import Enum, auto
 
 from core.utils import CIEnum, LabeledEnum
 
@@ -24,9 +25,9 @@ class ProductPlatform(LabeledEnum):
     STEAM = "steam"
 
 
-class SalesCategories(LabeledEnum):
-    XBOX_SALES = "Распродажи xbox"
-    PSN_SALES = "Распродажи psn"
+class SalesCategories(Enum):
+    XBOX_SALES = IntWithLabel(randint(10, 100), "Распродажи xbox")
+    PSN_SALES = IntWithLabel(randint(10, 100), "Распродажи psn")
 
 
 class ProductCategory(LabeledEnum):
@@ -34,13 +35,14 @@ class ProductCategory(LabeledEnum):
     SUBSCRIPTIONS = "Подписки"
     RECHARGE_CARDS = "Карты пополнения"
     DONATE = "Внутриигровая валюта"
+    STEAM_TOPUP = "Пополнение Steam"
 
 
 class ProductDeliveryMethod(LabeledEnum):
     KEY = "Ключ"
     ACCOUNT_PURCHASE = "Покупка на аккаунт"
     NEW_ACCOUNT_PURCHASE = "Покупка на новый аккаунт"
-    GIFT = "Передача подарком"
+    GIFT = "gift"
 
 
 class PsnParseRegions(CIEnum):

@@ -1,5 +1,5 @@
 from types import EllipsisType
-from .enums import LabeledEnum, CIEnum
+from .enums import LabeledEnum, CIEnum, IntWithLabel
 from .httpx_utils import JWTAuth
 from .helpers import run_coroutine_sync, normalize_s
 from .files import (
