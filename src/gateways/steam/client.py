@@ -40,10 +40,10 @@ class GamesForFarmAPIClient:
         self._logger.info("Goods succesfully fetched and filtered")
         return [self._good_to_dto(good) for good in goods_no_bundle]
 
-    async def fetch_and_save(self):
-        goods = await self._fetch_goods_without_bundle()
-        await self._service.load_new_steam_items(goods)
-        self._logger.info("Fetched goods succesfully loaded")
+    # async def fetch_and_save(self):
+    #     goods = await self._fetch_goods_without_bundle()
+    #     await self._service.load_new_steam_items(goods)
+    #     self._logger.info("Fetched goods succesfully loaded")
 
 
 class NSGiftsAPIClient:

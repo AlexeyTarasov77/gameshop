@@ -29,7 +29,6 @@ class ProductCategory(LabeledEnum):
     SUBSCRIPTIONS = "Подписки"
     RECHARGE_CARDS = "Карты пополнения"
     DONATE = "Внутриигровая валюта"
-    STEAM_KEYS = "Ключи Steam"
 
 
 class ProductDeliveryMethod(LabeledEnum):

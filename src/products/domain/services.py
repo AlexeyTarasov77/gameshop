@@ -36,7 +36,6 @@ from products.schemas import (
     SalesDTO,
     ShowProduct,
     ShowProductExtended,
-    SteamItemDTO,
     UpdatePricesDTO,
     UpdatePricesResDTO,
     UpdateProductDTO,
@@ -179,22 +178,7 @@ class ProductsService(BaseService):
                         ProductPlatform.PSN: ProductDeliveryMethod.ACCOUNT_PURCHASE,
                     }[item.platform],
                 )
-                await uow.products_repo.save_ignore_conflict(product)
-
-    async def load_new_steam_items(self, items: Sequence[SteamItemDTO]):
-        products_for_save = [
-            Product(
-                **item.model_dump(exclude={"price_rub"}),
-                category=ProductCategory.STEAM_KEYS,
-                platform=ProductPlatform.STEAM,
-                delivery_method=ProductDeliveryMethod.GIFT,
-                prices=[RegionalPrice(base_price=item.price_rub)],
-            )
-            for item in items
-        ]
-        async with self._uow as uow:
-            for product in products_for_save:
-                await uow.products_repo.save_ignore_conflict(product)
+                await uow.products_repo.save_on_conflict_update_discount(product)
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
         async with self._uow as uow:
