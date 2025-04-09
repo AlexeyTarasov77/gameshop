@@ -115,12 +115,10 @@ class ProductsRepository(PaginationRepository[Product]):
     async def fetch_ids_for_platforms(
         self,
         platforms: Sequence[ProductPlatform],
-        exclude_categories: Sequence[ProductCategory],
     ) -> Sequence[int]:
         stmt = sa.select(Product.id).where(
             sa.and_(
                 Product.platform.in_(platforms),
-                Product.category.not_in(exclude_categories),
             )
         )
         res = await self._session.execute(stmt)

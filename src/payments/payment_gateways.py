@@ -30,7 +30,7 @@ class PaypalychPaymentSystem:
     async def create_bill(
         self,
         order_id: UUID,
-        order_total: Decimal,
+        order_total: Decimal | int,
         customer_email: str,
         payment_for: OrderCategory,
     ) -> PaymentBillDTO:

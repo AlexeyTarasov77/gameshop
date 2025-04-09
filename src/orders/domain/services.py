@@ -49,7 +49,7 @@ class OrdersService(BaseService):
         payment_system = self._payment_system_factory.choose_by_name(ps_name)
         self._logger.info("Creating payment bill for %s payment system", ps_name)
         return await payment_system.create_bill(
-            order.id, order.total, order.client_email, category
+            order.id, round(order.total), order.client_email, category
         )
 
     async def create_in_app_order(
@@ -226,9 +226,9 @@ class OrdersService(BaseService):
         try:
             async with self._uow as uow:
                 product = await uow.products_repo.get_by_id(product_id)
-                if ProductDeliveryMethod.GIFT not in product.delivery_methods:
+                if product.delivery_method != ProductDeliveryMethod.GIFT:
                     raise ClientError(
-                        f"You can't buy that product as gift. Available options are: {[m.value.label for m in product.delivery_methods]}"
+                        f"You can't buy that product as gift. Available only: {product.delivery_method.value.label}"
                     )
                 unavailable_err = UnavailableProductError(
                     "That product is currently unavailable. Try to use another delivery method or try again later"

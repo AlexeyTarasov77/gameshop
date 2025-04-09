@@ -144,7 +144,7 @@ class NSGiftsAPIClient:
         return uuid.UUID(data["custom_id"])
 
     async def pay_gift_order(self, order_id: uuid.UUID):
-        self._logger.info("Paying gift order. order_id: %d", order_id)
+        self._logger.info("Paying gift order. order_id: %s", order_id)
         resp = await self._client.post(
             self._base_url + "/pay_order",
             json={"custom_id": str(order_id)},

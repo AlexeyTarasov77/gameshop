@@ -50,15 +50,17 @@ class AbstractPriceCalculator(ABC):
         self._price = price
 
     @abstractmethod
-    def calc_for_region(self, region_code: str) -> Decimal: ...
+    def calc_for_region(self, region_code: str, *args, **kwargs) -> Decimal: ...
 
     def _add_percent(self, percent: int) -> Decimal:
         return self._price + self._price / 100 * percent
 
 
 class XboxPriceCalculator(AbstractPriceCalculator):
-    def _calc_for_usa(self) -> Decimal:
+    def _calc_for_usa(self, with_gp: bool) -> Decimal:
         calculated = self._price * Decimal(0.75)
+        if with_gp:
+            calculated += 1
         if self._price <= 2.99:
             calculated = self._add_percent(70)
         elif self._price <= 4.99:
@@ -125,10 +127,10 @@ class XboxPriceCalculator(AbstractPriceCalculator):
             calculated = self._price * Decimal(1.7) / Decimal(1.1)
         return calculated + Decimal(addend)
 
-    def calc_for_region(self, region_code: str) -> Decimal:
+    def calc_for_region(self, region_code: str, *args, **kwargs) -> Decimal:
         match region_code.lower():
             case XboxParseRegions.US:
-                return self._calc_for_usa()
+                return self._calc_for_usa(*args, **kwargs)
             case XboxParseRegions.TR:
                 return self._calc_for_tr()
             case XboxParseRegions.AR:
@@ -159,7 +161,7 @@ class ProductsService(BaseService):
                     if item.platform == ProductPlatform.XBOX:
                         assert region in XboxParseRegions
                         new_value = XboxPriceCalculator(price.value).calc_for_region(
-                            region
+                            region, with_gp=item.with_gp
                         )
                         price.value = new_value
                     price_in_rub = await self._currency_converter.convert_to_rub(price)

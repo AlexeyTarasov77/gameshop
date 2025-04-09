@@ -20,7 +20,7 @@ class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
         exc_class = type(exc)
         mapped_exc_cls = self.EXCEPTION_MAPPING.get(t.cast(type[K], exc_class))
         if not mapped_exc_cls:
-            logging.warning("Not mapped exception: %s", exc_class)
+            logging.warning("Not mapped exception: %s", exc, exc_info=True)
             return self.get_default_exc()
         return mapped_exc_cls
 

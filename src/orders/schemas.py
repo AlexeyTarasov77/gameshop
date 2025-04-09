@@ -15,7 +15,7 @@ from pydantic import (
 from payments.models import AvailablePaymentSystems
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
-from core.schemas import Base64Int, BaseDTO
+from core.schemas import Base64Int, BaseDTO, RoundedDecimal
 from orders.models import InAppOrder, OrderCategory, OrderStatus
 
 
@@ -68,14 +68,6 @@ SteamFriendLink = Annotated[str, AfterValidator(check_steam_friend_link)]
 SteamGiftRegions = Literal["ua", "ru", "kz"]
 
 
-class _WithOptionalUserId(BaseDTO):
-    user_id: Base64Int | None
-
-
-class _WithOptionalUser(BaseDTO):
-    user: ShowUser | None
-
-
 class _InAppOrderItemProduct(BaseDTO):
     id: Base64Int
     name: str
@@ -84,9 +76,9 @@ class _InAppOrderItemProduct(BaseDTO):
 class InAppOrderItemDTO(BaseDTO):
     id: Base64Int
     product: _InAppOrderItemProduct
-    price: Decimal
+    price: RoundedDecimal
     quantity: int = Field(gt=0)
-    total_price: Decimal
+    total_price: RoundedDecimal
 
 
 class InAppOrderCustomerDTO(BaseDTO):
@@ -105,10 +97,12 @@ class InAppOrderCustomerDTO(BaseDTO):
     )
 
 
-class InAppOrderCustomerWithUserIdDTO(InAppOrderCustomerDTO, _WithOptionalUserId): ...
+class InAppOrderCustomerWithUserIdDTO(InAppOrderCustomerDTO):
+    user_id: int | None
 
 
-class InAppOrderCustomerWithUserDTO(InAppOrderCustomerDTO, _WithOptionalUser): ...
+class InAppOrderCustomerWithUserDTO(InAppOrderCustomerDTO):
+    user: ShowUser | None
 
 
 class CreateInAppOrderDTO(BaseDTO):
@@ -131,7 +125,7 @@ class ShowBaseOrderDTO(BaseDTO):
     id: UUID
     order_date: datetime
     status: OrderStatus
-    total: Decimal
+    total: RoundedDecimal
     bill_id: str | None = None
     paid_with: AvailablePaymentSystems | None = None
     category: OrderCategoryField
@@ -189,15 +183,18 @@ class SteamTopUpOrderCustomerDTO(BaseDTO):
 
 
 class _BaseSteamTopUpOrderDTO(SteamTopUpOrderCustomerDTO, ShowBaseOrderDTO):
-    amount: Decimal
+    amount: RoundedDecimal
     percent_fee: int
 
 
-class SteamTopUpOrderDTO(_BaseSteamTopUpOrderDTO, _WithOptionalUserId): ...
+class SteamTopUpOrderDTO(_BaseSteamTopUpOrderDTO):
+    user_id: Base64Int | None
 
 
-class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO, _WithOptionalUser): ...
+class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO):
+    user: ShowUser | None
 
 
-class SteamGiftOrderDTO(CreateSteamGiftOrderDTO, _WithOptionalUserId):
+class SteamGiftOrderDTO(CreateSteamGiftOrderDTO):
     id: UUID
+    user_id: int | None

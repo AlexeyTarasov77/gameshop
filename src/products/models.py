@@ -62,10 +62,7 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
         UniqueConstraint(*unique_fields),
         CheckConstraint(
             text(
-                "(platform = :steam_platform AND category = :games_cat AND sub_id IS NOT NULL) OR (platform != :steam_platform OR category != :games_cat AND sub_id IS NULL)"
-            ).bindparams(
-                steam_platform=ProductPlatform.STEAM.name,
-                games_cat=ProductCategory.GAMES.name,
+                "(platform = 'STEAM' AND category = 'GAMES' AND sub_id IS NOT NULL) OR (platform != 'STEAM' OR category != 'GAMES' AND sub_id IS NULL)"
             )
         ),
     )
@@ -87,24 +84,6 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
         back_populates="product", lazy="selectin"
     )
     sub_id: Mapped[int | None]
-
-    # @property
-    # def delivery_methods(self) -> list[ProductDeliveryMethod]:
-    #     """Chooses delivery_methods based on product platform and price regions"""
-    #     match self.platform:
-    #         case ProductPlatform.PSN:
-    #             return [ProductDeliveryMethod.ACCOUNT_PURCHASE]
-    #         case ProductPlatform.STEAM:
-    #             return [ProductDeliveryMethod.KEY, ProductDeliveryMethod.GIFT]
-    #         case ProductPlatform.XBOX:
-    #             regions = [normalize_s(price.region_code) for price in self.prices]
-    #             assert len(regions) > 0
-    #             if XboxParseRegions.US in regions:
-    #                 methods = [ProductDeliveryMethod.KEY]
-    #                 if len(regions) > 1:  # if something except of us
-    #                     methods.append(ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE)
-    #                 return methods
-    #             return [ProductDeliveryMethod.NEW_ACCOUNT_PURCHASE]
 
     @property
     def is_discount_expired(self) -> bool:
