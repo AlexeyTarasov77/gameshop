@@ -13,7 +13,7 @@ jobs:
      - name: Install dependencies
        run: pip install poetry && poetry install
      - name: lint
-       run: poetry run ruff check ./src --fix
+       run: poetry run ruff check ./src 
      - name: type checking
        run: poetry run pyright ./src
   # test:

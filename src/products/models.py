@@ -13,7 +13,6 @@ from gateways.db.sqlalchemy_gateway import (
 )
 from sqlalchemy import CHAR, CheckConstraint, ForeignKey, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from random import randint
 from enum import Enum, auto
 
 from core.utils import CIEnum, LabeledEnum
@@ -26,8 +25,8 @@ class ProductPlatform(LabeledEnum):
 
 
 class SalesCategories(Enum):
-    XBOX_SALES = IntWithLabel(randint(10, 100), "Распродажи xbox")
-    PSN_SALES = IntWithLabel(randint(10, 100), "Распродажи psn")
+    XBOX_SALES = IntWithLabel(6, "Распродажи xbox")
+    PSN_SALES = IntWithLabel(7, "Распродажи psn")
 
 
 class ProductCategory(LabeledEnum):

@@ -1,1 +1,1 @@
-from .client import SalesParser
+from .client import SalesParser as SalesParser

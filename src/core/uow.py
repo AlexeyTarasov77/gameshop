@@ -108,7 +108,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         assert self._session is not None
         try:
             if exc_type is not None:
-                self.logger.info(
+                self.logger.debug(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
                     exc_value,
                     exc_info=True,

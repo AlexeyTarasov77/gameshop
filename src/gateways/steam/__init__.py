@@ -1,1 +1,4 @@
-from .client import NSGiftsAPIClient, GamesForFarmAPIClient
+from .client import (
+    NSGiftsAPIClient as NSGiftsAPIClient,
+    GamesForFarmAPIClient as GamesForFarmAPIClient,
+)

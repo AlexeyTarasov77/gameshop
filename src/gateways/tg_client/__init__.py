@@ -1,1 +1,4 @@
-from .main import TelegramClient, TelegramClientError
+from .main import (
+    TelegramClient as TelegramClient,
+    TelegramClientError as TelegramClientError,
+)
