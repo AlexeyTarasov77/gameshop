@@ -1,6 +1,8 @@
 from logging import Logger
 from httpx import AsyncClient
 
+from core.utils.httpx_utils import log_request, log_response
+
 
 class TelegramClientError(Exception): ...
 
@@ -16,11 +18,13 @@ class TelegramClient:
         self._logger.info(
             "Sending telegram msg to chat #%s with text:\n%s", chat_id, text
         )
-        resp = await self._client.post(
-            self._base_url + "/sendMessage", json={"chat_id": chat_id, "text": text}
-        )
+        with log_request("TelegramClient.send_msg"):
+            resp = await self._client.post(
+                self._base_url + "/sendMessage", json={"chat_id": chat_id, "text": text}
+            )
+            log_response(resp)
+            resp.raise_for_status()
         data = resp.json()
-        self._logger.debug("Telegram API response: %s", data)
         if not data["ok"]:
             self._logger.error(
                 "Failed to send telegram msg to #%s. Description: %s",

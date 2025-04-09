@@ -4,6 +4,7 @@ from logging import Logger
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
+from core.utils.httpx_utils import log_request, log_response
 from orders.schemas import CreateSteamGiftOrderDTO, CreateSteamTopUpOrderDTO
 from products.domain.services import ProductsService
 from products.schemas import SteamItemDTO
@@ -62,11 +63,16 @@ class NSGiftsAPIClient:
             {"email": steam_api_auth_email, "password": steam_api_auth_password},
         )
 
+    def _get_logging_prefix(self, func_name: str) -> str:
+        return self.__class__.__name__ + "." + func_name
+
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO:
-        resp = await self._client.post(
-            self._base_url + "/steam/get_currency_rate", auth=self._auth
-        )
-        resp.raise_for_status()
+        with log_request(self._get_logging_prefix("get_currency_rates")):
+            resp = await self._client.post(
+                self._base_url + "/steam/get_currency_rate", auth=self._auth
+            )
+            log_response(resp)
+            resp.raise_for_status()
         data = resp.json()
         data.pop("date")
         return ExchangeRatesMappingDTO.model_validate(data)
@@ -79,80 +85,74 @@ class NSGiftsAPIClient:
             json={"amount": str(rub_amount)},
             auth=self._auth,
         )
+        log_response(resp)
         resp.raise_for_status()
         data = resp.json()
         return Decimal(data["usd_price"]), float(data["exchange_rate"])
 
     async def create_top_up_order(self, dto: CreateSteamTopUpOrderDTO) -> uuid.UUID:
         service_id = 1  # id for steam top-up service
-        usd_amount, exchange_rate = await self._convert_amount_to_usd(dto.rub_amount)
         usd_min_deposit = 0.13
+        with log_request(self._get_logging_prefix("create_top_up_order")):
+            usd_amount, exchange_rate = await self._convert_amount_to_usd(
+                dto.rub_amount
+            )
         if usd_amount < usd_min_deposit:
             raise ValueError(
                 "deposit should be >= %s" % (usd_min_deposit * exchange_rate)
             )
         top_up_id = uuid.uuid4()
-        resp = await self._client.post(
-            self._base_url + "/create_order",
-            json={
-                "service_id": service_id,
-                "custom_id": str(top_up_id),
-                "quantity": str(usd_amount),
-                "data": dto.steam_login,
-            },
-            auth=self._auth,
-        )
-        self._logger.info(
-            "Create steam top up order response status: %s", resp.status_code
-        )
-        resp.raise_for_status()
+        with log_request(self._get_logging_prefix("create_top_up_order")):
+            resp = await self._client.post(
+                self._base_url + "/create_order",
+                json={
+                    "service_id": service_id,
+                    "custom_id": str(top_up_id),
+                    "quantity": str(usd_amount),
+                    "data": dto.steam_login,
+                },
+                auth=self._auth,
+            )
+            log_response(resp)
+            resp.raise_for_status()
         return top_up_id
 
     async def top_up_complete(self, top_up_id: uuid.UUID):
-        resp = await self._client.post(
-            self._base_url + "/pay_order",
-            json={"custom_id": str(top_up_id)},
-            auth=self._auth,
-        )
-        self._logger.info(
-            "Top up complete response received. status: %s, text: %s",
-            resp.status_code,
-            resp.text,
-        )
-        resp.raise_for_status()
+        with log_request(self._get_logging_prefix("top_up_complete")):
+            resp = await self._client.post(
+                self._base_url + "/pay_order",
+                json={"custom_id": str(top_up_id)},
+                auth=self._auth,
+            )
+            log_response(resp)
+            resp.raise_for_status()
 
     async def create_gift_order(
         self, dto: CreateSteamGiftOrderDTO, sub_id: int
     ) -> uuid.UUID:
         self._logger.info("Creating steam gift order. sub_id: %d", sub_id)
-        resp = await self._client.post(
-            self._base_url + "/steam_gift/create_order",
-            json={
-                "sub_id": sub_id,
-                "friendLink": dto.friend_link,
-                "region": dto.region,
-            },
-            auth=self._auth,
-        )
-        self._logger.info(
-            "Create steam gift response received. status: %s, text: %s",
-            resp.status_code,
-            resp.text,
-        )
-        resp.raise_for_status()
+        with log_request(self._get_logging_prefix("create_gift_order")):
+            resp = await self._client.post(
+                self._base_url + "/steam_gift/create_order",
+                json={
+                    "sub_id": sub_id,
+                    "friendLink": dto.friend_link,
+                    "region": dto.region,
+                },
+                auth=self._auth,
+            )
+            log_response(resp)
+            resp.raise_for_status()
         data = resp.json()
         return uuid.UUID(data["custom_id"])
 
     async def pay_gift_order(self, order_id: uuid.UUID):
         self._logger.info("Paying gift order. order_id: %s", order_id)
-        resp = await self._client.post(
-            self._base_url + "/pay_order",
-            json={"custom_id": str(order_id)},
-            auth=self._auth,
-        )
-        self._logger.info(
-            "Pay gift order response received. status: %s, text: %s",
-            resp.status_code,
-            resp.text,
-        )
-        resp.raise_for_status()
+        with log_request(self._get_logging_prefix("pay_gift_order")):
+            resp = await self._client.post(
+                self._base_url + "/pay_order",
+                json={"custom_id": str(order_id)},
+                auth=self._auth,
+            )
+            log_response(resp)
+            resp.raise_for_status()

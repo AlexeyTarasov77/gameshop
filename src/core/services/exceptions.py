@@ -51,6 +51,10 @@ class ActionForbiddenError(ServiceError):
     _msg = "Action forbidden"
 
 
+class ExternalGatewayError(ServiceError):
+    _msg = "Gateway error. Please try again later"
+
+
 class CommonServiceError(ServiceError):
     def _generate_msg(self) -> str:
         return self._msg

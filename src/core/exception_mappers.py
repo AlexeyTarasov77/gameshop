@@ -47,6 +47,7 @@ class HTTPExceptionsMapper:
         service_exc.UserIsNotActivatedError: status.HTTP_403_FORBIDDEN,
         service_exc.UserAlreadyActivatedError: status.HTTP_403_FORBIDDEN,
         service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,
+        service_exc.ExternalGatewayError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     }
 
     def __init__(self, app: FastAPI, logger: logging.Logger):
@@ -57,7 +58,7 @@ class HTTPExceptionsMapper:
         status_code: int | None = self._EXCEPTION_MAPPING.get(type(exc), None)
         if status_code is None:
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-            self._logger.error("Unknown exception in handler: %s", exc)
+            self._logger.error("Unknown exception in handler: %s", exc, exc_info=True)
         message: str = str(exc) if status_code < 500 else "Internal server error."
         return JSONResponse({"detail": message}, status_code)
 

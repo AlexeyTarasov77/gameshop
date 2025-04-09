@@ -16,6 +16,7 @@ services:
     volumes:
       - ./src:/app/src
       - ./media:/app/media
+      - ./logs:/app/logs
     environment:
       - MODE=${MODE:?error}
     healthcheck:

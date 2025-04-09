@@ -1,5 +1,10 @@
+from contextlib import contextmanager
+from logging import Logger
 import httpx
 from typing import Any
+
+from core.ioc import Resolve
+from core.services.exceptions import ExternalGatewayError
 
 
 class JWTAuth(httpx.Auth):
@@ -35,3 +40,26 @@ class JWTAuth(httpx.Auth):
 
     def _set_auth_header(self, request: httpx.Request):
         request.headers["Authorization"] = f"Bearer {self._token}"
+
+
+@contextmanager
+def log_request(prefix: str):
+    logger = Resolve(Logger)
+    try:
+        logger.info(f"{prefix}: Sending request")
+        yield
+    except httpx.HTTPError as e:
+        if isinstance(e, httpx.RequestError):
+            logger.error("HTTP request failed: %s. Error: %s", e.request, e)
+        else:
+            logger.error("HTTP error: %s", e)
+        raise ExternalGatewayError()
+
+
+def log_response(resp: httpx.Response):
+    logger = Resolve(Logger)
+    logger.info(
+        "Response succesfully received. Status: %s, text: %s",
+        resp.status_code,
+        resp.text,
+    )
