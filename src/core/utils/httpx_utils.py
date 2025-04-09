@@ -3,9 +3,6 @@ from logging import Logger
 import httpx
 from typing import Any
 
-from core.ioc import Resolve
-from core.services.exceptions import ExternalGatewayError
-
 
 class JWTAuth(httpx.Auth):
     requires_response_body = True
@@ -43,8 +40,9 @@ class JWTAuth(httpx.Auth):
 
 
 @contextmanager
-def log_request(prefix: str):
-    logger = Resolve(Logger)
+def log_request(prefix: str, logger: Logger):
+    from core.services.exceptions import ExternalGatewayError
+
     try:
         logger.info(f"{prefix}: Sending request")
         yield
@@ -56,8 +54,7 @@ def log_request(prefix: str):
         raise ExternalGatewayError()
 
 
-def log_response(resp: httpx.Response):
-    logger = Resolve(Logger)
+def log_response(resp: httpx.Response, logger: Logger):
     logger.info(
         "Response succesfully received. Status: %s, text: %s",
         resp.status_code,

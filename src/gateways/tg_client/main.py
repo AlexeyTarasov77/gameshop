@@ -18,11 +18,11 @@ class TelegramClient:
         self._logger.info(
             "Sending telegram msg to chat #%s with text:\n%s", chat_id, text
         )
-        with log_request("TelegramClient.send_msg"):
+        with log_request("TelegramClient.send_msg", self._logger):
             resp = await self._client.post(
                 self._base_url + "/sendMessage", json={"chat_id": chat_id, "text": text}
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
         data = resp.json()
         if not data["ok"]:

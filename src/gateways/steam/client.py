@@ -67,11 +67,11 @@ class NSGiftsAPIClient:
         return self.__class__.__name__ + "." + func_name
 
     async def get_currency_rates(self) -> ExchangeRatesMappingDTO:
-        with log_request(self._get_logging_prefix("get_currency_rates")):
+        with log_request(self._get_logging_prefix("get_currency_rates"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/steam/get_currency_rate", auth=self._auth
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
         data = resp.json()
         data.pop("date")
@@ -85,7 +85,7 @@ class NSGiftsAPIClient:
             json={"amount": str(rub_amount)},
             auth=self._auth,
         )
-        log_response(resp)
+        log_response(resp, self._logger)
         resp.raise_for_status()
         data = resp.json()
         return Decimal(data["usd_price"]), float(data["exchange_rate"])
@@ -93,7 +93,7 @@ class NSGiftsAPIClient:
     async def create_top_up_order(self, dto: CreateSteamTopUpOrderDTO) -> uuid.UUID:
         service_id = 1  # id for steam top-up service
         usd_min_deposit = 0.13
-        with log_request(self._get_logging_prefix("create_top_up_order")):
+        with log_request(self._get_logging_prefix("create_top_up_order"), self._logger):
             usd_amount, exchange_rate = await self._convert_amount_to_usd(
                 dto.rub_amount
             )
@@ -102,7 +102,7 @@ class NSGiftsAPIClient:
                 "deposit should be >= %s" % (usd_min_deposit * exchange_rate)
             )
         top_up_id = uuid.uuid4()
-        with log_request(self._get_logging_prefix("create_top_up_order")):
+        with log_request(self._get_logging_prefix("create_top_up_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/create_order",
                 json={
@@ -113,25 +113,25 @@ class NSGiftsAPIClient:
                 },
                 auth=self._auth,
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
         return top_up_id
 
     async def top_up_complete(self, top_up_id: uuid.UUID):
-        with log_request(self._get_logging_prefix("top_up_complete")):
+        with log_request(self._get_logging_prefix("top_up_complete"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/pay_order",
                 json={"custom_id": str(top_up_id)},
                 auth=self._auth,
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
 
     async def create_gift_order(
         self, dto: CreateSteamGiftOrderDTO, sub_id: int
     ) -> uuid.UUID:
         self._logger.info("Creating steam gift order. sub_id: %d", sub_id)
-        with log_request(self._get_logging_prefix("create_gift_order")):
+        with log_request(self._get_logging_prefix("create_gift_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/steam_gift/create_order",
                 json={
@@ -141,18 +141,18 @@ class NSGiftsAPIClient:
                 },
                 auth=self._auth,
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
         data = resp.json()
         return uuid.UUID(data["custom_id"])
 
     async def pay_gift_order(self, order_id: uuid.UUID):
         self._logger.info("Paying gift order. order_id: %s", order_id)
-        with log_request(self._get_logging_prefix("pay_gift_order")):
+        with log_request(self._get_logging_prefix("pay_gift_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/pay_order",
                 json={"custom_id": str(order_id)},
                 auth=self._auth,
             )
-            log_response(resp)
+            log_response(resp, self._logger)
             resp.raise_for_status()
