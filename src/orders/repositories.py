@@ -1,9 +1,15 @@
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import desc, select
-from sqlalchemy.orm import joinedload, selectin_polymorphic, selectinload
+from sqlalchemy import func, select
+from sqlalchemy.orm import (
+    joinedload,
+    selectin_polymorphic,
+    selectinload,
+    with_polymorphic,
+)
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
@@ -72,13 +78,20 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         if user_id is not None:
             filters["user_id"] = user_id
         stmt = (
-            super()
-            ._get_pagination_stmt(pagination_params)
-            .options(selectin_polymorphic(BaseOrder, BaseOrder.__subclasses__()))
+            # super()
+            # ._get_pagination_stmt(pagination_params)
+            select(self.model, func.count().over())
+            .options(
+                selectin_polymorphic(self.model, self.model.__subclasses__()),
+                selectinload(InAppOrder.items).load_only(
+                    InAppOrderItem.price, InAppOrderItem.quantity
+                ),
+            )
             .filter_by(**filters)
         )
         res = await self._session.execute(stmt)
-        return super()._split_records_and_count(res.all())
+        orders, count = super()._split_records_and_count(res.all())
+        return orders, count
 
     async def list_orders(
         self, pagination_params: PaginationParams, category: OrderCategory | None = None
@@ -97,15 +110,12 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         await super().delete_or_raise_not_found(id=order_id)
 
     async def get_by_id(self, order_id: UUID) -> BaseOrder:
-        stmt = (
-            select(self.model)
-            .filter_by(id=order_id)
-            .options(selectin_polymorphic(BaseOrder, BaseOrder.__subclasses__()))
-        )
+        stmt = select(with_polymorphic(self.model, "*")).filter_by(id=order_id)
         res = await self._session.execute(stmt)
         obj = res.scalar_one_or_none()
         if not obj:
             raise NotFoundError("order not found")
+        print(obj.__dict__)
         return obj
 
 
@@ -137,30 +147,6 @@ class InAppOrdersRepository(
         return selectinload(self.model.items).options(
             joinedload(InAppOrderItem.product).load_only(Product.id, Product.name)
         )
-
-    async def _paginated_list(
-        self, pagination_params: PaginationParams, **filter_by
-    ) -> PaginationResT[model]:
-        stmt = (
-            super()
-            ._get_pagination_stmt(pagination_params)
-            .options(self._get_rels_load_options())
-            .filter_by(**filter_by)
-            .order_by(desc(InAppOrder.order_date))
-        )
-
-        res = await self._session.execute(stmt)
-        return super()._split_records_and_count(res.all())
-
-    async def list_orders_for_user(
-        self, pagination_params: PaginationParams, user_id: int
-    ) -> PaginationResT[model]:
-        return await self._paginated_list(pagination_params, user_id=user_id)
-
-    async def list_all_orders(
-        self, pagination_params: PaginationParams
-    ) -> PaginationResT[model]:
-        return await self._paginated_list(pagination_params)
 
     async def get_by_id(self, order_id: UUID) -> InAppOrder:
         stmt = (
@@ -214,10 +200,12 @@ class SteamGiftsRepository(OrdersRepoMixin[SteamGiftOrder]):
         dto: CreateSteamGiftOrderDTO,
         order_id: UUID,
         user_id: int | None,
+        total: Decimal,
     ) -> SteamGiftOrder:
         order_obj = SteamGiftOrder(
             id=order_id,
             user_id=user_id,
+            total=total,
             **dto.model_dump(exclude={"rub_amount", "selected_ps"}),
         )
         return await super()._save_order(order_obj)

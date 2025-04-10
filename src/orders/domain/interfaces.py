@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
@@ -80,6 +81,7 @@ class SteamGiftsRepositoryI(Protocol):
         dto: CreateSteamGiftOrderDTO,
         order_id: UUID,
         user_id: int | None,
+        total: Decimal,
     ) -> SteamGiftOrder: ...
 
 

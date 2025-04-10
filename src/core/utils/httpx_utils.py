@@ -48,7 +48,9 @@ def log_request(prefix: str, logger: Logger):
         yield
     except httpx.HTTPError as e:
         if isinstance(e, httpx.RequestError):
-            logger.error("HTTP request failed: %s. Error: %s", e.request, e)
+            logger.error(
+                "HTTP request failed: %s. Error: %s", e.request, e, exc_info=True
+            )
         else:
             logger.error("HTTP error: %s", e)
         raise ExternalGatewayError()

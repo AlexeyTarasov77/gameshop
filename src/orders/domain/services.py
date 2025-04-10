@@ -1,6 +1,8 @@
+from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.pagination import PaginationParams, PaginationResT
+from core.schemas import EMPTY_REGION
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
@@ -39,6 +41,14 @@ class OrdersService(BaseService):
         self._steam_api = steam_api
         self._top_up_fee_manager = top_up_fee_manager
         self._top_up_default_fee = 10  # %
+
+    def _order_to_dto(self, order: BaseOrder):
+        mapping: dict[OrderCategory, type[schemas.ShowBaseOrderDTO]] = {
+            OrderCategory.IN_APP: schemas.InAppOrderExtendedDTO,
+            OrderCategory.STEAM_TOP_UP: schemas.SteamTopUpOrderExtendedDTO,
+            OrderCategory.STEAM_GIFT: schemas.SteamGiftOrderDTO,
+        }
+        return mapping[order.category].model_validate(order)
 
     async def _create_payment_bill(
         self,
@@ -164,9 +174,7 @@ class OrdersService(BaseService):
             schemas.ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
-    async def get_order(
-        self, order_id: UUID
-    ) -> schemas.InAppOrderExtendedDTO | schemas.SteamTopUpOrderExtendedDTO:
+    async def get_order(self, order_id: UUID) -> schemas.ShowBaseOrderDTO:
         self._logger.info("Fetching order by id: %s", order_id)
         try:
             async with self._uow as uow:
@@ -174,11 +182,7 @@ class OrdersService(BaseService):
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
-        dto: schemas.InAppOrderExtendedDTO | schemas.SteamTopUpOrderExtendedDTO = {
-            OrderCategory.IN_APP: schemas.InAppOrderExtendedDTO,
-            OrderCategory.STEAM_TOP_UP: schemas.SteamTopUpOrderExtendedDTO,
-        }[order.category]
-        return dto.model_validate(order)
+        return self._order_to_dto(order)
 
     async def create_steam_top_up_order(
         self, dto: schemas.CreateSteamTopUpOrderDTO, user_id: int | None
@@ -230,32 +234,28 @@ class OrdersService(BaseService):
                     raise ClientError(
                         f"You can't buy that product as gift. Available only: {product.delivery_method.value.label}"
                     )
-                unavailable_err = UnavailableProductError(
-                    "That product is currently unavailable. Try to use another delivery method or try again later"
-                )
-
-                if not product.sub_id:
+                assert product.sub_id
+                order_total: Decimal | None = None
+                for price in product.prices:
+                    if normalize_s(price.region_code) == EMPTY_REGION:
+                        order_total = price.total_price
+                if order_total is None:
                     self._logger.error(
-                        "Product with GIFT delivery method missing sub_id! Product id: %d",
+                        "Unable to find price for product. Product id: %d",
                         product.id,
                     )
-                    raise unavailable_err
-                # product_price = await uow.products_prices_repo.get_price_for_region(
-                #     product_id, EMPTY_REGION
-                # )
-                # if product_price is None:
-                #     self._logger.error(
-                #         "Unable to find price for product to buy as gift. Product id: %d",
-                #         product.id,
-                #     )
-                #     raise unavailable_err
+                    raise UnavailableProductError(
+                        "That product is currently unavailable. Try to use another delivery method or try again later"
+                    )
                 try:
                     gift_id = await self._steam_api.create_gift_order(
                         dto, product.sub_id
                     )
                 except ValueError as e:
                     raise ClientError(str(e))
-                order = await uow.steam_gifts_repo.create_with_id(dto, gift_id, user_id)
+                order = await uow.steam_gifts_repo.create_with_id(
+                    dto, gift_id, user_id, order_total
+                )
                 order.product = product
                 payment_dto = await self._create_payment_bill(
                     dto.selected_ps, order, OrderCategory.STEAM_GIFT

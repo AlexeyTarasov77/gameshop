@@ -195,6 +195,9 @@ class SteamTopUpOrderExtendedDTO(_BaseSteamTopUpOrderDTO):
     user: ShowUser | None
 
 
-class SteamGiftOrderDTO(CreateSteamGiftOrderDTO):
-    id: UUID
+class SteamGiftOrderDTO(ShowBaseOrderDTO, CreateSteamGiftOrderDTO):
     user_id: int | None
+
+
+class SteamGiftOrderExtendedDTO(ShowBaseOrderDTO, CreateSteamGiftOrderDTO):
+    user: ShowUser | None

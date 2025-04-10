@@ -4,9 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from uuid import UUID
 from enum import StrEnum
 from sqlalchemy import CheckConstraint, ForeignKey, text
-from core.schemas import EMPTY_REGION
 from core.utils import LabeledEnum
-from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import int_pk_type, created_at_type
 
 from sqlalchemy.orm import Mapped, declared_attr, relationship, mapped_column
@@ -50,8 +48,9 @@ class BaseOrder(SqlAlchemyBaseModel, PaymentMixin):
     def client_email(self) -> str:
         email = self.customer_email
         if not email:
-            assert self.user
-            email = self.user.email
+            # use __dict__ to prevent attempt for lazy loading
+            assert "user" in self.__dict__, "Order user is not loaded"
+            email = self.user.email  # type: ignore
         return email
 
     __mapper_args__ = {
@@ -134,6 +133,7 @@ class SteamGiftOrder(BaseOrder):
     )
     region: Mapped[str]
     product: Mapped[Product] = relationship(lazy="joined")
+    total: Mapped[Decimal]  # type: ignore
     user: Mapped[User | None] = relationship(
         back_populates="steam_gift_orders", lazy="joined", passive_deletes=True
     )
@@ -142,10 +142,3 @@ class SteamGiftOrder(BaseOrder):
     __mapper_args__ = {
         "polymorphic_identity": OrderCategory.STEAM_GIFT,
     }
-
-    @property
-    def total(self) -> Decimal:
-        for price in self.product.prices:
-            if normalize_s(price.region_code) == EMPTY_REGION:
-                return price.total_price
-        raise Exception("Unable to find product price for order's region")

@@ -17,9 +17,7 @@ from orders.schemas import (
     SteamGiftOrderDTO,
     SteamTopUpOrderDTO,
     CreateSteamTopUpOrderDTO,
-    SteamTopUpOrderExtendedDTO,
     UpdateOrderDTO,
-    InAppOrderExtendedDTO,
 )
 from users.dependencies import get_optional_user_id, get_user_id_or_raise, require_admin
 
@@ -90,7 +88,7 @@ async def list_orders_for_user(
 @router.get("/detail/{order_id}")
 async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
-) -> SteamTopUpOrderExtendedDTO | InAppOrderExtendedDTO:
+) -> ShowBaseOrderDTO:
     return await orders_service.get_order(order_id)
 
 
