@@ -153,6 +153,7 @@ class NSGiftsAPIClient:
                 self._base_url + "/pay_order",
                 json={"custom_id": str(order_id)},
                 auth=self._auth,
+                timeout=None,
             )
             log_response(resp, self._logger)
             resp.raise_for_status()

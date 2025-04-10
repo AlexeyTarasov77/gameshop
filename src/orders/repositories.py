@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 from redis.asyncio import Redis
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import (
     joinedload,
     selectin_polymorphic,
@@ -78,9 +78,8 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         if user_id is not None:
             filters["user_id"] = user_id
         stmt = (
-            # super()
-            # ._get_pagination_stmt(pagination_params)
-            select(self.model, func.count().over())
+            super()
+            ._get_pagination_stmt(pagination_params)
             .options(
                 selectin_polymorphic(self.model, self.model.__subclasses__()),
                 selectinload(InAppOrder.items).load_only(
@@ -90,8 +89,7 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
             .filter_by(**filters)
         )
         res = await self._session.execute(stmt)
-        orders, count = super()._split_records_and_count(res.all())
-        return orders, count
+        return super()._split_records_and_count(res.all())
 
     async def list_orders(
         self, pagination_params: PaginationParams, category: OrderCategory | None = None
@@ -115,7 +113,6 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
         obj = res.scalar_one_or_none()
         if not obj:
             raise NotFoundError("order not found")
-        print(obj.__dict__)
         return obj
 
 

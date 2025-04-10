@@ -93,10 +93,7 @@ def _init_container() -> punq.Container:
     container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
     container.register(RedisClient, instance=redis_client)
     db = SqlAlchemyClient(
-        str(cfg.pg_dsn),
-        exception_mapper=PostgresExceptionsMapper,
-        future=True,
-        echo=True,
+        str(cfg.pg_dsn), exception_mapper=PostgresExceptionsMapper, future=True
     )
     container.register(PasswordHasherI, BcryptHasher)
     container.register(TokenHasherI, SHA256Hasher)

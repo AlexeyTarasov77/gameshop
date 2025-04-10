@@ -4,7 +4,7 @@ from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.services.base import BaseService
-from core.services.exceptions import ActionForbiddenError
+from core.services.exceptions import ActionForbiddenError, ExternalGatewayError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
@@ -12,7 +12,9 @@ from orders.domain.interfaces import SteamAPIClientI
 from orders.models import (
     BaseOrder,
     OrderCategory,
+    OrderStatus,
 )
+from orders.schemas import UpdateOrderDTO
 from payments.domain.interfaces import (
     AvailablePaymentSystems,
     EmailTemplatesI,
@@ -91,21 +93,31 @@ class PaymentsService(BaseService):
         additional_msg = ""
         try:
             async with self._uow as uow:
-                match payment_for:
-                    case OrderCategory.IN_APP:
-                        order = await self._process_in_app_order(process_order_dto)
-                        customer_tg = (
-                            await uow.in_app_orders_repo.get_customer_tg_by_id(order.id)
-                        )
-                        if customer_tg[0] != "@":
-                            customer_tg = "@" + customer_tg
-                        additional_msg = f"Телеграм заказчика: {customer_tg}"
-                    case OrderCategory.STEAM_TOP_UP:
-                        order = await self._process_steam_top_up_order(
-                            process_order_dto
-                        )
-                    case OrderCategory.STEAM_GIFT:
-                        order = await self._process_steam_gift_order(process_order_dto)
+                try:
+                    match payment_for:
+                        case OrderCategory.IN_APP:
+                            order = await self._process_in_app_order(process_order_dto)
+                            customer_tg = (
+                                await uow.in_app_orders_repo.get_customer_tg_by_id(
+                                    order.id
+                                )
+                            )
+                            if customer_tg[0] != "@":
+                                customer_tg = "@" + customer_tg
+                            additional_msg = f"Телеграм заказчика: {customer_tg}"
+                        case OrderCategory.STEAM_TOP_UP:
+                            order = await self._process_steam_top_up_order(
+                                process_order_dto
+                            )
+                        case OrderCategory.STEAM_GIFT:
+                            order = await self._process_steam_gift_order(
+                                process_order_dto
+                            )
+                except ExternalGatewayError:
+                    await uow.orders_repo.update_by_id(
+                        UpdateOrderDTO(status=OrderStatus.CANCELLED), order_id
+                    )
+                    raise
 
             admin_notification_msg = (
                 f"Заказ #{order.id} успешно оплачен!\n"
