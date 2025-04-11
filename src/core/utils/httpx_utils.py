@@ -52,7 +52,7 @@ def log_request(prefix: str, logger: Logger):
                 "HTTP request failed: %s. Error: %s", e.request, e, exc_info=True
             )
         else:
-            logger.error("HTTP error: %s", e)
+            logger.error("HTTP error: %s", e, exc_info=True)
         raise ExternalGatewayError()
 
 

@@ -130,7 +130,7 @@ class NSGiftsAPIClient:
     async def create_gift_order(
         self, dto: CreateSteamGiftOrderDTO, sub_id: int
     ) -> uuid.UUID:
-        self._logger.info("Creating steam gift order. sub_id: %d", sub_id)
+        self._logger.info("Creating steam gift order. sub_id: %d, dto: %s", sub_id, dto)
         with log_request(self._get_logging_prefix("create_gift_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/steam_gift/create_order",
@@ -150,7 +150,7 @@ class NSGiftsAPIClient:
         self._logger.info("Paying gift order. order_id: %s", order_id)
         with log_request(self._get_logging_prefix("pay_gift_order"), self._logger):
             resp = await self._client.post(
-                self._base_url + "/pay_order",
+                self._base_url + "/steam_gift/pay_order",
                 json={"custom_id": str(order_id)},
                 auth=self._auth,
                 timeout=None,
