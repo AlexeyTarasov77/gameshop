@@ -11,12 +11,8 @@ from gateways.gamesparser import SalesParser
 
 async def main():
     parser: SalesParser = get_container().instantiate(SalesParser)
-    try:
-        limit = int(sys.argv[1])
-    except IndexError:
-        limit = None
     async with lifespan():
-        await parser.parse_and_save(limit)
+        await parser.parse_and_save()
 
 
 if __name__ == "__main__":

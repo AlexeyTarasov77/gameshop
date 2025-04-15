@@ -159,32 +159,13 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
 
-    async def update_by_name(
-        self, name: str, exclude_categories: Sequence[ProductCategory], **values
-    ):
-        res = await self._session.execute(
-            sa.update(Product)
-            .where(
-                sa.and_(
-                    sa.func.lower(Product.name) == name.lower(),
-                    Product.category.not_in(exclude_categories),
-                )
-            )
-            .values(**values)
-            .returning(Product.id)
-        )
-        updated_id: int | None = res.scalar_one_or_none()
-        if updated_id is None:
-            raise NotFoundError()
-
     async def save_on_conflict_update_discount(self, product: Product):
-        """Inserts product and its related prices. If product already exists - ignores it"""
         product_data = {k: v for k, v in product.dump().items() if v is not None}
         res = await self._session.execute(
             insert(self.model)
             .values(**product_data)
             .on_conflict_do_update(
-                index_elements=["name", "category", "platform"],
+                index_elements=Product.unique_fields,
                 set_={"discount": product.discount, "deal_until": product.deal_until},
             )
             .returning(

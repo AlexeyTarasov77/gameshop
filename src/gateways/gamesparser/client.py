@@ -48,19 +48,25 @@ class SalesParser:
             sales.append(self._parsed_to_dto(product, ProductPlatform.XBOX))
         await self._service.load_new_sales(sales)
 
-    async def parse_and_save(self, limit: int | None):
+    async def parse_and_save(self):
         try:
-            limit = int(sys.argv[1]) // 2
+            limit_per_platform = int(sys.argv[1]) // 2
         except Exception:
-            limit = None
+            limit_per_platform = None
         self._logger.info(
-            "Start parsing%ssales..."
-            % (f" up to {limit * 2} " if limit is not None else " ")
+            "Start parsing%ssales...",
+            (
+                f" up to {limit_per_platform * 2} "
+                if limit_per_platform is not None
+                else " "
+            ),
         )
         psn_parser = PsnParser(
-            [el.value for el in PsnParseRegions], self._client, limit
+            [el.value for el in PsnParseRegions], self._client, limit_per_platform
         )
-        xbox_parser = XboxParser([XboxParseRegions.US], self._client, limit)
+        xbox_parser = XboxParser(
+            [XboxParseRegions.US], self._client, limit_per_platform
+        )
         t1 = time.perf_counter()
         psn_sales, xbox_sales = await asyncio.gather(
             psn_parser.parse(), xbox_parser.parse()

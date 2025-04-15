@@ -9,7 +9,6 @@ from gateways.currency_converter.schemas import (
 )
 from products.models import (
     Product,
-    ProductCategory,
     ProductPlatform,
     RegionalPrice,
 )
@@ -37,9 +36,6 @@ class ProductsRepositoryI(t.Protocol):
         base_price: Decimal,
         original_curr: str | None = None,
     ) -> Product: ...
-    async def update_by_name(
-        self, name: str, exclude_categories: Sequence[ProductCategory], **values
-    ): ...
     async def save_on_conflict_update_discount(self, product: Product): ...
 
     async def update_by_id_with_image(
