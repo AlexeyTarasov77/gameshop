@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import datetime
 from decimal import Decimal
 import typing as t
 
@@ -20,6 +21,16 @@ from products.schemas import (
 )
 
 
+class SaveGameRes(t.NamedTuple):
+    inserted_id: int
+    url: str
+
+
+class LoadPsnWithXboxRes(t.NamedTuple):
+    psn: list[SaveGameRes]
+    xbox: list[SaveGameRes]
+
+
 class CurrencyConverterI(t.Protocol):
     async def convert_to_rub(self, price: PriceUnitDTO) -> Decimal: ...
     async def set_exchange_rate(self, dto: SetExchangeRateDTO): ...
@@ -36,7 +47,11 @@ class ProductsRepositoryI(t.Protocol):
         base_price: Decimal,
         original_curr: str | None = None,
     ) -> Product: ...
-    async def save_on_conflict_update_discount(self, product: Product): ...
+    async def save_on_conflict_update_discount(
+        self, product: Product
+    ) -> int | None: ...
+
+    async def save_ignore_conflict(self, product: Product) -> int | None: ...
 
     async def update_by_id_with_image(
         self, product_id: int, dto: UpdateProductDTO, image_url: str | None
@@ -63,6 +78,10 @@ class ProductsRepositoryI(t.Protocol):
     ) -> Sequence[Product]: ...
 
     async def update_with_expired_discount(self, **values) -> int: ...
+    async def update_xbox_details(self, rows: Sequence[tuple[int, str]]): ...
+    async def update_psn_details(
+        self, rows: Sequence[tuple[int, str, datetime | None]]
+    ): ...
 
 
 class PricesRepositoryI(t.Protocol):

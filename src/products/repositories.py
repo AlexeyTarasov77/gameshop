@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
@@ -6,7 +7,6 @@ import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationParams, PaginationResT
 from core.utils import normalize_s
-from gateways.db.exceptions import NotFoundError
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
 from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
@@ -159,7 +159,57 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
 
-    async def save_on_conflict_update_discount(self, product: Product):
+    async def update_psn_details(
+        self, rows: Sequence[tuple[int, str, datetime | None]]
+    ):
+        if not rows:
+            raise ValueError("Nothing to update")
+        p2 = (
+            sa.values(
+                sa.column("id"), sa.column("description"), sa.column("deal_until")
+            )
+            .data(rows)
+            .alias("p2")
+        )
+        stmt = (
+            sa.update(self.model)
+            .values(description=p2.c.description, deal_until=p2.c.deal_until)
+            .where(self.model.id == p2.c.id)
+        )
+        await self._session.execute(stmt)
+
+    async def update_xbox_details(self, rows: Sequence[tuple[int, str]]):
+        if not rows:
+            raise ValueError("Nothing to update")
+        p2 = sa.values(sa.column("id"), sa.column("description")).data(rows).alias("p2")
+        stmt = (
+            sa.update(self.model)
+            .values(description=p2.c.description)
+            .where(self.model.id == p2.c.id)
+        )
+        await self._session.execute(stmt)
+
+    async def save_ignore_conflict(self, product: Product) -> int | None:
+        product_data = {k: v for k, v in product.dump().items() if v is not None}
+        res = await self._session.execute(
+            insert(self.model)
+            .values(**product_data)
+            .on_conflict_do_nothing(index_elements=Product.unique_fields)
+            .returning(Product.id)
+        )
+        product_id = res.scalar_one_or_none()
+        if product_id is not None:  # inserted
+            await self._session.execute(
+                insert(RegionalPrice),
+                [
+                    {**price.dump(), "product_id": product_id}
+                    for price in product.prices
+                ],
+            )
+            return product_id
+        return None
+
+    async def save_on_conflict_update_discount(self, product: Product) -> int | None:
         product_data = {k: v for k, v in product.dump().items() if v is not None}
         res = await self._session.execute(
             insert(self.model)
@@ -170,7 +220,7 @@ class ProductsRepository(PaginationRepository[Product]):
             )
             .returning(
                 Product.id, sa.text("xmax=0")
-            ),  # xmax is a postgres specific field, which indicates whether row was deleted (updated) or no
+            ),  # xmax is a postgres specific field, which indicates whether row was deleted (updated)
         )
         product_id, inserted = res.all()[0]
         if inserted:
@@ -181,6 +231,8 @@ class ProductsRepository(PaginationRepository[Product]):
                     for price in product.prices
                 ],
             )
+            return product_id
+        return None
 
     async def update_with_expired_discount(self, **values) -> int:
         stmt = (

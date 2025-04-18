@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import asyncio
 from collections.abc import Sequence
 from decimal import Decimal
 from logging import Logger
@@ -17,7 +18,12 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import CurrencyConverterI
+from products.domain.interfaces import (
+    CurrencyConverterI,
+    SaveGameRes,
+    LoadPsnWithXboxRes,
+)
+
 from orders.domain.interfaces import SteamAPIClientI
 from products.models import (
     Product,
@@ -34,7 +40,8 @@ from products.schemas import (
     DeliveryMethodsListDTO,
     ListProductsFilterDTO,
     PlatformsListDTO,
-    SalesDTO,
+    PsnGameParsedDTO,
+    XboxGameParsedDTO,
     ShowProduct,
     ShowProductExtended,
     UpdatePricesDTO,
@@ -153,35 +160,128 @@ class ProductsService(BaseService):
         self._currency_converter = currency_converter
         self._steam_api = steam_api
 
-    async def load_new_sales(self, products: Sequence[SalesDTO]):
-        async with self._uow as uow:
+    async def _save_games_by_platform(
+        self, products: Sequence[XboxGameParsedDTO | PsnGameParsedDTO]
+    ) -> list[SaveGameRes]:
+        """Returns list of ids of INSERTED (not updated) products"""
+        res: list[SaveGameRes] = []
+        platform = (
+            ProductPlatform.XBOX
+            if isinstance(products[0], XboxGameParsedDTO)
+            else ProductPlatform.PSN
+        )
+        async with self._uow() as uow:
             for item in products:
-                calculated_prices: list[RegionalPrice] = []
+                recalculated_prices: list[RegionalPrice] = []
                 for region, price in item.prices.items():
-                    if item.platform == ProductPlatform.XBOX:
+                    if platform == ProductPlatform.XBOX:
                         assert region in XboxParseRegions
-                        new_value = XboxPriceCalculator(price.value).calc_for_region(
-                            region, with_gp=item.with_gp
+                        price.value = XboxPriceCalculator(price.value).calc_for_region(
+                            region, with_gp=cast(XboxGameParsedDTO, item).with_gp
                         )
-                        price.value = new_value
                     price_in_rub = await self._currency_converter.convert_to_rub(price)
-                    calculated_prices.append(
+                    recalculated_prices.append(
                         RegionalPrice(
                             base_price=price_in_rub,
                             region_code=region,
                             original_curr=price.currency_code,
                         )
                     )
+                if platform == ProductPlatform.XBOX:
+                    delivery_method = ProductDeliveryMethod.KEY
+                    save_func = uow.products_repo.save_on_conflict_update_discount
+                else:  # assume PSN
+                    delivery_method = ProductDeliveryMethod.ACCOUNT_PURCHASE
+                    save_func = uow.products_repo.save_ignore_conflict
+
                 product = Product(
-                    **item.model_dump(exclude={"prices"}),
-                    prices=calculated_prices,
+                    **item.model_dump(exclude={"prices", "orig_url"}),
+                    prices=recalculated_prices,
                     category=ProductCategory.GAMES,
-                    delivery_method={
-                        ProductPlatform.XBOX: ProductDeliveryMethod.KEY,
-                        ProductPlatform.PSN: ProductDeliveryMethod.ACCOUNT_PURCHASE,
-                    }[item.platform],
+                    delivery_method=delivery_method,
+                    platform=platform,
                 )
-                await uow.products_repo.save_on_conflict_update_discount(product)
+                inserted_id = await save_func(product)
+                if inserted_id is not None:
+                    res.append(SaveGameRes(inserted_id=inserted_id, url=item.orig_url))
+        return res
+
+    # async def load_xbox(
+    #     self, products: Sequence[XboxGameParsedDTO]
+    # ) -> list[LoadGameResult]:
+    #     """Returns list of ids of INSERTED (not updated) products"""
+    #     res: list[LoadGameResult] = []
+    #     async with self._uow as uow:
+    #         for item in products:
+    #             recalculated_prices: list[RegionalPrice] = []
+    #             for region, price in item.prices.items():
+    #                 assert region in XboxParseRegions
+    #                 price.value = XboxPriceCalculator(price.value).calc_for_region(
+    #                     region, with_gp=item.with_gp
+    #                 )
+    #                 price_in_rub = await self._currency_converter.convert_to_rub(price)
+    #                 recalculated_prices.append(
+    #                     RegionalPrice(
+    #                         base_price=price_in_rub,
+    #                         region_code=region,
+    #                         original_curr=price.currency_code,
+    #                     )
+    #                 )
+    #             product = Product(
+    #                 **item.model_dump(exclude={"prices"}),
+    #                 prices=recalculated_prices,
+    #                 category=ProductCategory.GAMES,
+    #                 delivery_method=ProductDeliveryMethod.KEY,
+    #             )
+    #             inserted_id = await uow.products_repo.save_on_conflict_update_discount(
+    #                 product
+    #             )
+    #             if inserted_id is not None:
+    #                 res.append(
+    #                     LoadGameResult(inserted_id=inserted_id, url=item.orig_url)
+    #                 )
+    #     return res
+    #
+    # async def load_psn(
+    #     self, products: Sequence[PsnGameParsedDTO]
+    # ) -> list[LoadGameResult]:
+    #     """Returns list of ids of INSERTED (not updated) products"""
+    #     res: list[LoadGameResult] = []
+    #     async with self._uow as uow:
+    #         for item in products:
+    #             recalculated_prices: list[RegionalPrice] = []
+    #             for region, price in item.prices.items():
+    #                 price_in_rub = await self._currency_converter.convert_to_rub(price)
+    #                 recalculated_prices.append(
+    #                     RegionalPrice(
+    #                         base_price=price_in_rub,
+    #                         region_code=region,
+    #                         original_curr=price.currency_code,
+    #                     )
+    #                 )
+    #             product = Product(
+    #                 **item.model_dump(exclude={"prices"}),
+    #                 prices=recalculated_prices,
+    #                 category=ProductCategory.GAMES,
+    #                 delivery_method=ProductDeliveryMethod.ACCOUNT_PURCHASE,
+    #             )
+    #             inserted_id = await uow.products_repo.save_ignore_conflict(product)
+    #             if inserted_id is not None:
+    #                 res.append(
+    #                     LoadGameResult(inserted_id=inserted_id, url=item.orig_url)
+    #                 )
+    #     return res
+
+    async def load_new_sales(
+        self,
+        psn_products: Sequence[PsnGameParsedDTO],
+        xbox_product: Sequence[XboxGameParsedDTO],
+    ):
+        psn_res, xbox_res = await asyncio.gather(
+            self._save_games_by_platform(psn_products),
+            self._save_games_by_platform(xbox_product),
+        )
+        return LoadPsnWithXboxRes(psn_res, xbox_res)
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
         async with self._uow as uow:

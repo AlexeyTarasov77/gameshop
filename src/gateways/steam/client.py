@@ -7,7 +7,7 @@ from core.utils import JWTAuth
 from core.utils.httpx_utils import log_request, log_response
 from orders.schemas import CreateSteamGiftOrderDTO, CreateSteamTopUpOrderDTO
 from products.domain.services import ProductsService
-from products.schemas import SteamItemDTO
+from products.schemas import SteamGameParsedDTO
 from gateways.currency_converter import ExchangeRatesMappingDTO
 
 
@@ -20,8 +20,8 @@ class GamesForFarmAPIClient:
         self._service = products_service
         self._logger = logger
 
-    def _good_to_dto(self, good: dict) -> SteamItemDTO:
-        return SteamItemDTO.model_validate(
+    def _good_to_dto(self, good: dict) -> SteamGameParsedDTO:
+        return SteamGameParsedDTO.model_validate(
             {
                 **good,
                 "price_rub": good["price_wmr"],  # price in rubs
@@ -30,7 +30,7 @@ class GamesForFarmAPIClient:
             }
         )
 
-    async def _fetch_goods_without_bundle(self) -> Sequence[SteamItemDTO]:
+    async def _fetch_goods_without_bundle(self) -> Sequence[SteamGameParsedDTO]:
         self._logger.info("Fetching goods from api...")
         resp = await self._client.get(self._url)
         data = resp.json()["goods"]

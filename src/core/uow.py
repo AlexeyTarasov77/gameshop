@@ -4,7 +4,7 @@ import typing as t
 from logging import Logger
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.services.exceptions import ServiceError
 from gateways.db.exceptions import DatabaseError, AbstractDatabaseExceptionMapper
@@ -45,6 +45,9 @@ class AbstractUnitOfWork[S](abc.ABC):
         self._init_repos()
         return self
 
+    @abc.abstractmethod
+    def __call__(self) -> t.Self: ...
+
     async def __aexit__(self, exc_type, exc_value, _):
         await self.rollback()
 
@@ -52,7 +55,7 @@ class AbstractUnitOfWork[S](abc.ABC):
     def _init_repos(self) -> None: ...
 
     def _register_repo[V: AcceptsSessionI](self, repo_cls: type[V]) -> V:
-        assert self._session
+        assert self._session, "Attempt to register repos without initialized session"
         return repo_cls(self._session)
 
     @abc.abstractmethod
@@ -66,10 +69,10 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
     def __init__(
         self,
         exception_mapper: AbstractDatabaseExceptionMapper,
-        session_factory: async_sessionmaker[AsyncSession],
+        session_factory: Callable[[], AsyncSession],
         logger: Logger,
     ) -> None:
-        self.logger = logger
+        self._logger = logger
         self.exception_mapper = exception_mapper
         super().__init__(session_factory)
 
@@ -78,9 +81,12 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
             raise exc
         self.exception_mapper.map_and_raise(getattr(exc, "orig", None) or exc)
 
-    async def __aenter__(self) -> t.Self:
-        """Instantiating new session and initializing repos"""
-        return await super().__aenter__()
+    def __call__(self) -> t.Self:
+        # create new instance to be able to share in async code
+        self = self.__class__(
+            self.exception_mapper, self._session_factory, self._logger
+        )
+        return self
 
     def _init_repos(self):
         # initializing repositories using created session
@@ -108,7 +114,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         assert self._session is not None
         try:
             if exc_type is not None:
-                self.logger.debug(
+                self._logger.debug(
                     "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
                     exc_value,
                     exc_info=True,
@@ -118,7 +124,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
 
             await self.commit()
         except SQLAlchemyError as e:
-            self.logger.error("Exception during commiting/rollbacking trx", exc_info=e)
+            self._logger.error("Exception during commiting/rollbacking trx", exc_info=e)
             self._handle_exc(e)
         finally:
             await self._session.close()

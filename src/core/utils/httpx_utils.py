@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from logging import Logger
+from logging import Logger, getLogger
 import httpx
 from typing import Any
 
@@ -11,20 +11,22 @@ class JWTAuth(httpx.Auth):
         self,
         auth_url: str,
         credentials: dict[str, Any],
+        logger: Logger | None = None,
         resp_token_key: str = "access_token",
     ):
         self._token: str | None = None
         self._auth_url = auth_url
         self._credentials = credentials
         self._resp_token_key = resp_token_key
+        self._logger = logger or getLogger(__name__)
 
     def auth_flow(self, request: httpx.Request):
         self._set_auth_header(request)
         if self._token is None:
-            self.authenticate(request)
+            yield from self.authenticate(request)
         response = yield request
         if response.status_code in (401, 403):
-            # If the server issues a 401 response then resend the request,
+            # If the server issues a 401 response then resend the request, assuming that token is expired
             yield from self.authenticate(request)
             yield request
 
