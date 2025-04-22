@@ -8,7 +8,7 @@ import asyncio
 from gamesparser.models import PsnParsedItem, XboxParsedItem
 
 from core.uow import AbstractUnitOfWork
-from products.domain.interfaces import LoadPsnWithXboxRes, SaveGameRes
+from products.domain.interfaces import SaveGameRes
 from products.domain.services import ProductsService
 
 from httpx import AsyncClient

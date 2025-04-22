@@ -473,13 +473,13 @@ standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.5)", "htt
 
 [[package]]
 name = "gamesparser"
-version = "0.2.2"
+version = "0.2.5"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.12"
 files = [
-    {file = "gamesparser-0.2.2-py3-none-any.whl", hash = "sha256:91250f4d8176c6d59560d65da715d8f271f41ebc654d0dd1f9492a6039ae10c6"},
-    {file = "gamesparser-0.2.2.tar.gz", hash = "sha256:500a91970e88c38dfb8c7ac36c41b6dee30fdc010715c5dcd94f9a221b821a2b"},
+    {file = "gamesparser-0.2.5-py3-none-any.whl", hash = "sha256:2c24668a95e96e60d8ae66b47413e40f44fdd770091584d0615c7da12a9cf981"},
+    {file = "gamesparser-0.2.5.tar.gz", hash = "sha256:6a2e2aa8fb2b65d4a086dd5b4c32aa9eed061325cfc692dff3ac7addba856189"},
 ]
 
 [package.dependencies]
@@ -1663,4 +1663,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.6.3)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "f93da292e18e2b9a9b3fbd1d87dae89d4e141a77cb252f5cb32890d9d898782a"
+content-hash = "8946a3059527242c86b413a8a6eddfdc498f24c356e2cd6466b2a7ccff07c9f3"

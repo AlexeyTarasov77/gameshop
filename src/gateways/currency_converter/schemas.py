@@ -14,4 +14,4 @@ class PriceUnitDTO(BaseDTO):
 class SetExchangeRateDTO(BaseDTO):
     from_: Currency = Field(alias="from")
     to: Currency = Field(default=Currency("RUB"))
-    value: float
+    new_rate: Decimal

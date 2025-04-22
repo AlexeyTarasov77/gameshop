@@ -275,7 +275,7 @@ class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
         await super().create(product_id=for_product_id, base_price=base_price)
 
     async def update_all_with_rate(
-        self, for_currency: str, new_rate: float, old_rate: float
+        self, for_currency: str, new_rate: Decimal, old_rate: Decimal
     ) -> None:
         update_price_clause = RegionalPrice.base_price / old_rate * new_rate
         stmt = (

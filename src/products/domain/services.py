@@ -13,6 +13,7 @@ from core.services.exceptions import (
 )
 from core.uow import AbstractUnitOfWork
 from gateways.currency_converter import ExchangeRatesMappingDTO, SetExchangeRateDTO
+from gateways.currency_converter.schemas import PriceUnitDTO
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
@@ -53,8 +54,8 @@ from products.schemas import (
 class AbstractPriceCalculator(ABC):
     def __post_init__(self): ...
 
-    def __init__(self, price: Decimal):
-        self._price = price
+    def __init__(self, price: PriceUnitDTO):
+        self._price = price.value
 
     @abstractmethod
     def calc_for_region(self, region_code: str, *args, **kwargs) -> Decimal: ...
@@ -64,6 +65,10 @@ class AbstractPriceCalculator(ABC):
 
 
 class XboxPriceCalculator(AbstractPriceCalculator):
+    def __init__(self, price: PriceUnitDTO):
+        assert price.currency_code.lower() == "usd", "Expected price with usd currency"
+        super().__init__(price)
+
     def _calc_for_usa(self, with_gp: bool) -> Decimal:
         calculated = self._price * Decimal(0.75)
         if with_gp:
@@ -174,15 +179,19 @@ class ProductsService(BaseService):
             for item in products:
                 recalculated_prices: list[RegionalPrice] = []
                 for region, price in item.prices.items():
-                    if platform == ProductPlatform.XBOX:
-                        assert region in XboxParseRegions
-                        price.value = XboxPriceCalculator(price.value).calc_for_region(
-                            region, with_gp=cast(XboxGameParsedDTO, item).with_gp
+                    if isinstance(item, XboxGameParsedDTO):
+                        # if src currency != usd - convert it because all computations are done in dollars
+                        if price.currency_code.lower() != "usd":
+                            price = await self._currency_converter.convert_price(
+                                price, "usd"
+                            )
+                        price.value = XboxPriceCalculator(price).calc_for_region(
+                            region, with_gp=item.with_gp
                         )
-                    price_in_rub = await self._currency_converter.convert_to_rub(price)
+                    price_in_rub = await self._currency_converter.convert_price(price)
                     recalculated_prices.append(
                         RegionalPrice(
-                            base_price=price_in_rub,
+                            base_price=price_in_rub.value,
                             region_code=region,
                             original_curr=price.currency_code,
                         )
@@ -190,7 +199,7 @@ class ProductsService(BaseService):
                 if platform == ProductPlatform.XBOX:
                     delivery_method = ProductDeliveryMethod.KEY
                     save_func = uow.products_repo.save_on_conflict_update_discount
-                else:  # assume PSN
+                else:
                     delivery_method = ProductDeliveryMethod.ACCOUNT_PURCHASE
                     save_func = uow.products_repo.save_ignore_conflict
 
@@ -205,72 +214,6 @@ class ProductsService(BaseService):
                 if inserted_id is not None:
                     res.append(SaveGameRes(inserted_id=inserted_id, url=item.orig_url))
         return res
-
-    # async def load_xbox(
-    #     self, products: Sequence[XboxGameParsedDTO]
-    # ) -> list[LoadGameResult]:
-    #     """Returns list of ids of INSERTED (not updated) products"""
-    #     res: list[LoadGameResult] = []
-    #     async with self._uow as uow:
-    #         for item in products:
-    #             recalculated_prices: list[RegionalPrice] = []
-    #             for region, price in item.prices.items():
-    #                 assert region in XboxParseRegions
-    #                 price.value = XboxPriceCalculator(price.value).calc_for_region(
-    #                     region, with_gp=item.with_gp
-    #                 )
-    #                 price_in_rub = await self._currency_converter.convert_to_rub(price)
-    #                 recalculated_prices.append(
-    #                     RegionalPrice(
-    #                         base_price=price_in_rub,
-    #                         region_code=region,
-    #                         original_curr=price.currency_code,
-    #                     )
-    #                 )
-    #             product = Product(
-    #                 **item.model_dump(exclude={"prices"}),
-    #                 prices=recalculated_prices,
-    #                 category=ProductCategory.GAMES,
-    #                 delivery_method=ProductDeliveryMethod.KEY,
-    #             )
-    #             inserted_id = await uow.products_repo.save_on_conflict_update_discount(
-    #                 product
-    #             )
-    #             if inserted_id is not None:
-    #                 res.append(
-    #                     LoadGameResult(inserted_id=inserted_id, url=item.orig_url)
-    #                 )
-    #     return res
-    #
-    # async def load_psn(
-    #     self, products: Sequence[PsnGameParsedDTO]
-    # ) -> list[LoadGameResult]:
-    #     """Returns list of ids of INSERTED (not updated) products"""
-    #     res: list[LoadGameResult] = []
-    #     async with self._uow as uow:
-    #         for item in products:
-    #             recalculated_prices: list[RegionalPrice] = []
-    #             for region, price in item.prices.items():
-    #                 price_in_rub = await self._currency_converter.convert_to_rub(price)
-    #                 recalculated_prices.append(
-    #                     RegionalPrice(
-    #                         base_price=price_in_rub,
-    #                         region_code=region,
-    #                         original_curr=price.currency_code,
-    #                     )
-    #                 )
-    #             product = Product(
-    #                 **item.model_dump(exclude={"prices"}),
-    #                 prices=recalculated_prices,
-    #                 category=ProductCategory.GAMES,
-    #                 delivery_method=ProductDeliveryMethod.ACCOUNT_PURCHASE,
-    #             )
-    #             inserted_id = await uow.products_repo.save_ignore_conflict(product)
-    #             if inserted_id is not None:
-    #                 res.append(
-    #                     LoadGameResult(inserted_id=inserted_id, url=item.orig_url)
-    #                 )
-    #     return res
 
     async def load_new_sales(
         self,
@@ -384,11 +327,15 @@ class ProductsService(BaseService):
         await self._currency_converter.set_exchange_rate(dto)
         if old_rate is None:
             return
-        new_rate = dto.value
+        self._logger.info(
+            "Updating prices according to new rate for %s. Rate: %.2f",
+            dto.from_ + "/" + dto.to,
+            dto.new_rate,
+        )
         # update existing prices with new rate (only that which was converted from updated rate)
         async with self._uow as uow:
             await uow.products_prices_repo.update_all_with_rate(
-                dto.from_, new_rate, old_rate
+                dto.from_, dto.new_rate, old_rate
             )
 
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
