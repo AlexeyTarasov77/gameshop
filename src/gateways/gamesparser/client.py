@@ -121,17 +121,30 @@ class SalesParser:
         t1 = time.perf_counter()
         rows: list[NamedTuple] = []
         for obj in products_urls:
-            data = await parse_func(obj.url)
+            try:
+                data = await parse_func(obj.url)
+            except Exception as e:
+                self._logger.error(
+                    "Error during parsing details for id: %d, url: %s. Error: %s",
+                    obj.inserted_id,
+                    obj.url,
+                    e,
+                )
+                continue
             if data is None:
                 self._logger.warning(
-                    "Failed to parse details for psn product with inserted_id: %d. Left unchaged",
+                    "Failed to parse details for id: %d. Left unchaged",
                     obj.inserted_id,
                 )
                 continue
             rows.append(row_func(obj, data))
             if timeout:
                 await asyncio.sleep(timeout)
-        self._logger.info("PSN Parsed %d rows for update. Updating...", len(rows))
+        self._logger.info(
+            "%s Parsed %d rows for update. Updating...",
+            str(for_platform.value),
+            len(rows),
+        )
         async with self._uow() as uow:
             await uow.products_repo.update_from_rows(rows)
         self._logger.info(
