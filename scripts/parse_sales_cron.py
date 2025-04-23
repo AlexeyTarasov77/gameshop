@@ -17,11 +17,9 @@ async def main():
     parser: SalesParser = get_container().instantiate(SalesParser)
     async with lifespan():
         res = await parser.parse_and_save_all(limit)
-        # async def update_psn_wrapper():
-        #     # await asyncio.sleep(5 * 60)
-        #     await parser.update_psn_details(res.psn, 1)
         await asyncio.gather(
-            parser.update_psn_details(res.psn, 1), parser.update_xbox_details(res.xbox)
+            parser.update_psn_details(res.psn, timeout=1),
+            parser.update_xbox_details(res.xbox),
         )
 
 

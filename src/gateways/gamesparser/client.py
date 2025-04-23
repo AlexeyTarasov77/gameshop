@@ -1,11 +1,14 @@
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import asdict
 from datetime import datetime
 from logging import Logger
 import time
 import asyncio
+from typing import Literal, NamedTuple
 
 from gamesparser.models import PsnParsedItem, XboxParsedItem
+from gamesparser.psn import PsnItemDetails
+from gamesparser.xbox import XboxItemDetails
 
 from core.uow import AbstractUnitOfWork
 from products.domain.interfaces import SaveGameRes
@@ -15,6 +18,7 @@ from httpx import AsyncClient
 from gamesparser import ParsedItem, PsnParser, XboxParser
 
 from products.models import (
+    ProductPlatform,
     PsnParseRegions,
     XboxParseRegions,
 )
@@ -22,6 +26,17 @@ from products.schemas import PsnGameParsedDTO, XboxGameParsedDTO
 
 type PsnUpdateRows = list[tuple[int, str, datetime | None]]
 type XboxUpdateRows = list[tuple[int, str]]
+
+
+class PsnRowForUpdate(NamedTuple):
+    id: int
+    description: str
+    deal_until: datetime | None
+
+
+class XboxRowForUpdate(NamedTuple):
+    id: int
+    description: str
 
 
 class SalesParser:
@@ -86,56 +101,66 @@ class SalesParser:
         self._logger.info("Sales succesfully loaded")
         return res
 
-    async def update_psn_details(
-        self, products_urls: Sequence[SaveGameRes], timeout: int | None = None
+    async def _update_parsed_details[T](
+        self,
+        products_urls: Sequence[SaveGameRes],
+        for_platform: Literal[ProductPlatform.XBOX, ProductPlatform.PSN],
+        parse_func: Callable[[str], Awaitable[T | None]],
+        row_func: Callable[[SaveGameRes, T], NamedTuple],
+        *,
+        timeout: int | None = None,
     ):
         self._logger.info(
-            "Start updating psn details for %d products", len(products_urls)
+            "Start updating %s details for %d products",
+            str(for_platform.value),
+            len(products_urls),
         )
         if not len(products_urls):
             self._logger.info("Nothing to update. Exiting...")
             return
         t1 = time.perf_counter()
-        rows: PsnUpdateRows = []
+        rows: list[NamedTuple] = []
         for obj in products_urls:
-            data = await self._psn_parser.parse_item_details(obj.url)
+            data = await parse_func(obj.url)
             if data is None:
                 self._logger.warning(
                     "Failed to parse details for psn product with inserted_id: %d. Left unchaged",
                     obj.inserted_id,
                 )
                 continue
-            rows.append((obj.inserted_id, data.description, data.deal_until))
+            rows.append(row_func(obj, data))
             if timeout:
                 await asyncio.sleep(timeout)
         self._logger.info("PSN Parsed %d rows for update. Updating...", len(rows))
-        async with self._uow as uow:
-            await uow.products_repo.update_psn_details(rows)
+        async with self._uow() as uow:
+            await uow.products_repo.update_from_rows(rows)
         self._logger.info(
-            "PSN update completed. Which took: %.2f seconds", time.perf_counter() - t1
+            "%s update completed. Which took: %.2f seconds",
+            str(for_platform.value),
+            time.perf_counter() - t1,
+        )
+
+    async def update_psn_details(
+        self, products_urls: Sequence[SaveGameRes], timeout: int | None = None
+    ):
+        def row_func(obj: SaveGameRes, data: PsnItemDetails) -> PsnRowForUpdate:
+            return PsnRowForUpdate(obj.inserted_id, data.description, data.deal_until)
+
+        await self._update_parsed_details(
+            products_urls,
+            ProductPlatform.PSN,
+            self._psn_parser.parse_item_details,
+            row_func,
+            timeout=timeout,
         )
 
     async def update_xbox_details(self, products_urls: Sequence[SaveGameRes]):
-        self._logger.info(
-            "Start updating xbox details for %d products", len(products_urls)
-        )
-        if not len(products_urls):
-            self._logger.info("Nothing to update. Exiting...")
-            return
-        t1 = time.perf_counter()
-        rows: XboxUpdateRows = []
-        for obj in products_urls:
-            data = await self._xbox_parser.parse_item_details(obj.url)
-            if data is None:
-                self._logger.warning(
-                    "Failed to parse details for xbox product with inserted_id: %d. Left unchaged",
-                    obj.inserted_id,
-                )
-                continue
-            rows.append((obj.inserted_id, data.description))
-        self._logger.info("XBOX Parsed %d rows for update. Updating...", len(rows))
-        async with self._uow as uow:
-            await uow.products_repo.update_xbox_details(rows)
-        self._logger.info(
-            "XBOX update completed. Which took: %.2f seconds", time.perf_counter() - t1
+        def row_func(obj: SaveGameRes, data: XboxItemDetails) -> XboxRowForUpdate:
+            return XboxRowForUpdate(obj.inserted_id, data.description)
+
+        await self._update_parsed_details(
+            products_urls,
+            ProductPlatform.XBOX,
+            self._xbox_parser.parse_item_details,
+            row_func,
         )

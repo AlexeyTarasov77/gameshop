@@ -25,8 +25,8 @@ class ProductPlatform(LabeledEnum):
 
 
 class SalesCategories(Enum):
-    XBOX_SALES = IntWithLabel(6, "Распродажи xbox")
-    PSN_SALES = IntWithLabel(7, "Распродажи psn")
+    XBOX_SALES = IntWithLabel(6, "Распродажа xbox")
+    PSN_SALES = IntWithLabel(7, "Распродажа psn")
 
 
 class ProductCategory(LabeledEnum):

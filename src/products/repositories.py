@@ -1,4 +1,4 @@
-from datetime import datetime
+from typing import NamedTuple
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
@@ -159,34 +159,15 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return bool(res.scalar_one_or_none())
 
-    async def update_psn_details(
-        self, rows: Sequence[tuple[int, str, datetime | None]]
-    ):
+    async def update_from_rows(self, rows: Sequence[NamedTuple]):
         if not rows:
             raise ValueError("Nothing to update")
-        p2 = (
-            sa.values(
-                sa.column("id"), sa.column("description"), sa.column("deal_until")
-            )
-            .data(rows)
-            .alias("p2")
-        )
-        stmt = (
-            sa.update(self.model)
-            .values(description=p2.c.description, deal_until=p2.c.deal_until)
-            .where(self.model.id == p2.c.id)
-        )
-        await self._session.execute(stmt)
-
-    async def update_xbox_details(self, rows: Sequence[tuple[int, str]]):
-        if not rows:
-            raise ValueError("Nothing to update")
-        p2 = sa.values(sa.column("id"), sa.column("description")).data(rows).alias("p2")
-        stmt = (
-            sa.update(self.model)
-            .values(description=p2.c.description)
-            .where(self.model.id == p2.c.id)
-        )
+        assert "id" in rows[0]._fields, "Id must be present in the row"
+        columns = [sa.column(name) for name in rows[0]._fields]
+        p2 = sa.values(*columns).data(rows).alias("p2")
+        values = dict(p2.c)
+        id = values.pop("id")
+        stmt = sa.update(self.model).values(**values).where(self.model.id == id)
         await self._session.execute(stmt)
 
     async def save_ignore_conflict(self, product: Product) -> int | None:

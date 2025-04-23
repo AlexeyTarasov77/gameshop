@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from datetime import datetime
 from decimal import Decimal
 import typing as t
 
@@ -80,10 +79,7 @@ class ProductsRepositoryI(t.Protocol):
     ) -> Sequence[Product]: ...
 
     async def update_with_expired_discount(self, **values) -> int: ...
-    async def update_xbox_details(self, rows: Sequence[tuple[int, str]]): ...
-    async def update_psn_details(
-        self, rows: Sequence[tuple[int, str, datetime | None]]
-    ): ...
+    async def update_from_rows(self, rows: Sequence[t.NamedTuple]): ...
 
 
 class PricesRepositoryI(t.Protocol):
