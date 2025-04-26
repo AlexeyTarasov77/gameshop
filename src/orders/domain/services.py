@@ -1,6 +1,8 @@
 from decimal import Decimal
 from logging import Logger
 from uuid import UUID
+
+from pydantic_extra_types.country import CountryAlpha2
 from core.pagination import PaginationParams, PaginationResT
 from core.schemas import EMPTY_REGION
 from core.services.base import BaseService
@@ -22,7 +24,7 @@ from orders import schemas
 from payments.domain.interfaces import PaymentSystemFactoryI
 from payments.models import AvailablePaymentSystems
 from payments.schemas import PaymentBillDTO
-from products.models import ProductDeliveryMethod
+from products.models import ProductDeliveryMethod, ProductPlatform
 
 
 class OrdersService(BaseService):
@@ -78,11 +80,16 @@ class OrdersService(BaseService):
                 )
             order_items: list[InAppOrderItem] = []
             for product in cart_products:
-                [mapped_item] = [
+                [cart_item] = [
                     item for item in dto.cart if item.product_id == product.id
                 ]
+                if (
+                    product.platform == ProductPlatform.XBOX
+                    and "region" not in cart_item.model_fields_set
+                ):
+                    cart_item.region = CountryAlpha2("us")
                 # find price for provided region
-                region = normalize_s(mapped_item.region)
+                region = normalize_s(cart_item.region)
                 mapped_price = None
                 for regional_price in product.prices:
                     if normalize_s(regional_price.region_code) == region:
@@ -96,7 +103,7 @@ class OrdersService(BaseService):
                         region=region,
                         price=mapped_price,
                         product_id=product.id,
-                        quantity=mapped_item.quantity,
+                        quantity=cart_item.quantity,
                     )
                 )
             order = await uow.in_app_orders_repo.create_with_items(

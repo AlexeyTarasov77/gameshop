@@ -12,7 +12,7 @@ class BackgroundJobs:
         timeout_sec = 60 * 60 * 6  # 6 hours
         while True:
             async with self._uow as uow:
-                updated_count = await uow.products_repo.update_with_expired_discount(
+                updated_count = await uow.products_repo.update_where_expired_discount(
                     deal_until=None, discount=0
                 )
                 self._logger.info("%d products removed from sale", updated_count)

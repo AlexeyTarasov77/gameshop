@@ -12,7 +12,6 @@ from gateways.db.sqlalchemy_gateway import PaginationRepository
 from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
 from products.models import (
     Product,
-    ProductCategory,
     ProductPlatform,
     RegionalPrice,
 )
@@ -215,7 +214,7 @@ class ProductsRepository(PaginationRepository[Product]):
             return product_id
         return None
 
-    async def update_with_expired_discount(self, **values) -> int:
+    async def update_where_expired_discount(self, **values) -> int:
         stmt = (
             sa.update(self.model)
             .where(
@@ -225,25 +224,6 @@ class ProductsRepository(PaginationRepository[Product]):
                 ),
             )
             .values(**values)
-        )
-        res = await self._session.execute(stmt)
-        return res.rowcount
-
-    async def update_category_for_expired_sales(
-        self, for_categories: Sequence[ProductCategory], new_category: ProductCategory
-    ) -> int:
-        stmt = (
-            sa.update(self.model)
-            .where(
-                sa.and_(
-                    self.model.category.in_(for_categories),
-                    sa.and_(
-                        self.model.deal_until.isnot(None),
-                        self._is_deal_until_expired_stmt(),
-                    ),
-                )
-            )
-            .values(category=new_category)
         )
         res = await self._session.execute(stmt)
         return res.rowcount
