@@ -17,7 +17,7 @@ from users.models import User
 class OrderStatus(StrEnum):
     COMPLETED = "COMPLETED"
     PENDING = "PENDING"
-    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
 
 
 class OrderCategory(LabeledEnum):

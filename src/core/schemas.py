@@ -59,13 +59,6 @@ def _check_and_save_image(file: UploadFile) -> str:
     return run_coroutine_sync(save_upload_file(file))
 
 
-def _check_datetime[T: datetime](value: T) -> T:
-    assert value > datetime.now(
-        value.tzinfo
-    ), "Value should be greater than current datetime"
-    return value
-
-
 def _parse_int(s: str | int) -> int:
     if isinstance(s, int):
         return s
@@ -133,7 +126,6 @@ Base64IntOptionalIDParam = Annotated[
     BeforeValidator(_parse_id_optional, json_schema_input_type=str),
     _base64int_serializer,
 ]
-DateTimeAfterNow = Annotated[datetime, AfterValidator(_check_datetime)]
 
 type EmptyRegionT = Literal[""]
 

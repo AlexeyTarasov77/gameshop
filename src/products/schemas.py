@@ -66,7 +66,7 @@ class CreateProductDTO(BaseProductDTO):
     platform: models.ProductPlatform
     delivery_method: models.ProductDeliveryMethod
     discounted_price: Decimal
-    deal_until: schemas.DateTimeAfterNow | None = None
+    deal_until: pydantic.FutureDatetime | None = None
     image: schemas.UploadImage
     sub_id: int | None = None
 
@@ -93,7 +93,7 @@ class UpdateProductDTO(schemas.BaseDTO):
     platform: models.ProductPlatform | None = None
     image: schemas.UploadImage | None = None
     discount: ProductDiscount | None = None
-    deal_until: schemas.DateTimeAfterNow | None = None
+    deal_until: pydantic.FutureDatetime | None = None
 
 
 class UpdatePricesDTO(schemas.BaseDTO):

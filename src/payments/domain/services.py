@@ -115,7 +115,7 @@ class PaymentsService(BaseService):
                             )
                 except ExternalGatewayError:
                     await uow.orders_repo.update_by_id(
-                        UpdateOrderDTO(status=OrderStatus.CANCELLED), order_id
+                        UpdateOrderDTO(status=OrderStatus.FAILED), order_id
                     )
                     raise
 
