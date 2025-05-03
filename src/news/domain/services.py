@@ -13,12 +13,12 @@ class NewsService(BaseService):
     async def list_news(
         self, pagination_params: PaginationParams
     ) -> tuple[list[ShowNews], int]:
-        async with self._uow as uow:
+        async with self._uow() as uow:
             news, total_records = await uow.news_repo.paginated_list(pagination_params)
         return [ShowNews.model_validate(el) for el in news], total_records
 
     async def create_news(self, dto: CreateNewsDTO) -> ShowNews:
-        async with self._uow as uow:
+        async with self._uow() as uow:
             news = await uow.news_repo.create_with_image(
                 dto, cast(str | None, dto.photo)
             )
@@ -26,7 +26,7 @@ class NewsService(BaseService):
 
     async def get_news(self, news_id: int) -> ShowNews:
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 news = await uow.news_repo.get_by_id(news_id)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=news_id)
@@ -37,7 +37,7 @@ class NewsService(BaseService):
         if "photo" in dto.model_fields_set:  # if none is set explicitly
             photo_url = cast(str | None, dto.photo)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 news = await uow.news_repo.update_by_id(news_id, dto, photo_url)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=news_id)
@@ -45,7 +45,7 @@ class NewsService(BaseService):
 
     async def delete_news(self, news_id: int) -> None:
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 await uow.news_repo.delete_by_id(news_id)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=news_id)

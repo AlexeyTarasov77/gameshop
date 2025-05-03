@@ -175,7 +175,7 @@ class ProductsService(BaseService):
             if isinstance(products[0], XboxGameParsedDTO)
             else ProductPlatform.PSN
         )
-        async with self._uow() as uow:
+        async with self._uow()() as uow:
             for item in products:
                 recalculated_prices: list[RegionalPrice] = []
                 for region, price in item.prices.items():
@@ -227,7 +227,7 @@ class ProductsService(BaseService):
         return LoadPsnWithXboxRes(psn_res, xbox_res)
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
-        async with self._uow as uow:
+        async with self._uow() as uow:
             products_ids_for_update = await uow.products_repo.fetch_ids_for_platforms(
                 dto.for_platforms,
             )
@@ -242,7 +242,7 @@ class ProductsService(BaseService):
         if dto.platform in [ProductPlatform.XBOX, ProductPlatform.PSN]:
             original_curr = "usd"
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 product = await uow.products_repo.create_with_price(
                     dto, base_price, original_curr
                 )
@@ -257,7 +257,7 @@ class ProductsService(BaseService):
         self,
         dto: ListProductsParamsDTO,
     ) -> PaginationResT[ShowProductExtended]:
-        async with self._uow() as uow:
+        async with self._uow()() as uow:
             (
                 products,
                 total_records,
@@ -270,7 +270,7 @@ class ProductsService(BaseService):
 
     async def get_product(self, product_id: int) -> ShowProductExtended:
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 product = await uow.products_repo.get_by_id(product_id)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
@@ -291,7 +291,7 @@ class ProductsService(BaseService):
         self, product_id: int, dto: UpdateProductDTO
     ) -> ShowProduct:
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 product = await uow.products_repo.update_by_id_with_image(
                     product_id, dto, cast(str | None, dto.image)
                 )
@@ -310,7 +310,7 @@ class ProductsService(BaseService):
 
     async def delete_product(self, product_id: int) -> None:
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 await uow.products_repo.delete_by_id(product_id)
         except NotFoundError:
             raise EntityNotFoundError(self.entity_name, id=product_id)
@@ -331,7 +331,7 @@ class ProductsService(BaseService):
             dto.new_rate,
         )
         # update existing prices with new rate (only that which was converted from updated rate)
-        async with self._uow as uow:
+        async with self._uow() as uow:
             await uow.products_prices_repo.update_all_with_rate(
                 dto.from_, dto.new_rate, old_rate
             )

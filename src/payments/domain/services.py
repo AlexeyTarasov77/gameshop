@@ -92,7 +92,7 @@ class PaymentsService(BaseService):
         )
         additional_msg = ""
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 try:
                     match payment_for:
                         case OrderCategory.IN_APP:

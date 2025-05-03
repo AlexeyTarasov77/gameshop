@@ -28,7 +28,7 @@ class ShoppingService(BaseService):
         self._wishlist_manager = wishlist_manager
 
     async def _require_product_in_stock(self, product_id: int):
-        async with self._uow as uow:
+        async with self._uow() as uow:
             in_stock = await uow.products_repo.check_in_stock(product_id)
         if not in_stock:
             raise EntityNotFoundError(self.entity_name, id=product_id)
@@ -52,7 +52,7 @@ class ShoppingService(BaseService):
         items = await self._cart_manager.list_items()
         if not items:
             return []
-        async with self._uow as uow:
+        async with self._uow() as uow:
             products = await uow.products_repo.list_by_ids(list(items.keys()))
         res = []
         for product in products:
@@ -64,7 +64,7 @@ class ShoppingService(BaseService):
         product_ids = await self._wishlist_manager.list_ids()
         if not product_ids:
             return []
-        async with self._uow as uow:
+        async with self._uow() as uow:
             products = await uow.products_repo.list_by_ids(product_ids)
         return [ShowProductExtended.model_validate(product) for product in products]
 

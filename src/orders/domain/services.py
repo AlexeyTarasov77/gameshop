@@ -70,7 +70,7 @@ class OrdersService(BaseService):
         user_id: int | None,
     ) -> schemas.OrderPaymentDTO[schemas.InAppOrderDTO]:
         self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
-        async with self._uow as uow:
+        async with self._uow() as uow:
             cart_products = await uow.products_repo.list_by_ids(
                 [int(item.product_id) for item in dto.cart], only_in_stock=True
             )
@@ -132,7 +132,7 @@ class OrdersService(BaseService):
     ) -> schemas.ShowBaseOrderDTO:
         self._logger.info("Updating order: %s. Data: %s", order_id, dto)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 order = await uow.orders_repo.update_by_id(dto, order_id)
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
@@ -142,7 +142,7 @@ class OrdersService(BaseService):
     async def delete_order(self, order_id: UUID) -> None:
         self._logger.info("Deleting order: %s", order_id)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 await uow.orders_repo.delete_by_id(order_id)
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
@@ -159,7 +159,7 @@ class OrdersService(BaseService):
             user_id,
             pagination_params,
         )
-        async with self._uow as uow:
+        async with self._uow() as uow:
             orders, total_records = await uow.orders_repo.list_orders_for_user(
                 pagination_params, user_id, category
             )
@@ -173,7 +173,7 @@ class OrdersService(BaseService):
         self._logger.info(
             "Listing all orders. Pagination params: %s", pagination_params
         )
-        async with self._uow as uow:
+        async with self._uow() as uow:
             orders, total_records = await uow.orders_repo.list_orders(
                 pagination_params, category
             )
@@ -184,7 +184,7 @@ class OrdersService(BaseService):
     async def get_order(self, order_id: UUID) -> schemas.ShowBaseOrderDTO:
         self._logger.info("Fetching order by id: %s", order_id)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 order = await uow.orders_repo.get_by_id(order_id)
         except NotFoundError:
             self._logger.warning("Order %s not found", order_id)
@@ -204,7 +204,7 @@ class OrdersService(BaseService):
                 "Steam top up fee is unset. Using default: %s", self._top_up_default_fee
             )
             percent_fee = self._top_up_default_fee
-        async with self._uow as uow:
+        async with self._uow() as uow:
             order = await uow.steam_top_up_repo.create_with_id(
                 dto, top_up_id, percent_fee, user_id
             )
@@ -235,7 +235,7 @@ class OrdersService(BaseService):
     ) -> schemas.OrderPaymentDTO[schemas.SteamGiftOrderDTO]:
         product_id = int(dto.product_id)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 product = await uow.products_repo.get_by_id(product_id)
                 if product.delivery_method != ProductDeliveryMethod.GIFT:
                     raise ClientError(

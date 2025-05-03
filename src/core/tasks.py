@@ -11,7 +11,7 @@ class BackgroundJobs:
     async def _remove_products_from_sale(self):
         timeout_sec = 60 * 60 * 6  # 6 hours
         while True:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 updated_count = await uow.products_repo.update_where_expired_discount(
                     deal_until=None, discount=0
                 )
