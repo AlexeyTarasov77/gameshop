@@ -7,6 +7,7 @@ from typing import Any, Annotated
 from core import schemas
 import pydantic
 
+from core.pagination import PaginationParams
 from core.utils.enums import LabeledEnum
 from gateways.currency_converter import PriceUnitDTO
 from products import models
@@ -153,7 +154,7 @@ class OrderByOption(StrEnum):
     DESC = "desc"
 
 
-class ListProductsFilterDTO(schemas.BaseDTO):
+class ListProductsParamsDTO(PaginationParams):
     query: str | None = None
     discounted: bool | None = None
     in_stock: bool | None = None

@@ -41,7 +41,7 @@ from gateways.db import SqlAlchemyClient, RedisClient
 from gateways.tg_client import TelegramClient
 from news.domain.services import NewsService
 from orders.domain.services import OrdersService
-from orders.domain.interfaces import SteamAPIClientI
+from orders.domain.interfaces import SteamAPIClientI, TopUpFeeManagerI
 from products.domain.services import ProductsService
 from users.domain.interfaces import (
     EmailTemplatesI as UsersEmailTemplatesI,
@@ -104,7 +104,9 @@ def _init_container() -> punq.Container:
         signing_alg=cfg.tokens.alg,
     )
     container.register(StatefullTokenProviderI, SecureTokenProvider)
-    container.register(MailingService, MailingService, **cfg.smtp.model_dump())
+    container.register(
+        MailingService, scope=punq.Scope.singleton, **cfg.smtp.model_dump()
+    )
     container.register(SqlAlchemyClient, instance=db)
     container.register(Config, instance=cfg)
     container.register(
@@ -115,14 +117,17 @@ def _init_container() -> punq.Container:
     container.register(UsersEmailTemplatesI, EmailTemplates)
     container.register(TelegramClientI, TelegramClient, token=cfg.clients.tg_api.token)
     container.register(PaymentEmailTemplatesI, EmailTemplates)
-    container.register(ProductsService)
-    container.register(NewsService)
+    container.register(ProductsService, scope=punq.Scope.singleton)
+    container.register(NewsService, scope=punq.Scope.singleton)
+    container.register(TopUpFeeManagerI, TopUpFeeManager)
     container.register(
-        OrdersService, OrdersService, top_up_fee_manager=TopUpFeeManager(redis_client)
+        OrdersService,
+        scope=punq.Scope.singleton,
     )
     container.register(
         UsersService,
         UsersService,
+        scope=punq.Scope.singleton,
         activation_token_ttl=cfg.tokens.activation_token_ttl,
         auth_token_ttl=cfg.tokens.auth_token_ttl,
         password_reset_token_ttl=cfg.tokens.password_reset_token_ttl,
@@ -135,10 +140,10 @@ def _init_container() -> punq.Container:
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
-    container.register(ShoppingService)
+    container.register(ShoppingService, scope=punq.Scope.singleton)
     container.register(
         PaymentsService,
-        PaymentsService,
+        scope=punq.Scope.singleton,
         order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
         admin_tg_chat_id=cfg.clients.tg_api.admin_chat_id,
     )

@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 import typing as t
 
-from core.pagination import PaginationParams, PaginationResT
+from core.pagination import PaginationResT
 from gateways.currency_converter.schemas import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
@@ -14,7 +14,7 @@ from products.models import (
 )
 from products.schemas import (
     CreateProductDTO,
-    ListProductsFilterDTO,
+    ListProductsParamsDTO,
     PriceUnitDTO,
     UpdateProductDTO,
 )
@@ -66,8 +66,7 @@ class ProductsRepositoryI(t.Protocol):
 
     async def filter_paginated_list(
         self,
-        dto: ListProductsFilterDTO,
-        pagination_params: PaginationParams,
+        params: ListProductsParamsDTO,
     ) -> PaginationResT[Product]: ...
 
     async def get_by_id(self, product_id: int) -> Product: ...

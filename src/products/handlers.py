@@ -1,9 +1,10 @@
 import typing as t
 
+from core.caching import cache
 from core.ioc import Inject
 from core.schemas import EntityIDParam, require_dto_not_empty
 from core.pagination import PaginatedResponse
-from core.dependencies import PaginationDep, restrict_content_type
+from core.dependencies import restrict_content_type
 from fastapi import APIRouter, Form, Depends, Query, status
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
@@ -19,16 +20,13 @@ ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 
 
 @router.get("/")
+@cache()
 async def list_products(
-    pagination_params: PaginationDep,
     products_service: ProductsServiceDep,
-    dto: t.Annotated[schemas.ListProductsFilterDTO, Query()] = {},  # type: ignore
+    dto: t.Annotated[schemas.ListProductsParamsDTO, Query()] = None,  # type: ignore
 ) -> PaginatedResponse[schemas.ShowProductExtended]:
-    products, total_records = await products_service.list_products(
-        dto,
-        pagination_params,
-    )
-    return PaginatedResponse.new_response(products, total_records, pagination_params)
+    products, total_records = await products_service.list_products(dto)
+    return PaginatedResponse.new_response(products, total_records, dto)
 
 
 @router.get("/detail/{product_id}")

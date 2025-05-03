@@ -1,8 +1,10 @@
+import asyncio
 from collections.abc import Callable
 from functools import wraps
 from hashlib import md5
 from logging import Logger
-from fastapi import Request
+from fastapi import Request, Response
+from fastapi.dependencies.utils import get_typed_signature
 from pydantic import BaseModel
 from fastapi.concurrency import run_in_threadpool
 from core.ioc import Resolve
@@ -15,10 +17,41 @@ def _uncacheable(request: Request) -> bool:
     return request.method != "GET" or request.headers.get("Cache-Control") == "no-store"
 
 
+def _locate_param(
+    sig: inspect.Signature, dep: inspect.Parameter, to_inject: list[inspect.Parameter]
+) -> inspect.Parameter:
+    """Locate an existing parameter in the decorated endpoint
+    If not found, returns the injectable parameter, and adds it to the to_inject list."""
+    param = next(
+        (p for p in sig.parameters.values() if p.annotation is dep.annotation), None
+    )
+    if param is None:
+        to_inject.append(dep)
+        param = dep
+    return param
+
+
 def cache(ttl: int = 300):
+    injected_request = inspect.Parameter(
+        name="__cache_request",
+        annotation=Request,
+        kind=inspect.Parameter.KEYWORD_ONLY,
+    )
+    injected_response = inspect.Parameter(
+        name="__cache_response",
+        annotation=Response,
+        kind=inspect.Parameter.KEYWORD_ONLY,
+    )
+
     def decorator[T](func: Callable[..., T]):
+        ns = f"{func.__module__}.{func.__name__}"
+        sig = get_typed_signature(func)
+        to_inject: list[inspect.Parameter] = []
+        request_param = _locate_param(sig, injected_request, to_inject)
+        response_param = _locate_param(sig, injected_response, to_inject)
+
         @wraps(func)
-        async def wrapper(req: Request, *args, **kwargs) -> T:
+        async def wrapper(*args, **kwargs) -> T:
             async def compute_resp() -> T:
                 return (
                     await func(*args, **kwargs)
@@ -26,32 +59,39 @@ def cache(ttl: int = 300):
                     else await run_in_threadpool(func, *args, **kwargs)
                 )
 
+            req: Request = kwargs.pop(request_param.name)
+            resp: Response = kwargs.pop(response_param.name)
             if _uncacheable(req):
                 return await compute_resp()
 
             params = repr(args) + repr(kwargs)
-            print("PARAMS", params)
-            cache_key = f"{func.__name__}:{md5(params.encode()).hexdigest()}"
+            cache_key = f"{ns}:{md5(params.encode()).hexdigest()}"
             logger = Resolve(Logger)
             cache = Resolve(RedisClient)
             cached_resp = None
             try:
-                cached_resp = await cache.get(cache_key)
+                cached_resp, ttl_left = await asyncio.gather(
+                    cache.get(cache_key), cache.ttl(cache_key)
+                )
             except Exception as e:
                 logger.error("Failed to retrieve response from cache. Error: %s", e)
-            if cached_resp:
-                logger.debug("Retrieved response from cache")
-                return json.loads(cached_resp)
-            resp = await compute_resp()
-            dumped_resp = (
-                resp.model_dump_json()
-                if isinstance(resp, BaseModel)
-                else json.dumps(resp)
+            else:
+                if cached_resp and req.headers.get("Cache-Control") != "no-cache":
+                    logger.debug("Retrieved response from cache")
+                    resp.headers.update({"Cache-Control": f"max-age={ttl_left}"})
+                    return json.loads(cached_resp)
+            res = await compute_resp()
+            dumped_res = (
+                res.model_dump_json() if isinstance(res, BaseModel) else json.dumps(res)
             )
-            await cache.set(cache_key, dumped_resp, ttl)
+            await cache.set(cache_key, dumped_res, ttl)
             logger.debug("Computed and cached response")
-            return resp
+            return res
 
+        if to_inject:
+            wrapper.__signature__ = sig.replace(  # type: ignore
+                parameters=[*sig.parameters.values(), *to_inject]
+            )
         return wrapper
 
     return decorator

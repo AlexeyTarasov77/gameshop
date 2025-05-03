@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
-from core.pagination import PaginationParams, PaginationResT
+from core.pagination import PaginationResT
 from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
@@ -17,7 +17,7 @@ from products.models import (
 )
 from products.schemas import (
     CreateProductDTO,
-    ListProductsFilterDTO,
+    ListProductsParamsDTO,
     OrderByOption,
     UpdateProductDTO,
 )
@@ -33,8 +33,7 @@ class ProductsRepository(PaginationRepository[Product]):
 
     async def filter_paginated_list(
         self,
-        dto: ListProductsFilterDTO,
-        pagination_params: PaginationParams,
+        params: ListProductsParamsDTO,
     ) -> PaginationResT[model]:
         stmt = (
             sa.select(self.model)
@@ -42,25 +41,25 @@ class ProductsRepository(PaginationRepository[Product]):
             .options(
                 selectinload(
                     Product.prices
-                    if not dto.regions
+                    if not params.regions
                     else Product.prices.and_(
                         sa.func.lower(cast(RegionalPrice.region_code, sa.String)).in_(
-                            [region.lower() for region in dto.regions]
+                            [region.lower() for region in params.regions]
                         )
                     )
                 )
             )
         )
-        if dto.price_ordering:
+        if params.price_ordering:
             option = {OrderByOption.ASC: sa.asc, OrderByOption.DESC: sa.desc}[
-                dto.price_ordering
+                params.price_ordering
             ]
             stmt = stmt.join(self.model.prices).order_by(
                 option(RegionalPrice.base_price)
             )
-        if dto.query:
-            stmt = stmt.where(self.model.name.ilike(f"%{dto.query}%"))
-        if dto.discounted is not None:
+        if params.query:
+            stmt = stmt.where(self.model.name.ilike(f"%{params.query}%"))
+        if params.discounted is not None:
             base_cond = sa.and_(
                 sa.or_(
                     self.model.deal_until.is_(None),
@@ -68,15 +67,15 @@ class ProductsRepository(PaginationRepository[Product]):
                 ),
                 self.model.discount > 0,
             )
-            stmt = stmt.where(base_cond if dto.discounted else sa.not_(base_cond))
-        if dto.in_stock is not None:
-            stmt = stmt.filter_by(in_stock=dto.in_stock)
-        if dto.categories:
-            stmt = stmt.where(Product.category.in_(dto.categories))
-        if dto.platforms:
-            stmt = stmt.where(Product.platform.in_(dto.platforms))
-        if dto.delivery_methods:
-            stmt = stmt.where(Product.delivery_method.in_(dto.delivery_methods))
+            stmt = stmt.where(base_cond if params.discounted else sa.not_(base_cond))
+        if params.in_stock is not None:
+            stmt = stmt.filter_by(in_stock=params.in_stock)
+        if params.categories:
+            stmt = stmt.where(Product.category.in_(params.categories))
+        if params.platforms:
+            stmt = stmt.where(Product.platform.in_(params.platforms))
+        if params.delivery_methods:
+            stmt = stmt.where(Product.delivery_method.in_(params.delivery_methods))
         res = await self._session.execute(stmt)
         products = res.scalars().all()
         filtered_products = []
@@ -84,8 +83,8 @@ class ProductsRepository(PaginationRepository[Product]):
             if product.prices:
                 filtered_products.append(product)
 
-        offset = pagination_params.calc_offset()
-        return filtered_products[offset : offset + pagination_params.page_size], len(
+        offset = params.calc_offset()
+        return filtered_products[offset : offset + params.page_size], len(
             filtered_products
         )
 

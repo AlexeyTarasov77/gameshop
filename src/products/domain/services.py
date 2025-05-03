@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from logging import Logger
 from typing import cast
-from core.pagination import PaginationParams, PaginationResT
+from core.pagination import PaginationResT
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityAlreadyExistsError,
@@ -39,7 +39,7 @@ from products.schemas import (
     CategoriesListDTO,
     CreateProductDTO,
     DeliveryMethodsListDTO,
-    ListProductsFilterDTO,
+    ListProductsParamsDTO,
     PlatformsListDTO,
     PsnGameParsedDTO,
     XboxGameParsedDTO,
@@ -255,16 +255,14 @@ class ProductsService(BaseService):
 
     async def list_products(
         self,
-        dto: ListProductsFilterDTO,
-        pagination_params: PaginationParams,
+        dto: ListProductsParamsDTO,
     ) -> PaginationResT[ShowProductExtended]:
-        async with self._uow as uow:
+        async with self._uow() as uow:
             (
                 products,
                 total_records,
             ) = await uow.products_repo.filter_paginated_list(
                 dto,
-                pagination_params,
             )
         return [
             ShowProductExtended.model_validate(product) for product in products

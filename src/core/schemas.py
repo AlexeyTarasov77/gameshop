@@ -1,6 +1,5 @@
 import base64
 from contextlib import suppress
-from datetime import datetime
 from decimal import Decimal
 from fastapi import HTTPException, status
 import json
