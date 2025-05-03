@@ -3,7 +3,7 @@ from collections.abc import Callable
 from functools import wraps
 from hashlib import md5
 from logging import Logger
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response, status
 from fastapi.dependencies.utils import get_typed_signature
 from pydantic import BaseModel
 from fastapi.concurrency import run_in_threadpool
@@ -15,6 +15,14 @@ import inspect
 
 def _uncacheable(request: Request) -> bool:
     return request.method != "GET" or request.headers.get("Cache-Control") == "no-store"
+
+
+def _get_etag_for_resp(resp: str):
+    return f"W/{hash(resp)}"
+
+
+def _get_cache_headers(max_age: int, etag: str) -> dict[str, str]:
+    return {"Cache-Control": f"max-age={max_age}", "Etag": etag}
 
 
 def _locate_param(
@@ -64,6 +72,7 @@ def cache(ttl: int = 300):
             if _uncacheable(req):
                 return await compute_resp()
 
+            etag = req.headers.get("If-None-Match")
             params = repr(args) + repr(kwargs)
             cache_key = f"{ns}:{md5(params.encode()).hexdigest()}"
             logger = Resolve(Logger)
@@ -78,15 +87,24 @@ def cache(ttl: int = 300):
             else:
                 if cached_resp and req.headers.get("Cache-Control") != "no-cache":
                     logger.debug("Retrieved response from cache")
-                    resp.headers.update({"Cache-Control": f"max-age={ttl_left}"})
+                    resp_etag = _get_etag_for_resp(cached_resp)
+                    if etag is not None and etag == resp_etag:
+                        raise HTTPException(status.HTTP_304_NOT_MODIFIED)
+                    resp.headers.update(_get_cache_headers(ttl_left, resp_etag))
                     return json.loads(cached_resp)
-            res = await compute_resp()
-            dumped_res = (
-                res.model_dump_json() if isinstance(res, BaseModel) else json.dumps(res)
+            computed_response = await compute_resp()
+            response_dump = (
+                computed_response.model_dump_json()
+                if isinstance(computed_response, BaseModel)
+                else json.dumps(computed_response)
             )
-            await cache.set(cache_key, dumped_res, ttl)
+            await cache.set(cache_key, response_dump, ttl)
             logger.debug("Computed and cached response")
-            return res
+            resp_etag = _get_etag_for_resp(response_dump)
+            if etag is not None and etag == resp_etag:
+                raise HTTPException(status.HTTP_304_NOT_MODIFIED)
+            resp.headers.update(_get_cache_headers(ttl, resp_etag))
+            return computed_response
 
         if to_inject:
             wrapper.__signature__ = sig.replace(  # type: ignore

@@ -30,6 +30,7 @@ async def list_products(
 
 
 @router.get("/detail/{product_id}")
+@cache()
 async def get_product(
     product_id: EntityIDParam, products_service: ProductsServiceDep
 ) -> schemas.ShowProductExtended:

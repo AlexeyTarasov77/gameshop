@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
-from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.orm import (
     joinedload,
@@ -12,6 +11,7 @@ from sqlalchemy.orm import (
 )
 from core.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import NotFoundError
+from gateways.db import RedisClient
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
 from orders.models import (
     BaseOrder,
@@ -209,7 +209,7 @@ class SteamGiftsRepository(OrdersRepoMixin[SteamGiftOrder]):
 
 
 class TopUpFeeManager:
-    def __init__(self, db: Redis):
+    def __init__(self, db: RedisClient):
         self._db = db
         self._key = "steam_top_up_fee"
 
