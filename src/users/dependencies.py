@@ -1,7 +1,7 @@
 from typing import Annotated
 from users.domain.services import UsersService
 from core.ioc import Inject
-from config import Config
+from config import Config, ConfigMode
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 
@@ -41,7 +41,7 @@ async def require_admin(
 ) -> None:
     # flag to change, if wanna test require_admin functionallity in local mode
     require_admin_in_debug = False
-    if cfg.mode == "local" and not require_admin_in_debug:
+    if cfg.mode == ConfigMode.LOCAL and not require_admin_in_debug:
         return
     if not user_id:
         raise credentials_exception from None

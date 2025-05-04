@@ -127,10 +127,15 @@ class ShowProduct(BaseProductDTO):
     delivery_method: ProductDeliveryMethodField
 
 
+class ParsedPriceDTO(PriceUnitDTO):
+    region: str
+
+
 class BaseParsedGameDTO(schemas.BaseDTO):
     name: str
     discount: int
     image_url: str
+    prices: list[ParsedPriceDTO]
     orig_url: str = pydantic.Field(validation_alias="url")
 
 
@@ -142,11 +147,9 @@ class SteamGameParsedDTO(BaseParsedGameDTO):
 class XboxGameParsedDTO(BaseParsedGameDTO):
     with_gp: bool | None
     deal_until: datetime | None
-    prices: dict[models.XboxParseRegions, PriceUnitDTO]
 
 
-class PsnGameParsedDTO(BaseParsedGameDTO):
-    prices: dict[models.PsnParseRegions, PriceUnitDTO]
+class PsnGameParsedDTO(BaseParsedGameDTO): ...
 
 
 class OrderByOption(StrEnum):

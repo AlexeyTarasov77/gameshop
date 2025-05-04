@@ -1,4 +1,5 @@
 import argparse
+from enum import StrEnum
 import os
 import re
 import sys
@@ -35,6 +36,13 @@ def _parse_timedelta(delta: str) -> timedelta:
 
 
 ParsableTimedelta = t.Annotated[timedelta, BeforeValidator(_parse_timedelta)]
+
+
+class ConfigMode(StrEnum):
+    LOCAL = "local"
+    LOCAL_TESTS = "local-tests"
+    PROD = "prod"
+    PROD_TESTS = "prod-tests"
 
 
 class _HTTPSessions(BaseModel):
@@ -97,7 +105,7 @@ class _ClientsConfig(BaseModel):
 class Config(BaseSettings):
     model_config = SettingsConfigDict(extra="allow")
     api_version: str = "1.0.0"
-    mode: t.Literal["local", "prod", "local-test", "prod-test"]
+    mode: ConfigMode
     server: _Server = Field(default=_Server())
     smtp: _SMTP
     clients: _ClientsConfig
@@ -127,7 +135,7 @@ class Config(BaseSettings):
 
     @property
     def debug(self):
-        return self.mode in ["local", "local-test", "prod-test"]
+        return self.mode != ConfigMode.PROD
 
 
 def init_config(

@@ -20,14 +20,9 @@ from products.schemas import (
 )
 
 
-class SaveGameRes(t.NamedTuple):
+class SavedGameInfo(t.NamedTuple):
     inserted_id: int
     url: str
-
-
-class LoadPsnWithXboxRes(t.NamedTuple):
-    psn: list[SaveGameRes]
-    xbox: list[SaveGameRes]
 
 
 class CurrencyConverterI(t.Protocol):

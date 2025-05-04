@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import asyncio
 from collections.abc import Sequence
 from decimal import Decimal
 from logging import Logger
@@ -21,8 +20,7 @@ from gateways.db.exceptions import (
 )
 from products.domain.interfaces import (
     CurrencyConverterI,
-    SaveGameRes,
-    LoadPsnWithXboxRes,
+    SavedGameInfo,
 )
 
 from orders.domain.interfaces import SteamAPIClientI
@@ -36,12 +34,12 @@ from products.models import (
     XboxParseRegions,
 )
 from products.schemas import (
+    BaseParsedGameDTO,
     CategoriesListDTO,
     CreateProductDTO,
     DeliveryMethodsListDTO,
     ListProductsParamsDTO,
     PlatformsListDTO,
-    PsnGameParsedDTO,
     XboxGameParsedDTO,
     ShowProduct,
     ShowProductExtended,
@@ -165,35 +163,43 @@ class ProductsService(BaseService):
         self._currency_converter = currency_converter
         self._steam_api = steam_api
 
-    async def _save_games_by_platform(
-        self, products: Sequence[XboxGameParsedDTO | PsnGameParsedDTO]
-    ) -> list[SaveGameRes]:
+    async def save_parsed_products(
+        self, products: Sequence[BaseParsedGameDTO]
+    ) -> list[SavedGameInfo]:
         """Returns list of ids of INSERTED (not updated) products"""
-        res: list[SaveGameRes] = []
-        platform = (
-            ProductPlatform.XBOX
-            if isinstance(products[0], XboxGameParsedDTO)
-            else ProductPlatform.PSN
-        )
-        async with self._uow()() as uow:
+        res: list[SavedGameInfo] = []
+        async with self._uow() as uow:
             for item in products:
+                platform = (
+                    ProductPlatform.XBOX
+                    if isinstance(item, XboxGameParsedDTO)
+                    else ProductPlatform.PSN
+                )
                 recalculated_prices: list[RegionalPrice] = []
-                for region, price in item.prices.items():
+                for price_dto in item.prices:
                     if isinstance(item, XboxGameParsedDTO):
                         # if src currency != usd - convert it because all computations are done in dollars
-                        if price.currency_code.lower() != "usd":
-                            price = await self._currency_converter.convert_price(
-                                price, "usd"
+                        if price_dto.currency_code.lower() != "usd":
+                            self._logger.warning(
+                                "Converting price from %s to usd. May cause miscalculation",
+                                price_dto.currency_code,
                             )
-                        price.value = XboxPriceCalculator(price).calc_for_region(
-                            region, with_gp=item.with_gp
-                        )
-                    price_in_rub = await self._currency_converter.convert_price(price)
+                            price = await self._currency_converter.convert_price(
+                                price_dto, "usd"
+                            )
+                            price_dto.value = price.value
+                            price_dto.currency_code = price.currency_code
+                        price_dto.value = XboxPriceCalculator(
+                            price_dto
+                        ).calc_for_region(price_dto.region, with_gp=item.with_gp)
+                    price_in_rub = await self._currency_converter.convert_price(
+                        price_dto
+                    )
                     recalculated_prices.append(
                         RegionalPrice(
                             base_price=price_in_rub.value,
-                            region_code=region,
-                            original_curr=price.currency_code,
+                            region_code=price_dto.region,
+                            original_curr=price_dto.currency_code,
                         )
                     )
                 if platform == ProductPlatform.XBOX:
@@ -212,19 +218,10 @@ class ProductsService(BaseService):
                 )
                 inserted_id = await save_func(product)
                 if inserted_id is not None:
-                    res.append(SaveGameRes(inserted_id=inserted_id, url=item.orig_url))
+                    res.append(
+                        SavedGameInfo(inserted_id=inserted_id, url=item.orig_url)
+                    )
         return res
-
-    async def load_new_sales(
-        self,
-        psn_products: Sequence[PsnGameParsedDTO],
-        xbox_product: Sequence[XboxGameParsedDTO],
-    ):
-        psn_res, xbox_res = await asyncio.gather(
-            self._save_games_by_platform(psn_products),
-            self._save_games_by_platform(xbox_product),
-        )
-        return LoadPsnWithXboxRes(psn_res, xbox_res)
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
         async with self._uow() as uow:
@@ -257,7 +254,7 @@ class ProductsService(BaseService):
         self,
         dto: ListProductsParamsDTO,
     ) -> PaginationResT[ShowProductExtended]:
-        async with self._uow()() as uow:
+        async with self._uow() as uow:
             (
                 products,
                 total_records,

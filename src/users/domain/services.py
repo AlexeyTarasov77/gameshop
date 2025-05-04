@@ -92,7 +92,7 @@ class UsersService(BaseService):
         )
         password_hash = self._password_hasher.hash(dto.password)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 user = await uow.users_repo.create_with_hashed_password(
                     dto, password_hash, cast(str | None, dto.photo)
                 )
@@ -134,7 +134,7 @@ class UsersService(BaseService):
     async def signin(self, dto: UserSignInDTO, session_key: str) -> str:
         self._logger.info("Signing in user with email: %s", dto.email)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(dto.email)
         except NotFoundError as e:
             self._logger.warning(
@@ -159,7 +159,7 @@ class UsersService(BaseService):
     async def send_password_reset_token(self, user_email: str):
         self._logger.info("Password reset request for user %s", user_email)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(user_email)
                 plain_token, token_obj = self._statefull_token_provider.new_token(
                     user.id, self._password_reset_token_ttl, TokenScopes.PASSWORD_RESET
@@ -187,7 +187,7 @@ class UsersService(BaseService):
             self._password_hasher.hash, new_password
         )
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 token = await uow.tokens_repo.get_by_hash(
                     token_hash, TokenScopes.PASSWORD_RESET
                 )
@@ -218,7 +218,7 @@ class UsersService(BaseService):
                 raise ValueError()
         except ValueError:  # user_id is not a valid digit or < 1
             raise exc.InvalidTokenError()
-        async with self._uow as uow:
+        async with self._uow() as uow:
             is_valid = await uow.users_repo.check_exists_active(user_id)
         if not is_valid:
             self._logger.warning(
@@ -233,7 +233,7 @@ class UsersService(BaseService):
         photo_url: str | None | UnspecifiedType = ...
         if "photo_url" in dto.model_fields_set:
             photo_url = cast(str | None, dto.photo)
-        async with self._uow as uow:
+        async with self._uow() as uow:
             user = await uow.users_repo.update_by_id(
                 user_id, username=dto.username, photo_url=photo_url
             )
@@ -275,7 +275,7 @@ class UsersService(BaseService):
                 user_id_from_token,
             )
             raise exc.ActionForbiddenError()
-        async with self._uow as uow:
+        async with self._uow() as uow:
             user = await uow.users_repo.update_by_id(
                 user_id_from_token, email=new_email
             )
@@ -285,7 +285,7 @@ class UsersService(BaseService):
         self._logger.info("Activating user")
         token_hash = await asyncio.to_thread(self._token_hasher.hash, plain_token)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 token = await uow.tokens_repo.get_by_hash(
                     token_hash, TokenScopes.ACTIVATION
                 )
@@ -301,7 +301,7 @@ class UsersService(BaseService):
     async def resend_activation_token(self, email: str) -> None:
         self._logger.info("Resend activation token request for %s", email)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(email)
                 if user.is_active:
                     raise exc.UserAlreadyActivatedError()
@@ -330,7 +330,7 @@ class UsersService(BaseService):
     async def get_user_with_role(self, user_id: int) -> ShowUserWithRole:
         self._logger.info("Fetching user with role. id: %s", user_id)
         try:
-            async with self._uow as uow:
+            async with self._uow() as uow:
                 user, is_admin = await uow.users_repo.get_by_id_and_check_is_admin(
                     user_id
                 )
@@ -340,5 +340,5 @@ class UsersService(BaseService):
         return ShowUserWithRole.model_validate(user)
 
     async def check_is_user_admin(self, user_id: int) -> bool:
-        async with self._uow as uow:
+        async with self._uow() as uow:
             return await uow.admins_repo.check_exists(user_id)

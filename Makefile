@@ -6,14 +6,14 @@ api/run:
 	MODE=$(MODE) poetry run python src/main.py 
 
 run/tests:
-	MODE="local-test" poetry run pytest
+	MODE="local-tests" poetry run pytest
 
 run/redis:
 	docker run -v gameshop_redis-data:/data -p 6379:6379 -d --rm --name redis-stack redis/redis-stack:latest
 
 
 run/tests/docker:
-	MODE="prod-test" docker exec gameshop_web "sh poetry run pytest"
+	MODE="prod-tests" docker exec gameshop_web "sh poetry run pytest"
 
 migrations/new:
 	MODE=local poetry run alembic revision --autogenerate -m "$(msg)"
@@ -26,4 +26,4 @@ api/deploy/prod:
 	bash scripts/deploy.sh prod
 
 api/deploy/test:
-	bash scripts/deploy.sh prod-test
+	bash scripts/deploy.sh prod-tests

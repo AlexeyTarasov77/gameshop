@@ -4,7 +4,7 @@ import random
 import aiofiles
 from string import ascii_letters
 
-from config import Config
+from config import Config, ConfigMode
 
 
 def filename_split(orig_filename: str) -> tuple[str, list[str]]:
@@ -51,6 +51,6 @@ def get_uploaded_file_url(filename: str) -> str:
     cfg = Resolve(Config)
     base_url = cfg.server.addr
     # assume that in not local environment server works behind proxy, e.g nginx which uses default port
-    if cfg.mode != "local":
+    if cfg.mode != ConfigMode.LOCAL:
         base_url = base_url[: base_url.rfind(":")]
     return f"{base_url}/media/{filename}"

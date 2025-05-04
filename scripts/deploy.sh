@@ -14,7 +14,7 @@ require_confirmation() {
 if [[ "$MODE" == "prod" ]]; then
   remote_host=gamebazaar.ru
   dest_dir="/home/www/projects/gameshop"
-elif [[ "$MODE" == "prod-test" ]]; then
+elif [[ "$MODE" == "prod-tests" ]]; then
     remote_host=subpack.fun
     dest_dir="/var/www/gamebazaar.ru/backend/gameshop"
 else

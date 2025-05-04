@@ -11,7 +11,7 @@ from gamesparser.psn import PsnItemDetails
 from gamesparser.xbox import XboxItemDetails
 
 from core.uow import AbstractUnitOfWork
-from products.domain.interfaces import SaveGameRes
+from products.domain.interfaces import SavedGameInfo
 from products.domain.services import ProductsService
 
 from httpx import AsyncClient
@@ -58,6 +58,10 @@ class SalesParser:
         return {
             **asdict(parsed),
             "image_url": parsed.preview_img_url,
+            "prices": [
+                {"region": region, **asdict(price)}
+                for region, price in parsed.prices.items()
+            ],
         }
 
     def _parsed_xbox_to_dto(self, parsed_product: XboxParsedItem) -> XboxGameParsedDTO:
@@ -68,45 +72,53 @@ class SalesParser:
     def _parsed_psn_to_dto(self, product: PsnParsedItem) -> PsnGameParsedDTO:
         return PsnGameParsedDTO.model_validate(self._parsed_to_dict(product))
 
-    async def _save_parsed(
-        self, psn_sales: Sequence[PsnParsedItem], xbox_sales: Sequence[XboxParsedItem]
-    ):
-        psn_dtos: list[PsnGameParsedDTO] = [
-            self._parsed_psn_to_dto(product) for product in psn_sales
-        ]
-        xbox_dtos: list[XboxGameParsedDTO] = [
-            self._parsed_xbox_to_dto(product) for product in xbox_sales
-        ]
-        return await self._service.load_new_sales(psn_dtos, xbox_dtos)
+    async def parse_and_save_xbox(self, parse_limit: int | None = None):
+        self._logger.info("Start parsing xbox sales...")
+        xbox_sales = await self._xbox_parser.parse([XboxParseRegions.US], parse_limit)
+        self._logger.info("Xbox sales parsed. Saving...")
+        mapped_to_dto = [self._parsed_xbox_to_dto(product) for product in xbox_sales]
+        res = await self._service.save_parsed_products(mapped_to_dto)
+        self._logger.info("Xbox sales succesfully saved.")
+        return res
 
-    async def parse_and_save_all(self, parse_limit: int | None = None):
+    async def parse_and_save_psn(self, parse_limit: int | None = None):
+        self._logger.info("Start parsing psn sales...")
+        psn_sales = await self._psn_parser.parse(
+            [el.value for el in PsnParseRegions], parse_limit
+        )
+        self._logger.info("Psn sales parsed. Saving...")
+        mapped_to_dto = [self._parsed_psn_to_dto(product) for product in psn_sales]
+        res = await self._service.save_parsed_products(mapped_to_dto)
+        self._logger.info("Psn sales succesfully saved.")
+        return res
+
+    async def parse_and_save_all(
+        self,
+        parse_limit: int | None = None,
+    ) -> dict[ProductPlatform, Sequence[SavedGameInfo]]:
         limit_per_parser = parse_limit // 2 if parse_limit else None
         self._logger.info(
             "Start parsing%ssales...",
             (f" up to {parse_limit} " if parse_limit is not None else " "),
         )
         t1 = time.perf_counter()
-        psn_regions = [el.value for el in PsnParseRegions]
         psn_sales, xbox_sales = await asyncio.gather(
-            self._psn_parser.parse(psn_regions, limit_per_parser),
-            self._xbox_parser.parse([XboxParseRegions.US], limit_per_parser),
+            self.parse_and_save_psn(limit_per_parser),
+            self.parse_and_save_xbox(limit_per_parser),
         )
         self._logger.info(
-            "%s sales succesfully parsed, which took: %s seconds",
+            "%s sales succesfully parsed and loaded, which took: %s seconds",
             len(psn_sales) + len(xbox_sales),
             round(time.perf_counter() - t1, 1),
         )
-        self._logger.info("Loading sales to db...")
-        res = await self._save_parsed(psn_sales, xbox_sales)
-        self._logger.info("Sales succesfully loaded")
-        return res
+        return {ProductPlatform.XBOX: xbox_sales, ProductPlatform.PSN: psn_sales}
 
     async def _update_parsed_details[T](
         self,
-        products_urls: Sequence[SaveGameRes],
+        products_urls: Sequence[SavedGameInfo],
         for_platform: Literal[ProductPlatform.XBOX, ProductPlatform.PSN],
         parse_func: Callable[[str], Awaitable[T | None]],
-        row_func: Callable[[SaveGameRes, T], NamedTuple],
+        row_extracter: Callable[[SavedGameInfo, T], NamedTuple],
         *,
         timeout: int | None = None,
     ):
@@ -137,7 +149,7 @@ class SalesParser:
                     obj.inserted_id,
                 )
                 continue
-            rows.append(row_func(obj, data))
+            rows.append(row_extracter(obj, data))
             if timeout:
                 await asyncio.sleep(timeout)
         self._logger.info(
@@ -154,26 +166,28 @@ class SalesParser:
         )
 
     async def update_psn_details(
-        self, products_urls: Sequence[SaveGameRes], timeout: int | None = None
+        self, products_urls: Sequence[SavedGameInfo], timeout: int | None = None
     ):
-        def row_func(obj: SaveGameRes, data: PsnItemDetails) -> PsnRowForUpdate:
+        def row_extracter(obj: SavedGameInfo, data: PsnItemDetails) -> PsnRowForUpdate:
             return PsnRowForUpdate(obj.inserted_id, data.description, data.deal_until)
 
         await self._update_parsed_details(
             products_urls,
             ProductPlatform.PSN,
             self._psn_parser.parse_item_details,
-            row_func,
+            row_extracter,
             timeout=timeout,
         )
 
-    async def update_xbox_details(self, products_urls: Sequence[SaveGameRes]):
-        def row_func(obj: SaveGameRes, data: XboxItemDetails) -> XboxRowForUpdate:
+    async def update_xbox_details(self, products_urls: Sequence[SavedGameInfo]):
+        def row_extracter(
+            obj: SavedGameInfo, data: XboxItemDetails
+        ) -> XboxRowForUpdate:
             return XboxRowForUpdate(obj.inserted_id, data.description)
 
         await self._update_parsed_details(
             products_urls,
             ProductPlatform.XBOX,
             self._xbox_parser.parse_item_details,
-            row_func,
+            row_extracter,
         )
