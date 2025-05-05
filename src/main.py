@@ -43,12 +43,10 @@ def custom_openapi(app: FastAPI, version: str):
     return app.openapi_schema
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI | None = None):
+async def ping_gateways():
     logger = Resolve(Logger)
     db = Resolve(SqlAlchemyClient)
     redis_client = Resolve(RedisClient)
-    bg_jobs = Resolve(BackgroundJobs)
     logger.info("Pinging database...")
     done_tasks, _ = await asyncio.wait(
         [asyncio.create_task(redis_client.ping()), asyncio.create_task(db.ping())],
@@ -57,12 +55,23 @@ async def lifespan(app: FastAPI | None = None):
     [await task for task in done_tasks]
     await redis_client.setup()
     logger.info("Gateways are ready to accept connections!")
+
+
+async def close_connections():
+    await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger = Resolve(Logger)
+    bg_jobs = Resolve(BackgroundJobs)
+    await ping_gateways()
     bg_jobs.run()
     logger.info("Background jobs succesfully launched!")
     try:
         yield
     finally:
-        await asyncio.gather(*[obj.aclose() for obj in cleanup_list])
+        await close_connections()
 
 
 def app_factory() -> FastAPI:

@@ -164,8 +164,8 @@ class ProductsRepository(PaginationRepository[Product]):
         columns = [sa.column(name) for name in rows[0]._fields]
         p2 = sa.values(*columns).data(rows).alias("p2")
         values = dict(p2.c)
-        id = values.pop("id")
-        stmt = sa.update(self.model).values(**values).where(self.model.id == id)
+        values.pop("id")
+        stmt = sa.update(self.model).values(**values).where(self.model.id == p2.c.id)
         await self._session.execute(stmt)
 
     async def save_ignore_conflict(self, product: Product) -> int | None:

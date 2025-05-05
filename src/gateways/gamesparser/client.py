@@ -157,7 +157,7 @@ class SalesParser:
             str(for_platform.value),
             len(rows),
         )
-        async with self._uow()() as uow:
+        async with self._uow() as uow:
             await uow.products_repo.update_from_rows(rows)
         self._logger.info(
             "%s update completed. Which took: %.2f seconds",
