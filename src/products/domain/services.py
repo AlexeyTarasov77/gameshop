@@ -68,7 +68,7 @@ class XboxPriceCalculator(AbstractPriceCalculator):
         super().__init__(price)
 
     def _calc_for_usa(self, with_gp: bool) -> Decimal:
-        calculated = self._price * Decimal(0.75)
+        calculated = self._price * Decimal(0.73)
         if with_gp:
             calculated += 1
         if self._price <= 2.99:
@@ -77,10 +77,12 @@ class XboxPriceCalculator(AbstractPriceCalculator):
             calculated = self._add_percent(55)
         elif self._price <= 12.99:
             calculated = self._add_percent(35)
-        elif self._price <= 29.99:
+        elif self._price <= 19.99:
             calculated = self._add_percent(33)
-        elif self._price <= 34.99:
+        elif self._price <= 29.99:
             calculated = self._add_percent(31)
+        elif self._price <= 34.99:
+            calculated = self._add_percent(30)
         elif self._price <= 39.99:
             calculated = self._add_percent(28)
         elif self._price <= 49.99:
