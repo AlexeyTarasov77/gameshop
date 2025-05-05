@@ -76,7 +76,7 @@ class SalesParser:
     @measure_time_async
     async def parse_and_save_xbox(self, parse_limit: int | None = None):
         xbox_sales = await self._xbox_parser.parse([XboxParseRegions.US], parse_limit)
-        self._logger.info("Xbox sales parsed. Saving...")
+        self._logger.info("Xbox %d sales parsed. Saving...", len(xbox_sales))
         mapped_to_dto = [self._parsed_xbox_to_dto(product) for product in xbox_sales]
         res = await self._service.save_parsed_products(mapped_to_dto)
         return res
@@ -86,7 +86,7 @@ class SalesParser:
         psn_sales = await self._psn_parser.parse(
             [el.value for el in PsnParseRegions], parse_limit
         )
-        self._logger.info("Psn sales parsed. Saving...")
+        self._logger.info("Psn %d sales parsed. Saving...", len(psn_sales))
         mapped_to_dto = [self._parsed_psn_to_dto(product) for product in psn_sales]
         res = await self._service.save_parsed_products(mapped_to_dto)
         return res
@@ -143,9 +143,7 @@ class SalesParser:
             time.perf_counter() - t1,
         )
 
-    async def update_psn_details(
-        self, products_urls: ParsedUrlsMapping, timeout: int | None = None
-    ):
+    async def _update_psn_details(self, products_urls: ParsedUrlsMapping):
         def row_extracter(id: int, data: PsnItemDetails) -> PsnRowForUpdate:
             return PsnRowForUpdate(id, data.description, data.deal_until)
 
@@ -154,10 +152,10 @@ class SalesParser:
             ProductPlatform.PSN,
             self._psn_parser.parse_item_details,
             row_extracter,
-            timeout=timeout,
+            timeout=1,
         )
 
-    async def update_xbox_details(self, products_urls: ParsedUrlsMapping):
+    async def _update_xbox_details(self, products_urls: ParsedUrlsMapping):
         def row_extracter(id: int, data: XboxItemDetails) -> XboxRowForUpdate:
             return XboxRowForUpdate(id, data.description)
 
@@ -167,3 +165,14 @@ class SalesParser:
             self._xbox_parser.parse_item_details,
             row_extracter,
         )
+
+    async def update_for_platform(
+        self, platform: ProductPlatform, products_urls: ParsedUrlsMapping
+    ):
+        match platform:
+            case ProductPlatform.XBOX:
+                await self._update_xbox_details(products_urls)
+            case ProductPlatform.PSN:
+                await self._update_psn_details(products_urls)
+            case _:
+                raise ValueError("Unsupported platform: %s" % platform)

@@ -1,29 +1,18 @@
+from _base import UPDATE_CHUNK_SIZE, get_redis_key_by_platform
 from collections.abc import Sequence
 from logging import Logger
-import os
 
 import asyncio
-import sys
-from pathlib import Path
 from argparse import ArgumentParser
 
 
-sys.path.append((Path().parent.parent / "src").absolute().as_posix())
-
-from config import ConfigMode
-
-if not os.environ.get("MODE"):
-    os.environ["MODE"] = ConfigMode.LOCAL
-
 from products.domain.services import ProductsService
+from core.utils import chunkify
 from gateways.db import RedisClient
 from main import ping_gateways, close_connections
 from products.models import ProductPlatform
 from core.ioc import Resolve, get_container
 from gateways.gamesparser import SalesParser
-
-XBOX_REDIS_KEY = "parsed_xbox"
-PSN_REDIS_KEY = "parsed_psn"
 
 
 async def save_inserted_ids(key: str, ids: Sequence[int]):
@@ -38,7 +27,7 @@ async def save_inserted_ids(key: str, ids: Sequence[int]):
         logger.info("Nothing to save in redis. Exiting")
         return
     await redis_client.lpush(key, *ids)
-    logger.info("Succesfully saved %s lastly inserted ids", len(ids))
+    logger.info("Succesfully saved %s lastly inserted ids under key: %s", len(ids), key)
 
 
 async def update_sales_details(
@@ -46,15 +35,15 @@ async def update_sales_details(
 ):
     service = Resolve(ProductsService)
     urls_mapping = await service.get_urls_mapping(inserted_ids)
-    match platform:
-        case ProductPlatform.PSN:
-            await save_inserted_ids(PSN_REDIS_KEY, inserted_ids)
-            await parser.update_psn_details(urls_mapping, timeout=1)
-        case ProductPlatform.XBOX:
-            await save_inserted_ids(XBOX_REDIS_KEY, inserted_ids)
-            await parser.update_xbox_details(urls_mapping)
-        case _:
-            raise ValueError("Unsupported platform: %s" % platform)
+    ids = list(urls_mapping.keys())
+    key = get_redis_key_by_platform(platform)
+    await save_inserted_ids(key, inserted_ids)
+    for i, chunk in enumerate(
+        chunkify(list(urls_mapping.items()), UPDATE_CHUNK_SIZE), 1
+    ):
+        urls_mapping_chunk = dict(chunk)
+        await parser.update_for_platform(platform, urls_mapping_chunk)
+        await save_inserted_ids(key, ids[len(urls_mapping_chunk) * i :])
 
 
 async def main():
@@ -67,7 +56,7 @@ async def main():
     try:
         match args.platform:
             case None:
-                limit_per_parser = args.limit // 2
+                limit_per_parser = args.limit // 2 if args.limit else None
                 xbox_ids, psn_ids = await asyncio.gather(
                     parser.parse_and_save_xbox(limit_per_parser),
                     parser.parse_and_save_psn(limit_per_parser),

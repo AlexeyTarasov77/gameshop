@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Generator, Sequence
 from functools import wraps
 from logging import Logger
 import time
@@ -36,8 +36,19 @@ def measure_time_async[T](func: Callable[..., Coroutine[Any, Any, T]]):
         logger.info("%s execution started", func)
         res = await func(*args, **kwargs)
         logger.info(
-            "%s completed execution, which took: %.2f", func, time.perf_counter() - t1
+            "%s completed execution, which took: %.2f seconds",
+            func,
+            time.perf_counter() - t1,
         )
         return res
 
     return wrapper
+
+
+def chunkify[T](seq: Sequence[T], chunk_size: int) -> Generator[Sequence[T]]:
+    full_chunks_count, left_unchunked = divmod(len(seq), chunk_size)
+    top = 0
+    for i in range(full_chunks_count):
+        top = i + 1 * chunk_size
+        yield seq[i:top]
+    yield seq[top : top + left_unchunked]

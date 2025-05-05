@@ -18,5 +18,5 @@ RUN apt update && apt install -y libpq-dev build-essential
 
 COPY . .
 
-ENTRYPOINT [ "poetry", "run", "python", "scripts/parse_sales_cron.py" ]
+ENTRYPOINT [ "poetry", "run", "python", "scripts/sales/parse_and_save.py" ]
 
