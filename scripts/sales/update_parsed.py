@@ -12,22 +12,34 @@ from config import ConfigMode
 if not os.environ.get("MODE"):
     os.environ["MODE"] = ConfigMode.LOCAL
 
+from products.domain.interfaces import ParsedUrlsMapping
+from products.domain.services import ProductsService
 from parse_and_save import PSN_REDIS_KEY, XBOX_REDIS_KEY
 from gateways.db import RedisClient
-from products.domain.interfaces import SavedGameInfo
 from products.models import ProductPlatform
 from core.ioc import get_container, Resolve
 from main import ping_gateways, close_connections
 from gateways.gamesparser import SalesParser
 
 
-async def retrieve_saved_info(key: str, redis_client: RedisClient):
-    saved_info_raw: list[str] = await redis_client.lrange(key, 0, -1)
-    saved_info: list[SavedGameInfo] = []
-    for s in saved_info_raw:
-        id, _, url = s.partition(",")
-        saved_info.append(SavedGameInfo(int(id), url))
-    return saved_info
+async def retrieve_parsed_urls(key: str) -> ParsedUrlsMapping:
+    redis_client = Resolve(RedisClient)
+    service = Resolve(ProductsService)
+    ids: list[str] = await redis_client.lrange(key, 0, -1)
+    return await service.get_urls_mapping([int(id) for id in ids])
+
+
+async def update_parsed_sales(platform: ProductPlatform, parser: SalesParser):
+    match platform:
+        case ProductPlatform.PSN:
+            urls = await retrieve_parsed_urls(PSN_REDIS_KEY)
+            await parser.update_psn_details(
+                urls,
+                timeout=1,
+            )
+        case ProductPlatform.XBOX:
+            urls = await retrieve_parsed_urls(XBOX_REDIS_KEY)
+            await parser.update_xbox_details(urls)
 
 
 async def main():
@@ -36,31 +48,17 @@ async def main():
     arg_parser.add_argument("-p", "--platform", type=ProductPlatform)
     args = arg_parser.parse_args()
     parser: SalesParser = get_container().instantiate(SalesParser)
-    redis_client = Resolve(RedisClient)
     try:
         match args.platform:
             case None:
-                xbox_saved_info = await retrieve_saved_info(
-                    XBOX_REDIS_KEY, redis_client
-                )
-                psn_saved_info = await retrieve_saved_info(PSN_REDIS_KEY, redis_client)
                 await asyncio.gather(
-                    parser.update_psn_details(
-                        psn_saved_info,
-                        timeout=1,
-                    ),
-                    parser.update_xbox_details(xbox_saved_info),
+                    update_parsed_sales(ProductPlatform.XBOX, parser),
+                    update_parsed_sales(ProductPlatform.PSN, parser),
                 )
             case ProductPlatform.XBOX:
-                items_for_update = await retrieve_saved_info(
-                    XBOX_REDIS_KEY, redis_client
-                )
-                await parser.update_xbox_details(items_for_update)
+                await update_parsed_sales(ProductPlatform.XBOX, parser)
             case ProductPlatform.PSN:
-                items_for_update = await retrieve_saved_info(
-                    PSN_REDIS_KEY, redis_client
-                )
-                await parser.update_psn_details(items_for_update)
+                await update_parsed_sales(ProductPlatform.PSN, parser)
             case _:
                 raise ValueError("Unsupported platform: %s" % args.platform)
     finally:

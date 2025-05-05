@@ -19,10 +19,8 @@ from products.schemas import (
     UpdateProductDTO,
 )
 
-
-class SavedGameInfo(t.NamedTuple):
-    inserted_id: int
-    url: str
+# mapping of product_id with corresponding orig_url
+type ParsedUrlsMapping = dict[int, str]
 
 
 class CurrencyConverterI(t.Protocol):

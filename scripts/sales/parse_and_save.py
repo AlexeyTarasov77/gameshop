@@ -15,8 +15,8 @@ from config import ConfigMode
 if not os.environ.get("MODE"):
     os.environ["MODE"] = ConfigMode.LOCAL
 
+from products.domain.services import ProductsService
 from gateways.db import RedisClient
-from products.domain.interfaces import SavedGameInfo
 from main import ping_gateways, close_connections
 from products.models import ProductPlatform
 from core.ioc import Resolve, get_container
@@ -26,19 +26,35 @@ XBOX_REDIS_KEY = "parsed_xbox"
 PSN_REDIS_KEY = "parsed_psn"
 
 
-async def save_parsed_urls(
-    redis_client: RedisClient, key: str, urls: Sequence[SavedGameInfo]
-):
-    """Saves most recently parsed and saved sequence of url+id"""
+async def save_inserted_ids(key: str, ids: Sequence[int]):
+    """
+    Saves ids of most recently parsed and saved sales
+    which could be retrieved for further processing
+    """
+    redis_client = Resolve(RedisClient)
     logger = Resolve(Logger)
     await redis_client.delete(key)
-    if not urls:
+    if not ids:
         logger.info("Nothing to save in redis. Exiting")
         return
-    await redis_client.lpush(key, *[f"{obj.inserted_id},{obj.url}" for obj in urls])
-    logger.info(
-        "Succesfully saved %s insertion info objects for parsed sales", len(urls)
-    )
+    await redis_client.lpush(key, *ids)
+    logger.info("Succesfully saved %s lastly inserted ids", len(ids))
+
+
+async def update_sales_details(
+    inserted_ids: Sequence[int], platform: ProductPlatform, parser: SalesParser
+):
+    service = Resolve(ProductsService)
+    urls_mapping = await service.get_urls_mapping(inserted_ids)
+    match platform:
+        case ProductPlatform.PSN:
+            await save_inserted_ids(PSN_REDIS_KEY, inserted_ids)
+            await parser.update_psn_details(urls_mapping, timeout=1)
+        case ProductPlatform.XBOX:
+            await save_inserted_ids(XBOX_REDIS_KEY, inserted_ids)
+            await parser.update_xbox_details(urls_mapping)
+        case _:
+            raise ValueError("Unsupported platform: %s" % platform)
 
 
 async def main():
@@ -48,33 +64,32 @@ async def main():
     arg_parser.add_argument("-p", "--platform", type=ProductPlatform)
     args = arg_parser.parse_args()
     parser: SalesParser = get_container().instantiate(SalesParser)
-    redis_client = Resolve(RedisClient)
     try:
         match args.platform:
             case None:
-                save_info = await parser.parse_and_save_all(args.limit)
-                await asyncio.gather(
-                    save_parsed_urls(
-                        redis_client, XBOX_REDIS_KEY, save_info[ProductPlatform.XBOX]
-                    ),
-                    save_parsed_urls(
-                        redis_client, PSN_REDIS_KEY, save_info[ProductPlatform.PSN]
-                    ),
+                limit_per_parser = args.limit // 2
+                xbox_ids, psn_ids = await asyncio.gather(
+                    parser.parse_and_save_xbox(limit_per_parser),
+                    parser.parse_and_save_psn(limit_per_parser),
                 )
                 await asyncio.gather(
-                    parser.update_psn_details(
-                        save_info[ProductPlatform.XBOX], timeout=1
+                    update_sales_details(
+                        xbox_ids,
+                        ProductPlatform.XBOX,
+                        parser,
                     ),
-                    parser.update_xbox_details(save_info[ProductPlatform.PSN]),
+                    update_sales_details(
+                        psn_ids,
+                        ProductPlatform.PSN,
+                        parser,
+                    ),
                 )
             case ProductPlatform.XBOX:
-                items_for_update = await parser.parse_and_save_xbox(args.limit)
-                await save_parsed_urls(redis_client, XBOX_REDIS_KEY, items_for_update)
-                await parser.update_xbox_details(items_for_update)
+                inserted_ids = await parser.parse_and_save_xbox(args.limit)
+                await update_sales_details(inserted_ids, ProductPlatform.XBOX, parser)
             case ProductPlatform.PSN:
-                items_for_update = await parser.parse_and_save_psn(args.limit)
-                await save_parsed_urls(redis_client, PSN_REDIS_KEY, items_for_update)
-                await parser.update_psn_details(items_for_update)
+                inserted_ids = await parser.parse_and_save_psn(args.limit)
+                await update_sales_details(inserted_ids, ProductPlatform.PSN, parser)
             case _:
                 raise ValueError("Unsupported platform: %s" % args.platform)
     finally:

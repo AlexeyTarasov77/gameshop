@@ -83,6 +83,9 @@ class Product(SqlAlchemyBaseModel, TimestampMixin):
         back_populates="product", lazy="selectin"
     )
     sub_id: Mapped[int | None]
+    # used for products parsed from external websites to determine their original page
+    # this field can also be used to determine whether product is manually added
+    orig_url: Mapped[str | None]
 
     @property
     def is_discount_expired(self) -> bool:

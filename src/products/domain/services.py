@@ -18,10 +18,7 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import (
-    CurrencyConverterI,
-    SavedGameInfo,
-)
+from products.domain.interfaces import CurrencyConverterI, ParsedUrlsMapping
 
 from orders.domain.interfaces import SteamAPIClientI
 from products.models import (
@@ -167,9 +164,9 @@ class ProductsService(BaseService):
 
     async def save_parsed_products(
         self, products: Sequence[BaseParsedGameDTO]
-    ) -> list[SavedGameInfo]:
+    ) -> list[int]:
         """Returns list of ids of INSERTED (not updated) products"""
-        res: list[SavedGameInfo] = []
+        res: list[int] = []
         async with self._uow() as uow:
             for item in products:
                 platform = (
@@ -212,7 +209,7 @@ class ProductsService(BaseService):
                     save_func = uow.products_repo.save_ignore_conflict
 
                 product = Product(
-                    **item.model_dump(exclude={"prices", "orig_url"}),
+                    **item.model_dump(exclude={"prices"}),
                     prices=recalculated_prices,
                     category=ProductCategory.GAMES,
                     delivery_method=delivery_method,
@@ -220,10 +217,17 @@ class ProductsService(BaseService):
                 )
                 inserted_id = await save_func(product)
                 if inserted_id is not None:
-                    res.append(
-                        SavedGameInfo(inserted_id=inserted_id, url=item.orig_url)
-                    )
+                    res.append(inserted_id)
         return res
+
+    async def get_urls_mapping(self, by_ids: Sequence[int]) -> ParsedUrlsMapping:
+        async with self._uow() as uow:
+            products = await uow.products_repo.list_by_ids(by_ids)
+        return {
+            product.id: product.orig_url
+            for product in products
+            if product.orig_url is not None
+        }
 
     async def update_prices(self, dto: UpdatePricesDTO) -> UpdatePricesResDTO:
         async with self._uow() as uow:
