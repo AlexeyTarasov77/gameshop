@@ -1,9 +1,8 @@
-from _base import get_redis_key_by_platform
+from _base import get_redis_key_by_platform, update_sales_details
 from argparse import ArgumentParser
 import asyncio
 
 
-from products.domain.services import ProductsService
 from gateways.db import RedisClient
 from products.models import ProductPlatform
 from core.ioc import get_container, Resolve
@@ -13,12 +12,10 @@ from gateways.gamesparser import SalesParser
 
 async def update_last_parsed_sales(platform: ProductPlatform, parser: SalesParser):
     redis_client = Resolve(RedisClient)
-    service = Resolve(ProductsService)
     ids: list[str] = await redis_client.lrange(
         get_redis_key_by_platform(platform), 0, -1
     )
-    urls = await service.get_urls_mapping([int(id) for id in ids])
-    await parser.update_for_platform(platform, urls)
+    await update_sales_details([int(id) for id in ids], platform, parser)
 
 
 async def main():

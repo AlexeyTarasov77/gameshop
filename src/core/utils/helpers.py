@@ -46,6 +46,8 @@ def measure_time_async[T](func: Callable[..., Coroutine[Any, Any, T]]):
 
 
 def chunkify[T](seq: Sequence[T], chunk_size: int) -> Generator[Sequence[T]]:
+    if not len(seq):
+        return
     full_chunks_count, left_unchunked = divmod(len(seq), chunk_size)
     top = 0
     for i in range(full_chunks_count):
