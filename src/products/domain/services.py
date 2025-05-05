@@ -68,23 +68,23 @@ class XboxPriceCalculator(AbstractPriceCalculator):
         calculated = self._price * Decimal(0.73)
         if with_gp:
             calculated += 1
-        if self._price <= 2.99:
+        if calculated <= 2.99:
             calculated = self._add_percent(70)
-        elif self._price <= 4.99:
+        elif calculated <= 4.99:
             calculated = self._add_percent(55)
-        elif self._price <= 12.99:
+        elif calculated <= 12.99:
             calculated = self._add_percent(35)
-        elif self._price <= 19.99:
+        elif calculated <= 19.99:
             calculated = self._add_percent(33)
-        elif self._price <= 29.99:
+        elif calculated <= 29.99:
             calculated = self._add_percent(31)
-        elif self._price <= 34.99:
+        elif calculated <= 34.99:
             calculated = self._add_percent(30)
-        elif self._price <= 39.99:
+        elif calculated <= 39.99:
             calculated = self._add_percent(28)
-        elif self._price <= 49.99:
+        elif calculated <= 49.99:
             calculated = self._add_percent(25)
-        elif self._price <= 54.99:
+        elif calculated <= 54.99:
             calculated = self._add_percent(23)
         else:
             calculated = self._add_percent(20)
