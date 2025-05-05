@@ -1,4 +1,8 @@
 import asyncio
+from collections.abc import Callable
+from functools import wraps
+from logging import Logger
+import time
 from typing import Coroutine, Any
 from concurrent.futures import ThreadPoolExecutor
 
@@ -19,3 +23,21 @@ def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
 
 def normalize_s(s: str) -> str:
     return s.strip().lower()
+
+
+def measure_time_async[T](func: Callable[..., Coroutine[Any, Any, T]]):
+    from core.ioc import Resolve
+
+    logger = Resolve(Logger)
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> T:
+        t1 = time.perf_counter()
+        logger.info("%s execution started", func)
+        res = await func(*args, **kwargs)
+        logger.info(
+            "%s completed execution, which took: %.2f", func, time.perf_counter() - t1
+        )
+        return res
+
+    return wrapper
