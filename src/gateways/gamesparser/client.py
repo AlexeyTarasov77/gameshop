@@ -60,7 +60,11 @@ class SalesParser:
             **asdict(parsed),
             "image_url": parsed.preview_img_url,
             "prices": [
-                {"region": region, **asdict(price)}
+                {
+                    "region": region,
+                    "currency_code": price.currency_code,
+                    "value": price.discounted_value,
+                }
                 for region, price in parsed.prices.items()
             ],
         }
