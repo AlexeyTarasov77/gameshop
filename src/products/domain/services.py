@@ -55,8 +55,8 @@ class AbstractPriceCalculator(ABC):
     @abstractmethod
     def calc_for_region(self, region_code: str, *args, **kwargs) -> Decimal: ...
 
-    def _add_percent(self, percent: int) -> Decimal:
-        return self._price + self._price / 100 * percent
+    def _add_percent(self, n: Decimal, percent: int) -> Decimal:
+        return n + n / 100 * percent
 
 
 class XboxPriceCalculator(AbstractPriceCalculator):
@@ -64,86 +64,87 @@ class XboxPriceCalculator(AbstractPriceCalculator):
         assert price.currency_code.lower() == "usd", "Expected price with usd currency"
         super().__init__(price)
 
-    def _calc_for_usa(self, with_gp: bool) -> Decimal:
+    def _calc_for_us(self, with_gp: bool) -> Decimal:
         calculated = self._price * Decimal(0.73)
         if with_gp:
             calculated += 1
-        if calculated <= 2.99:
-            calculated = self._add_percent(70)
-        elif calculated <= 4.99:
-            calculated = self._add_percent(55)
-        elif calculated <= 12.99:
-            calculated = self._add_percent(35)
-        elif calculated <= 19.99:
-            calculated = self._add_percent(33)
-        elif calculated <= 29.99:
-            calculated = self._add_percent(31)
-        elif calculated <= 34.99:
-            calculated = self._add_percent(30)
-        elif calculated <= 39.99:
-            calculated = self._add_percent(28)
-        elif calculated <= 49.99:
-            calculated = self._add_percent(25)
-        elif calculated <= 54.99:
-            calculated = self._add_percent(23)
+        if calculated <= Decimal("2.99"):
+            calculated = self._add_percent(calculated, 70)
+        elif calculated <= Decimal("4.99"):
+            calculated = self._add_percent(calculated, 55)
+        elif calculated <= Decimal("12.99"):
+            calculated = self._add_percent(calculated, 35)
+        elif calculated <= Decimal("19.99"):
+            calculated = self._add_percent(calculated, 33)
+        elif calculated <= Decimal("29.99"):
+            calculated = self._add_percent(calculated, 31)
+        elif calculated <= Decimal("34.99"):
+            calculated = self._add_percent(calculated, 30)
+        elif calculated <= Decimal("39.99"):
+            calculated = self._add_percent(calculated, 28)
+        elif calculated <= Decimal("49.99"):
+            calculated = self._add_percent(calculated, 25)
+        elif calculated <= Decimal("54.99"):
+            calculated = self._add_percent(calculated, 23)
         else:
-            calculated = self._add_percent(20)
+            calculated = self._add_percent(calculated, 20)
         return calculated
 
     def _calc_for_tr(self) -> Decimal:
-        if self._price <= 0.99:
-            calculated = self._add_percent(200)
-        elif self._price <= 1.99:
-            calculated = self._add_percent(150)
-        elif self._price <= 2.99:
-            calculated = self._add_percent(80)
-        elif self._price <= 4.99:
-            calculated = self._add_percent(65)
-        elif self._price <= 7.99:
-            calculated = self._add_percent(55)
-        elif self._price <= 9.99:
-            calculated = self._add_percent(40)
-        elif self._price <= 12.99:
-            calculated = self._add_percent(35)
-        elif self._price <= 15.99:
-            calculated = self._add_percent(32)
-        elif self._price <= 19.99:
-            calculated = self._add_percent(28)
-        elif self._price <= 24.99:
-            calculated = self._add_percent(25)
-        elif self._price <= 29.99:
-            calculated = self._add_percent(24)
+        calculated = self._price
+        if self._price <= Decimal("0.99"):
+            calculated = self._add_percent(calculated, 200)
+        elif self._price <= Decimal("1.99"):
+            calculated = self._add_percent(calculated, 150)
+        elif self._price <= Decimal("2.99"):
+            calculated = self._add_percent(calculated, 80)
+        elif self._price <= Decimal("4.99"):
+            calculated = self._add_percent(calculated, 65)
+        elif self._price <= Decimal("7.99"):
+            calculated = self._add_percent(calculated, 55)
+        elif self._price <= Decimal("9.99"):
+            calculated = self._add_percent(calculated, 40)
+        elif self._price <= Decimal("12.99"):
+            calculated = self._add_percent(calculated, 35)
+        elif self._price <= Decimal("15.99"):
+            calculated = self._add_percent(calculated, 32)
+        elif self._price <= Decimal("19.99"):
+            calculated = self._add_percent(calculated, 28)
+        elif self._price <= Decimal("24.99"):
+            calculated = self._add_percent(calculated, 25)
+        elif self._price <= Decimal("29.99"):
+            calculated = self._add_percent(calculated, 24)
         else:
-            calculated = self._add_percent(21)
+            calculated = self._add_percent(calculated, 21)
         return calculated
 
     def _calc_for_ar(self) -> Decimal:
-        addend: float
-        if self._price <= 0.2:
-            addend = 3.4
-        elif self._price <= 2.0:
+        calculated = Decimal(0)
+        addend: int | Decimal
+        if self._price <= Decimal("0.2"):
+            addend = Decimal("3.4")
+        elif self._price <= Decimal("2.0"):
             addend = 5
-        elif self._price <= 5.0:
+        elif self._price <= Decimal("5.0"):
             addend = 7
-        elif self._price <= 15.0:
+        elif self._price <= Decimal("15.0"):
             addend = 10
-        elif self._price <= 25.0:
+        elif self._price <= Decimal("25.0"):
             addend = 12
         else:
             addend = 14
-        calculated = 0
-        if self._price > 0.2:
-            calculated = self._price * Decimal(1.7) / Decimal(1.1)
+        if self._price > Decimal("0.2"):
+            calculated = self._price * Decimal("1.7") / Decimal("1.1")
         return calculated + Decimal(addend)
 
     def calc_for_region(self, region_code: str, *args, **kwargs) -> Decimal:
         match region_code.lower():
             case XboxParseRegions.US:
-                return self._calc_for_usa(*args, **kwargs)
+                return self._calc_for_us(*args, **kwargs)
             case XboxParseRegions.TR:
-                return self._calc_for_tr()
+                return self._calc_for_tr(*args, **kwargs)
             case XboxParseRegions.AR:
-                return self._calc_for_ar()
+                return self._calc_for_ar(*args, **kwargs)
             case _:
                 raise ValueError("Unsupported region: %s" % region_code)
 
