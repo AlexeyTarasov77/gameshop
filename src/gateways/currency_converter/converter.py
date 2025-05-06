@@ -41,7 +41,10 @@ class CurrencyConverter:
                     % (price.currency_code, to_curr)
                 )
             return PriceUnitDTO.model_validate(
-                {"value": price.value / reversed_rate, "currency_code": to_curr}
+                {
+                    "value": price.value / reversed_rate,
+                    "currency_code": to_curr,
+                }
             )
         return PriceUnitDTO.model_validate(
             {"value": price.value * exchange_rate, "currency_code": to_curr}

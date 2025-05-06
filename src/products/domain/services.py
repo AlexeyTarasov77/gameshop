@@ -197,7 +197,9 @@ class ProductsService(BaseService):
                     )
                     recalculated_prices.append(
                         RegionalPrice(
-                            base_price=price_in_rub.value,
+                            base_price=price_in_rub.value
+                            * 100
+                            / (100 - item.discount),  # compute base price
                             region_code=price_dto.region,
                             original_curr=price_dto.currency_code,
                         )
