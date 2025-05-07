@@ -105,7 +105,10 @@ def _init_container() -> punq.Container:
     )
     container.register(StatefullTokenProviderI, SecureTokenProvider)
     container.register(
-        MailingService, scope=punq.Scope.singleton, **cfg.smtp.model_dump()
+        MailingService,
+        MailingService,
+        scope=punq.Scope.singleton,
+        **cfg.smtp.model_dump(),
     )
     container.register(SqlAlchemyClient, instance=db)
     container.register(Config, instance=cfg)
@@ -142,6 +145,7 @@ def _init_container() -> punq.Container:
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(ShoppingService, scope=punq.Scope.singleton)
     container.register(
+        PaymentsService,
         PaymentsService,
         scope=punq.Scope.singleton,
         order_details_link_builder=lambda order_id: f"{FRONTEND_DOMAIN}/orderhistory/{order_id}",
