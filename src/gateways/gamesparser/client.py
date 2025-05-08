@@ -1,6 +1,6 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from logging import Logger
 import time
 import asyncio
@@ -118,7 +118,7 @@ class SalesParser:
             try:
                 data = await parse_func(url)
             except Exception as e:
-                self._logger.error(
+                self._logger.exception(
                     "Error during parsing details for id: %d, url: %s. Error: %s",
                     id,
                     url,
@@ -149,7 +149,14 @@ class SalesParser:
 
     async def _update_psn_details(self, products_urls: ParsedUrlsMapping):
         def row_extracter(id: int, data: PsnItemDetails) -> PsnRowForUpdate:
-            return PsnRowForUpdate(id, data.description, data.deal_until)
+            """Forms set of fields to be used for updating row.
+            Sets deal_until to be expired if data.deal_until is None
+            because it means that product is not discounted anymore and should be cleaned up"""
+
+            deal_until = data.deal_until
+            if deal_until is None:
+                deal_until = datetime.now() - timedelta(days=1)
+            return PsnRowForUpdate(id, data.description, deal_until)
 
         await self._update_parsed_details(
             products_urls,

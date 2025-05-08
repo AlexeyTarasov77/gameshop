@@ -58,6 +58,7 @@ async def update_sales_details(
     ids = list(urls_mapping.keys())
     key = get_redis_key_by_platform(platform)
     total_chunks = math.ceil(len(urls_mapping) / UPDATE_CHUNK_SIZE)
+    total_updated = 0
     for i, chunk in enumerate(
         chunkify(list(urls_mapping.items()), UPDATE_CHUNK_SIZE), 1
     ):
@@ -66,4 +67,6 @@ async def update_sales_details(
         logger.info(
             "Chunk %d out of %d chunks updated. Platform: %s", i, total_chunks, platform
         )
-        await save_unprocessed_ids(key, ids[len(urls_mapping_chunk) * i :])
+        await save_unprocessed_ids(key, ids[UPDATE_CHUNK_SIZE * i :])
+        total_updated += len(urls_mapping_chunk)
+    logger.info("Chunked update completed. Totaly updated: %d", total_updated)

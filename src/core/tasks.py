@@ -8,7 +8,10 @@ class BackgroundJobs:
         self._uow = uow
         self._logger = logger
 
-    async def _remove_products_from_sale(self):
+    async def remove_products_from_sale(self, *, exit_after_update: bool = False):
+        """Periodically updates products with expired discount.
+        If exit_after_update is set to True - don't run an infinite loop
+        and exit after first cleanup"""
         timeout_sec = 60 * 60 * 6  # 6 hours
         while True:
             async with self._uow() as uow:
@@ -16,7 +19,9 @@ class BackgroundJobs:
                     deal_until=None, discount=0
                 )
                 self._logger.info("%d products removed from sale", updated_count)
+            if exit_after_update:
+                return
             await asyncio.sleep(timeout_sec)
 
-    def run(self):
-        asyncio.create_task(self._remove_products_from_sale())
+    def start_all(self):
+        asyncio.create_task(self.remove_products_from_sale())

@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
     logger = Resolve(Logger)
     bg_jobs = Resolve(BackgroundJobs)
     await ping_gateways()
-    bg_jobs.run()
+    bg_jobs.start_all()
     logger.info("Background jobs succesfully launched!")
     try:
         yield
