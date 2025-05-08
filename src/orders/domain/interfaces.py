@@ -7,13 +7,13 @@ from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamGiftOrderDTO,
     CreateSteamTopUpOrderDTO,
+    ListOrdersParamsDTO,
     UpdateOrderDTO,
 )
 from orders.models import (
     BaseOrder,
     InAppOrder,
     InAppOrderItem,
-    OrderCategory,
     SteamGiftOrder,
     SteamTopUpOrder,
 )
@@ -25,14 +25,10 @@ class AllOrdersRepositoryI(Protocol):
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> BaseOrder: ...
     async def delete_by_id(self, order_id: UUID) -> None: ...
     async def get_by_id(self, order_id: UUID) -> BaseOrder: ...
-    async def list_orders_for_user(
+    async def list_orders(
         self,
         pagination_params: PaginationParams,
-        user_id: int,
-        category: OrderCategory | None = None,
-    ) -> PaginationResT[BaseOrder]: ...
-    async def list_orders(
-        self, pagination_params: PaginationParams, category: OrderCategory | None = None
+        dto: ListOrdersParamsDTO,
     ) -> PaginationResT[BaseOrder]: ...
     async def update_payment_details(
         self,

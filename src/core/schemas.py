@@ -1,6 +1,7 @@
 import base64
 from contextlib import suppress
 from decimal import Decimal
+from enum import StrEnum
 from fastapi import HTTPException, status
 import json
 from typing import Annotated, Final, Literal
@@ -134,3 +135,8 @@ ProductRegion = Annotated[
     CountryAlpha2 | EmptyRegionT,
     BeforeValidator(lambda s: s.strip() if isinstance(s, str) else s),
 ]
+
+
+class OrderByOption(StrEnum):
+    ASC = "asc"
+    DESC = "desc"

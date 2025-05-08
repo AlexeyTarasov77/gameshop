@@ -151,31 +151,31 @@ class OrdersService(BaseService):
     async def list_orders_for_user(
         self,
         pagination_params: PaginationParams,
-        user_id: int,
-        category: OrderCategory | None,
+        dto: schemas.ListOrdersParamsDTO,
     ) -> PaginationResT[schemas.ShowBaseOrderDTO]:
+        assert dto.user_id, "User id must be present"
         self._logger.info(
             "Listing orders for user: %s. Pagination params: %s",
-            user_id,
+            dto.user_id,
             pagination_params,
         )
         async with self._uow() as uow:
-            orders, total_records = await uow.orders_repo.list_orders_for_user(
-                pagination_params, user_id, category
+            orders, total_records = await uow.orders_repo.list_orders(
+                pagination_params, dto
             )
         return [
             schemas.ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
     async def list_all_orders(
-        self, pagination_params: PaginationParams, category: OrderCategory | None
+        self, pagination_params: PaginationParams, dto: schemas.ListOrdersParamsDTO
     ) -> PaginationResT[schemas.ShowBaseOrderDTO]:
         self._logger.info(
             "Listing all orders. Pagination params: %s", pagination_params
         )
         async with self._uow() as uow:
             orders, total_records = await uow.orders_repo.list_orders(
-                pagination_params, category
+                pagination_params, dto
             )
         return [
             schemas.ShowBaseOrderDTO.model_validate(order) for order in orders

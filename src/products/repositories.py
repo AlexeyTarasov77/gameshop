@@ -6,6 +6,7 @@ from decimal import Decimal
 import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
 from core.pagination import PaginationResT
+from core.schemas import OrderByOption
 from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
@@ -18,7 +19,6 @@ from products.models import (
 from products.schemas import (
     CreateProductDTO,
     ListProductsParamsDTO,
-    OrderByOption,
     UpdateProductDTO,
 )
 

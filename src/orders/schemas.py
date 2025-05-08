@@ -15,7 +15,7 @@ from pydantic import (
 from payments.models import AvailablePaymentSystems
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
-from core.schemas import Base64Int, BaseDTO, RoundedDecimal
+from core.schemas import Base64Int, BaseDTO, OrderByOption, RoundedDecimal
 from orders.models import InAppOrder, OrderCategory, OrderStatus
 
 
@@ -66,6 +66,13 @@ CustomerName = Annotated[str, AfterValidator(check_name)]
 CustomerTg = Annotated[str, AfterValidator(normalize_tg_username)]
 SteamFriendLink = Annotated[str, AfterValidator(check_steam_friend_link)]
 SteamGiftRegions = Literal["ua", "ru", "kz"]
+
+
+class ListOrdersParamsDTO(BaseDTO):
+    category: OrderCategory | None = None
+    status: OrderStatus | None = None
+    date_ordering: OrderByOption | None = OrderByOption.DESC
+    user_id: int | None = None
 
 
 class _InAppOrderItemProduct(BaseDTO):

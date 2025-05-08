@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
-from sqlalchemy import select
+import sqlalchemy as sa
 from sqlalchemy.orm import (
     joinedload,
     selectin_polymorphic,
@@ -10,6 +10,7 @@ from sqlalchemy.orm import (
     with_polymorphic,
 )
 from core.pagination import PaginationParams, PaginationResT
+from core.schemas import OrderByOption
 from gateways.db.exceptions import NotFoundError
 from gateways.db import RedisClient
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository
@@ -17,7 +18,6 @@ from orders.models import (
     BaseOrder,
     InAppOrder,
     InAppOrderItem,
-    OrderCategory,
     OrderStatus,
     SteamGiftOrder,
     SteamTopUpOrder,
@@ -26,6 +26,7 @@ from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamGiftOrderDTO,
     CreateSteamTopUpOrderDTO,
+    ListOrdersParamsDTO,
     UpdateOrderDTO,
 )
 from payments.models import AvailablePaymentSystems
@@ -66,17 +67,11 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
     async def update_by_id(self, dto: UpdateOrderDTO, order_id: UUID) -> BaseOrder:
         return await super().update(dto.model_dump(), id=order_id)
 
-    async def _paginated_list(
+    async def list_orders(
         self,
         pagination_params: PaginationParams,
-        category: OrderCategory | None = None,
-        user_id: int | None = None,
-    ):
-        filters = {}
-        if category is not None:
-            filters["category"] = category
-        if user_id is not None:
-            filters["user_id"] = user_id
+        dto: ListOrdersParamsDTO,
+    ) -> PaginationResT[BaseOrder]:
         stmt = (
             super()
             ._get_pagination_stmt(pagination_params)
@@ -86,29 +81,26 @@ class OrdersRepository(PaginationRepository[BaseOrder]):
                     InAppOrderItem.price, InAppOrderItem.quantity
                 ),
             )
-            .filter_by(**filters)
         )
+        if dto.category is not None:
+            stmt = stmt.filter_by(category=dto.category)
+        if dto.user_id is not None:
+            stmt = stmt.filter_by(user_id=dto.user_id)
+        if dto.status is not None:
+            stmt = stmt.filter_by(status=dto.status)
+        if dto.date_ordering is not None:
+            option = {OrderByOption.ASC: sa.asc, OrderByOption.DESC: sa.desc}[
+                dto.date_ordering
+            ]
+            stmt = stmt.order_by(option(self.model.order_date))
         res = await self._session.execute(stmt)
         return super()._split_records_and_count(res.all())
-
-    async def list_orders(
-        self, pagination_params: PaginationParams, category: OrderCategory | None = None
-    ) -> PaginationResT[BaseOrder]:
-        return await self._paginated_list(pagination_params, category)
-
-    async def list_orders_for_user(
-        self,
-        pagination_params: PaginationParams,
-        user_id: int,
-        category: OrderCategory | None = None,
-    ) -> PaginationResT[BaseOrder]:
-        return await self._paginated_list(pagination_params, category, user_id)
 
     async def delete_by_id(self, order_id: UUID) -> None:
         await super().delete_or_raise_not_found(id=order_id)
 
     async def get_by_id(self, order_id: UUID) -> BaseOrder:
-        stmt = select(with_polymorphic(self.model, "*")).filter_by(id=order_id)
+        stmt = sa.select(with_polymorphic(self.model, "*")).filter_by(id=order_id)
         res = await self._session.execute(stmt)
         obj = res.scalar_one_or_none()
         if not obj:
@@ -147,7 +139,7 @@ class InAppOrdersRepository(
 
     async def get_by_id(self, order_id: UUID) -> InAppOrder:
         stmt = (
-            select(self.model)
+            sa.select(self.model)
             .filter_by(id=order_id)
             .options(self._get_rels_load_options())
         )
@@ -159,7 +151,7 @@ class InAppOrdersRepository(
 
     async def get_customer_tg_by_id(self, order_id: UUID) -> str:
         customer_tg = await self._session.scalar(
-            select(self.model.customer_tg_username).filter_by(id=order_id)
+            sa.select(self.model.customer_tg_username).filter_by(id=order_id)
         )
         if customer_tg is None:
             raise NotFoundError()

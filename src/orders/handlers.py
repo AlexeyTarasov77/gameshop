@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from core.pagination import PaginatedResponse
 from core.dependencies import PaginationDep
 from core.ioc import Inject
@@ -7,10 +7,10 @@ import typing as t
 
 from core.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
-from orders.models import OrderCategory
 from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamGiftOrderDTO,
+    ListOrdersParamsDTO,
     OrderPaymentDTO,
     InAppOrderDTO,
     ShowBaseOrderDTO,
@@ -57,18 +57,13 @@ async def delete_order(order_id: UUID, orders_service: OrdersServiceDep):
     await orders_service.delete_order(order_id)
 
 
-@router.get(
-    "/list",
-    # dependencies=[Depends(require_admin)]
-)
+@router.get("/list", dependencies=[Depends(require_admin)])
 async def list_all_orders(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
-    category: OrderCategory | None = None,
+    dto: t.Annotated[ListOrdersParamsDTO, Query()] = None,  # type: ignore
 ) -> PaginatedResponse[ShowBaseOrderDTO]:
-    orders, total_records = await orders_service.list_all_orders(
-        pagination_params, category
-    )
+    orders, total_records = await orders_service.list_all_orders(pagination_params, dto)
     return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
 
@@ -76,11 +71,12 @@ async def list_all_orders(
 async def list_orders_for_user(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
+    dto: t.Annotated[ListOrdersParamsDTO, Query()] = None,  # type: ignore
     user_id: int = Depends(get_user_id_or_raise),
-    category: OrderCategory | None = None,
 ) -> PaginatedResponse[ShowBaseOrderDTO]:
+    dto.user_id = user_id
     orders, total_records = await orders_service.list_orders_for_user(
-        pagination_params, user_id, category
+        pagination_params, dto
     )
     return PaginatedResponse.new_response(orders, total_records, pagination_params)
 
