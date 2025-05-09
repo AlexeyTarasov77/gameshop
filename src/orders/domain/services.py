@@ -151,7 +151,7 @@ class OrdersService(BaseService):
     async def list_orders_for_user(
         self,
         pagination_params: PaginationParams,
-        dto: schemas.ListOrdersParamsDTO,
+        dto: schemas.ListOrdersForUserParamsDTO,
     ) -> PaginationResT[schemas.ShowBaseOrderDTO]:
         assert dto.user_id, "User id must be present"
         self._logger.info(

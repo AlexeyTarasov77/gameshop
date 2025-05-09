@@ -12,6 +12,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 from payments.models import AvailablePaymentSystems
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
@@ -73,6 +74,12 @@ class ListOrdersParamsDTO(BaseDTO):
     status: OrderStatus | None = None
     date_ordering: OrderByOption | None = OrderByOption.DESC
     user_id: int | None = None
+
+
+class ListOrdersForUserParamsDTO(ListOrdersParamsDTO):
+    """User id is used only for transfer purpose and is not accepted in request"""
+
+    user_id: SkipJsonSchema[int | None] = None
 
 
 class _InAppOrderItemProduct(BaseDTO):

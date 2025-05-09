@@ -10,6 +10,7 @@ from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamGiftOrderDTO,
+    ListOrdersForUserParamsDTO,
     ListOrdersParamsDTO,
     OrderPaymentDTO,
     InAppOrderDTO,
@@ -71,7 +72,7 @@ async def list_all_orders(
 async def list_orders_for_user(
     pagination_params: PaginationDep,
     orders_service: OrdersServiceDep,
-    dto: t.Annotated[ListOrdersParamsDTO, Query()] = None,  # type: ignore
+    dto: t.Annotated[ListOrdersForUserParamsDTO, Query()] = None,  # type: ignore
     user_id: int = Depends(get_user_id_or_raise),
 ) -> PaginatedResponse[ShowBaseOrderDTO]:
     dto.user_id = user_id
