@@ -60,3 +60,14 @@ class EmailTemplates:
             order_details_link=order_details_link,
         )
         return MailingTemplate(html, text)
+
+    async def password_reset(self, username: str, link: str) -> str | MailingTemplate:
+        text = (
+            f"Здраствуйте, {username}!\n"
+            "Мы получили ваш запрос на сброс пароля\n"
+            "Для того что бы подтвердить это, перейдите по ссылке ниже:\n"
+            f"\t{link}\n"
+            "Если это были не вы - игнорируйте это сообщение"
+        )
+        html = await parse("password_reset.html", username=username, link=link)
+        return MailingTemplate(html, text)
