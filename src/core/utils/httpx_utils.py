@@ -55,7 +55,7 @@ def log_request(prefix: str, logger: Logger):
             )
         else:
             logger.error("HTTP error: %s", e, exc_info=True)
-        raise ExternalGatewayError()
+        raise ExternalGatewayError(str(e))
 
 
 def log_response(resp: httpx.Response, logger: Logger):

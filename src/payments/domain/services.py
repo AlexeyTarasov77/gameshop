@@ -48,25 +48,31 @@ class PaymentsService(BaseService):
         self._tg_client = tg_client
         self._admin_tg_chat_id = admin_tg_chat_id
 
-    async def _mark_order_as_paid(self, dto: ProcessOrderPaymentDTO):
-        return await self._uow.orders_repo.update_payment_details(
+    async def _mark_order_as_paid(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ):
+        return await uow.orders_repo.update_payment_details(
             **dto.model_dump(), check_is_pending=True
         )
 
-    async def _process_steam_gift_order(self, dto: ProcessOrderPaymentDTO) -> BaseOrder:
-        order = await self._mark_order_as_paid(dto)
+    async def _process_steam_gift_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> BaseOrder:
+        order = await self._mark_order_as_paid(dto, uow)
         await self._steam_api.pay_gift_order(dto.order_id)
         return order
 
     async def _process_steam_top_up_order(
-        self, dto: ProcessOrderPaymentDTO
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
     ) -> BaseOrder:
-        order = await self._mark_order_as_paid(dto)
+        order = await self._mark_order_as_paid(dto, uow)
         await self._steam_api.top_up_complete(dto.order_id)
         return order
 
-    async def _process_in_app_order(self, dto: ProcessOrderPaymentDTO) -> BaseOrder:
-        order = await self._mark_order_as_paid(dto)
+    async def _process_in_app_order(
+        self, dto: ProcessOrderPaymentDTO, uow: AbstractUnitOfWork
+    ) -> BaseOrder:
+        order = await self._mark_order_as_paid(dto, uow)
         return order
 
     async def process_payment(
@@ -96,7 +102,9 @@ class PaymentsService(BaseService):
                 try:
                     match payment_for:
                         case OrderCategory.IN_APP:
-                            order = await self._process_in_app_order(process_order_dto)
+                            order = await self._process_in_app_order(
+                                process_order_dto, uow
+                            )
                             customer_tg = (
                                 await uow.in_app_orders_repo.get_customer_tg_by_id(
                                     order.id
@@ -107,11 +115,11 @@ class PaymentsService(BaseService):
                             additional_msg = f"Телеграм заказчика: {customer_tg}"
                         case OrderCategory.STEAM_TOP_UP:
                             order = await self._process_steam_top_up_order(
-                                process_order_dto
+                                process_order_dto, uow
                             )
                         case OrderCategory.STEAM_GIFT:
                             order = await self._process_steam_gift_order(
-                                process_order_dto
+                                process_order_dto, uow
                             )
                 except ExternalGatewayError:
                     await uow.orders_repo.update_by_id(
@@ -126,9 +134,6 @@ class PaymentsService(BaseService):
                 f"Дата заказа: {order.order_date} 📆\n"
                 f"Тип заказа: {str(order.category.value)}\n" + additional_msg
             )
-            await self._tg_client.send_msg(
-                self._admin_tg_chat_id, admin_notification_msg
-            )
             email_body = await self._email_templates.order_checkout(
                 self._order_details_link_builder(order_id), order_id
             )
@@ -138,6 +143,9 @@ class PaymentsService(BaseService):
                     email_body,
                     to=order.client_email,
                 )
+            )
+            await self._tg_client.send_msg(
+                self._admin_tg_chat_id, admin_notification_msg
             )
         except NotFoundError:
             self._logger.error(
