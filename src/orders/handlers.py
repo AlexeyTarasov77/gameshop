@@ -12,6 +12,7 @@ from orders.schemas import (
     CreateSteamGiftOrderDTO,
     ListOrdersForUserParamsDTO,
     ListOrdersParamsDTO,
+    OrderDetailSchemaT,
     OrderPaymentDTO,
     InAppOrderDTO,
     ShowBaseOrderDTO,
@@ -85,7 +86,7 @@ async def list_orders_for_user(
 @router.get("/detail/{order_id}")
 async def get_order(
     order_id: UUID, orders_service: OrdersServiceDep
-) -> ShowBaseOrderDTO:
+) -> OrderDetailSchemaT:
     return await orders_service.get_order(order_id)
 
 

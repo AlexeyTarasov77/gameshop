@@ -14,6 +14,11 @@ from pydantic import (
 )
 from pydantic.json_schema import SkipJsonSchema
 from payments.models import AvailablePaymentSystems
+from products.schemas import (
+    ProductCategoryField,
+    ProductDeliveryMethodField,
+    ProductPlatformField,
+)
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
 from core.schemas import Base64Int, BaseDTO, OrderByOption, RoundedDecimal
@@ -82,14 +87,18 @@ class ListOrdersForUserParamsDTO(ListOrdersParamsDTO):
     user_id: SkipJsonSchema[int | None] = None
 
 
-class _InAppOrderItemProduct(BaseDTO):
+class OrderProductDTO(BaseDTO):
     id: Base64Int
     name: str
+    in_stock: bool
+    category: ProductCategoryField
+    platform: ProductPlatformField
+    delivery_method: ProductDeliveryMethodField
 
 
 class InAppOrderItemDTO(BaseDTO):
     id: Base64Int
-    product: _InAppOrderItemProduct
+    product: OrderProductDTO
     price: RoundedDecimal
     quantity: int = Field(gt=0)
     total_price: RoundedDecimal
@@ -191,12 +200,9 @@ class CreateSteamGiftOrderDTO(CreateSteamOrderBaseDTO):
     region: SteamGiftRegions
 
 
-class SteamTopUpOrderCustomerDTO(BaseDTO):
+class _BaseSteamTopUpOrderDTO(ShowBaseOrderDTO):
     customer_email: EmailStr | None = None
     steam_login: str
-
-
-class _BaseSteamTopUpOrderDTO(SteamTopUpOrderCustomerDTO, ShowBaseOrderDTO):
     amount: RoundedDecimal
     percent_fee: int
 
@@ -214,4 +220,10 @@ class SteamGiftOrderDTO(ShowBaseOrderDTO, CreateSteamGiftOrderDTO):
 
 
 class SteamGiftOrderExtendedDTO(ShowBaseOrderDTO, CreateSteamGiftOrderDTO):
+    product: OrderProductDTO
     user: ShowUser | None
+
+
+type OrderDetailSchemaT = (
+    SteamGiftOrderExtendedDTO | InAppOrderExtendedDTO | SteamTopUpOrderExtendedDTO
+)

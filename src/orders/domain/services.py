@@ -44,11 +44,11 @@ class OrdersService(BaseService):
         self._top_up_fee_manager = top_up_fee_manager
         self._top_up_default_fee = 10  # %
 
-    def _order_to_dto(self, order: BaseOrder):
-        mapping: dict[OrderCategory, type[schemas.ShowBaseOrderDTO]] = {
+    def _order_to_dto(self, order: BaseOrder) -> schemas.OrderDetailSchemaT:
+        mapping: dict[OrderCategory, type[schemas.OrderDetailSchemaT]] = {
             OrderCategory.IN_APP: schemas.InAppOrderExtendedDTO,
             OrderCategory.STEAM_TOP_UP: schemas.SteamTopUpOrderExtendedDTO,
-            OrderCategory.STEAM_GIFT: schemas.SteamGiftOrderDTO,
+            OrderCategory.STEAM_GIFT: schemas.SteamGiftOrderExtendedDTO,
         }
         return mapping[order.category].model_validate(order)
 
@@ -181,7 +181,7 @@ class OrdersService(BaseService):
             schemas.ShowBaseOrderDTO.model_validate(order) for order in orders
         ], total_records
 
-    async def get_order(self, order_id: UUID) -> schemas.ShowBaseOrderDTO:
+    async def get_order(self, order_id: UUID) -> schemas.OrderDetailSchemaT:
         self._logger.info("Fetching order by id: %s", order_id)
         try:
             async with self._uow() as uow:
