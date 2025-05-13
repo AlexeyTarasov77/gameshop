@@ -2,12 +2,15 @@ from collections.abc import Mapping
 import logging
 import abc
 import typing as t
-
 from fastapi.responses import JSONResponse
 from core.services import exceptions as service_exc
 
 
 from fastapi import FastAPI, Request, status
+
+
+class TelegramClientI(t.Protocol):
+    async def send_msg(self, chat_id: int, text: str): ...
 
 
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
@@ -50,15 +53,30 @@ class HTTPExceptionsMapper:
         service_exc.ExternalGatewayError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     }
 
-    def __init__(self, app: FastAPI, logger: logging.Logger):
+    def __init__(
+        self,
+        app: FastAPI,
+        logger: logging.Logger,
+        tg_client: TelegramClientI,
+        support_tg_chat_id: int | None,
+        hostname: str,
+    ):
         self._app = app
         self._logger = logger
+        self._tg_client = tg_client
+        self._support_tg_chat_id = support_tg_chat_id
+        self._server_addr = hostname
 
     async def _handle(self, _: Request, exc: Exception):
         status_code: int | None = self._EXCEPTION_MAPPING.get(type(exc), None)
         if status_code is None:
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             self._logger.error("Unknown exception in handler: %s", exc, exc_info=True)
+            if self._support_tg_chat_id:
+                await self._tg_client.send_msg(
+                    self._support_tg_chat_id,
+                    f"Unexpected exception occured on server: {self._server_addr} ! Error: {exc}",
+                )
         message: str = str(exc) if status_code < 500 else "Internal server error."
         return JSONResponse({"detail": message}, status_code)
 

@@ -95,6 +95,7 @@ class _SteamAPIClient(BaseModel):
 class _TelegramAPIClient(BaseModel):
     token: str
     admin_chat_id: int
+    support_chat_id: int | None = None
 
 
 class _ClientsConfig(BaseModel):

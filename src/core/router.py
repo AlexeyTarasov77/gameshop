@@ -28,6 +28,7 @@ router.include_router(api_router)
 
 @router.get("/ping", include_in_schema=False)
 async def ping() -> dict[str, str | list[str]]:
+    raise Exception("Failure")
     return {"status": "available", "version": Resolve(Config).api_version}
 
 

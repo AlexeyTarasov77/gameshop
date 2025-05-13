@@ -12,7 +12,7 @@ from orders.repositories import TopUpFeeManager
 from payments.domain.interfaces import (
     EmailTemplatesI as PaymentEmailTemplatesI,
     PaymentSystemFactoryI,
-    TelegramClientI,
+    TelegramClientI as PaymentsTelegramClientI,
 )
 from payments.domain.services import PaymentsService
 from payments.payment_gateways import PaymentSystemFactoryImpl
@@ -31,7 +31,10 @@ from shopping.repositories import (
     WishlistManagerFactory,
 )
 from core.logger import setup_logger
-from core.exception_mappers import HTTPExceptionsMapper
+from core.exception_mappers import (
+    HTTPExceptionsMapper,
+    TelegramClientI as ExceptionMapperTelegramClientI,
+)
 from gateways.db.exceptions import (
     AbstractDatabaseExceptionMapper,
     PostgresExceptionsMapper,
@@ -90,7 +93,14 @@ def _init_container() -> punq.Container:
     container.register(AsyncClient, instance=httpx_client)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
     container.register(RedisSessionManager, RedisSessionManager)
-    container.register(HTTPExceptionsMapper, HTTPExceptionsMapper)
+    container.register(
+        HTTPExceptionsMapper,
+        HTTPExceptionsMapper,
+        support_tg_chat_id=cfg.clients.tg_api.support_chat_id
+        if not cfg.debug
+        else None,
+        hostname=cfg.server.host,
+    )
     container.register(RedisClient, instance=redis_client)
     db = SqlAlchemyClient(
         str(cfg.pg_dsn), exception_mapper=PostgresExceptionsMapper, future=True
@@ -118,7 +128,12 @@ def _init_container() -> punq.Container:
         session_factory=db.session_factory,
     )
     container.register(UsersEmailTemplatesI, EmailTemplates)
-    container.register(TelegramClientI, TelegramClient, token=cfg.clients.tg_api.token)
+    container.register(
+        PaymentsTelegramClientI, TelegramClient, token=cfg.clients.tg_api.token
+    )
+    container.register(
+        ExceptionMapperTelegramClientI, TelegramClient, token=cfg.clients.tg_api.token
+    )
     container.register(PaymentEmailTemplatesI, EmailTemplates)
     container.register(ProductsService, scope=punq.Scope.singleton)
     container.register(NewsService, scope=punq.Scope.singleton)
