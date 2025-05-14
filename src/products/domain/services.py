@@ -65,29 +65,32 @@ class XboxPriceCalculator(AbstractPriceCalculator):
         super().__init__(price)
 
     def _calc_for_us(self, with_gp: bool) -> Decimal:
-        calculated = self._price * Decimal(0.73)
+        calculated = self._price * Decimal("0.73")
+        calculated = calculated.quantize(Decimal(".001"))
         if with_gp:
-            calculated += 1
+            calculated += Decimal("1")
+
         if calculated <= Decimal("2.99"):
-            calculated = self._add_percent(calculated, 70)
+            calculated = self._add_percent(calculated, 120)
         elif calculated <= Decimal("4.99"):
-            calculated = self._add_percent(calculated, 55)
+            calculated = self._add_percent(calculated, 70)
+        elif calculated <= Decimal("8.99"):
+            calculated = self._add_percent(calculated, 40)
         elif calculated <= Decimal("12.99"):
             calculated = self._add_percent(calculated, 35)
         elif calculated <= Decimal("19.99"):
-            calculated = self._add_percent(calculated, 33)
-        elif calculated <= Decimal("29.99"):
-            calculated = self._add_percent(calculated, 31)
-        elif calculated <= Decimal("34.99"):
-            calculated = self._add_percent(calculated, 30)
-        elif calculated <= Decimal("39.99"):
             calculated = self._add_percent(calculated, 28)
-        elif calculated <= Decimal("49.99"):
+        elif calculated <= Decimal("29.99"):
             calculated = self._add_percent(calculated, 25)
-        elif calculated <= Decimal("54.99"):
+        elif calculated <= Decimal("34.99"):
             calculated = self._add_percent(calculated, 23)
+        elif calculated <= Decimal("39.99"):
+            calculated = self._add_percent(calculated, 22)
+        elif calculated <= Decimal("49.99"):
+            calculated = self._add_percent(calculated, 21)
         else:
             calculated = self._add_percent(calculated, 20)
+
         return calculated
 
     def _calc_for_tr(self) -> Decimal:

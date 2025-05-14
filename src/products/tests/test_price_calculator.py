@@ -12,6 +12,9 @@ def new_test_price(value: Decimal | None = None, currency_code: str = "usd"):
     )
 
 
+_xbox_price_divider = Decimal("0.73")
+
+
 class TestXboxPriceCalculator:
     def test_calc_invalid_currency(self):
         with pytest.raises(Exception):
@@ -40,34 +43,35 @@ class TestXboxPriceCalculator:
     @pytest.mark.parametrize(
         ["input", "expected_percent", "with_gp"],
         [
-            (Decimal("2.99") / Decimal("0.73"), 70, False),
-            (Decimal("3.00") / Decimal("0.73"), 55, False),
-            (Decimal("4.99") / Decimal("0.73"), 55, False),
-            (Decimal("5.00") / Decimal("0.73"), 35, False),
-            (Decimal("12.99") / Decimal("0.73"), 35, False),
-            (Decimal("13.00") / Decimal("0.73"), 33, False),
-            (Decimal("19.99") / Decimal("0.73"), 33, False),
-            (Decimal("20.00") / Decimal("0.73"), 31, False),
-            (Decimal("29.99") / Decimal("0.73"), 31, False),
-            (Decimal("30.00") / Decimal("0.73"), 30, False),
-            (Decimal("34.99") / Decimal("0.73"), 30, False),
-            (Decimal("35.00") / Decimal("0.73"), 28, False),
-            (Decimal("39.99") / Decimal("0.73"), 28, False),
-            (Decimal("40.00") / Decimal("0.73"), 25, False),
-            (Decimal("49.99") / Decimal("0.73"), 25, False),
-            (Decimal("50.00") / Decimal("0.73"), 23, False),
-            (Decimal("54.99") / Decimal("0.73"), 23, False),
-            (Decimal("55.00") / Decimal("0.73"), 20, False),
-            (Decimal("70.00") / Decimal("0.73"), 20, False),
-            (Decimal("2.00"), 70, True),
-            (Decimal("5.00"), 55, True),
-            (Decimal("6.99"), 35, True),
+            (Decimal("0.1") / _xbox_price_divider, 120, False),
+            (Decimal("2.99") / _xbox_price_divider, 120, False),
+            (Decimal("3.00") / _xbox_price_divider, 70, False),
+            (Decimal("4.99") / _xbox_price_divider, 70, False),
+            (Decimal("5.00") / _xbox_price_divider, 40, False),
+            (Decimal("8.99") / _xbox_price_divider, 40, False),
+            (Decimal("9.00") / _xbox_price_divider, 35, False),
+            (Decimal("12.99") / _xbox_price_divider, 35, False),
+            (Decimal("13.00") / _xbox_price_divider, 28, False),
+            (Decimal("19.99") / _xbox_price_divider, 28, False),
+            (Decimal("20.00") / _xbox_price_divider, 25, False),
+            (Decimal("29.99") / _xbox_price_divider, 25, False),
+            (Decimal("30.00") / _xbox_price_divider, 23, False),
+            (Decimal("34.99") / _xbox_price_divider, 23, False),
+            (Decimal("35.00") / _xbox_price_divider, 22, False),
+            (Decimal("39.99") / _xbox_price_divider, 22, False),
+            (Decimal("40.00") / _xbox_price_divider, 21, False),
+            (Decimal("49.99") / _xbox_price_divider, 21, False),
+            (Decimal("50.00") / _xbox_price_divider, 20, False),
+            (Decimal("9999.00") / _xbox_price_divider, 20, False),
+            (Decimal("2.00"), 120, True),
+            (Decimal("5.00"), 70, True),
+            (Decimal("6.99"), 40, True),
         ],
     )
     def test_calc_usa(self, input: Decimal, expected_percent: int, with_gp: bool):
         calculator = XboxPriceCalculator(new_test_price(Decimal(input)))
         res = calculator.calc_for_region("us", with_gp=with_gp)
-        input = input * Decimal("0.73")
+        input = input * _xbox_price_divider
         if with_gp:
             input += 1
         expected = calculator._add_percent(input, expected_percent)
