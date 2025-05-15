@@ -45,12 +45,12 @@ async def save_upload_file(upload_file: UploadFile) -> str:
     return unique_filename
 
 
-def get_uploaded_file_url(filename: str) -> str:
+def resolve_file_url(filename: str) -> str:
     from core.ioc import Resolve
 
     cfg = Resolve(Config)
     base_url = cfg.server.addr
-    # assume that in not local environment server works behind proxy, e.g nginx which uses default port
+    # assume that in non local environment server works on default protocol port (80 or 443)
     if cfg.mode != ConfigMode.LOCAL:
         base_url = base_url[: base_url.rfind(":")]
     return f"{base_url}/media/{filename}"

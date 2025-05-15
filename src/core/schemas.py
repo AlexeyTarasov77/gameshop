@@ -22,7 +22,7 @@ from pydantic_extra_types.country import CountryAlpha2
 from pydantic_extra_types.currency_code import Currency
 
 from core.utils import (
-    get_uploaded_file_url,
+    resolve_file_url,
     filename_split,
     run_coroutine_sync,
     save_upload_file,
@@ -107,7 +107,7 @@ ParseJson = BeforeValidator(lambda s: json.loads(s) if isinstance(s, str) else s
 UrlStr = Annotated[AnyHttpUrl, AfterValidator(lambda val: str(val))]
 ImgUrl = Annotated[
     str,
-    PlainSerializer(lambda s: get_uploaded_file_url(s) if not _is_valid_url(s) else s),
+    PlainSerializer(lambda s: resolve_file_url(s) if not _is_valid_url(s) else s),
 ]
 UploadImage = Annotated[UploadFile, AfterValidator(_check_and_save_image)]
 _base64int_serializer = PlainSerializer(

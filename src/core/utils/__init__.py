@@ -17,7 +17,7 @@ from .helpers import (
 )
 from .files import (
     save_upload_file as save_upload_file,
-    get_uploaded_file_url as get_uploaded_file_url,
+    resolve_file_url as resolve_file_url,
     FILES_UPLOAD_DIR as FILES_UPLOAD_DIR,
     filename_split as filename_split,
 )

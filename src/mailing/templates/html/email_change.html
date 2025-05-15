@@ -50,6 +50,10 @@
             font-size: 14px;
             color: #999;
         }
+        .footer-link{
+            display: flex;
+            gap: 30px;
+        }
     </style>
 </head>
 <body>
@@ -61,7 +65,16 @@
         <a href="$link" class="button">Подтвердить Email</a>
         <p>Если вы не запрашивали смену email, просто проигнорируйте это письмо — никаких действий предпринято не будет.</p>
         <div class="footer">
-            <p>С уважением,<br>Команда поддержки</p>
+            <p>С уважением,<br>Команда GameBazaar</p>
+            <p>Подписывайтесь на нас</p>
+            <div class="footer-link">
+                <a class="footer-link__tg" href="https://t.me/xboxStoreArgentinaa">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAJ7SURBVHgB7ZoxTyJBFMefHCeeJ4Y77i6xYhuvORNyVtpooqWFiRZ2WthT8AEs/AAm0mui38DCSi20UQs1JtpoDEulhRAUNIpB3f/o6Iq4sLO7MJL5JQMJs0vmP++9/xs2NCWTyQdqAPx40TSNPjO6rpOPGgQlRDaUENlQQmRDCZENJUQ2lBDZkEJItvBAicMrGlxOU3zrkkTwUx1ZPy1Q4iBP62cFyt7eP392SzM97WSXmgthu28sHhHgizcTDTeTCDURgsVjpxMHV+zdCq3tC4ngqRCkzlLqhhaPr9/tfiToZymEuSX95uXz/g5JIoLd54v7aPenuoM00dlKI6sZ2k/fvZmLhr+SCK4Jwe5P7+ZoP3NXNvdBf0eAZnrbKdTso4Hlc0rlimWuqUNEKhUuJxTw0dT/IMW6vlMqX7QQESBRbAupJnXMDGstNNf3w4hCE4sWesVHokXTCtgSAteZ3stZ7j4HxTzfF3pJlcWja4pvX1reW7OIzFZIIU6sq40VNKIAUDsYlRC1XmBLyMnYH+Yy6MQLxg6XOg4v5ujP1xSpVgQMIBoWL1nbdyKPMWL/ngoXbgVRw5EWVsxmJjeybK7a73WCI9eKGKkw3vmNDTMwhNGVTFVmwBG1XY4nnX10Jc0iZQcnhQ48Ocbr+aLdWxynlidCyjU7K3Di5Q4niuc/rGDFE39bLa9xYrsc12skZUor9BIMgBqIb14YRvC+DzktdOBZRMwiAJxtZ+Q36/ilOK0P4ImQtaFfb0RwYNdoqqVzbkTE9dTCYiMVch5CEAWc3dBI3aBuDx8gwC0RQD3Xkg0lRDaUENlQQmRDCZGNhhHCzlr4v9Nn5xE+C/uLyfymbgAAAABJRU5ErkJggg==" alt="Телеграм">
+                </a>
+                <a class="footer-link__vk" href="https://vk.com/gamebazaaar">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAQcSURBVHgB1VpdTttAEJ4ZIxWemp6g7gkKBwCZE7Q9AeGlFa2g4QSEE2CoAKkvhBMAJ6ihByCcoOYEdR9aSoV3O2M7kIT1z4bQxp8URd71rufzzt/OGqEAXuugAXDlKaVntabniHqWmxtZtwtjhY4AMNIaQr6I+FkXRNgFmAkCfznKG4VgFHzfi2O9gQgeTACY1LHj4HbgrwTDfQME5I3H8dUBC/4aJhBaY8dxptf7V+SWgAiv1NU5jF01xo6QaGauR4J6rVr/3oLJF17gxvH1Qe8iWQHReTbUL1AjsIEvik0kK8C69RFqBnEy8o9ea4t1/8l3qCHYFp5RfPPEg7ri5sojpCQ41RKKZSdE5yXUFJIdkFKqATWFaA97o1r4fjM0NEjfJWe1hMSBOhNwp8rvwW0i1e1vUQrYc90PfhwQA8dRh6ZZ4hhf5SeJGPLPJ4p/DD4neUahlywlcLaz0jK1z6/uvRxOtxHVaeB/6Jju53Ql5HQlhwC1z3be3SO+sLbr8qyFBAhKIHlSTtfJ/SbcKLg/BxiahM/6XkEJSgmwuhjfmuNcd/gvMtzfAitQ29SavYjSIFtKgDV7Kd1aDiLw11l4fe/NaW0TV/LfPqvbQZUZKhAA2egYl5KIfHgAiJw3pvb51d0mVNybVCEgaJsaOR8P+e8QRgAidgL/bXe4nVXH5b6NitNUJuAurO0tGScgbIPBFoqBIXuwTVMPb+BFeBcqoioBgW+2hZWQH7pZPtzpkYyIYDFbvQGI6mitm2ABGwJsC7+MHubrp/c+kwiKh/8MparAKzZnEj5VHdgCS1SIxP3Aj/ygjkkAdqtvlJruSIZlQuq1YDlvZs6Kmzy/dVpjSQC4bpS4t8XhjkzAketJ7NE6HEPYzrRrNQ4sIekDpxGWwaocsqpiG2leVB3WBASiq17rs/VW1GvtvRZdz+sfhcRIBARK3RwVCTMMIcwqcsQR9tvC2n6un7clMTIBhivFsOok4j4D1e351f3cVCEjsQwV8BACgoyEvTpx+bzJwfHcFFsEaSVab5fN81ACAiZxcy5qYaNSGWa5Gn6U10n0pw0lUX4cBDLotqyGqIbNiqRezaxOmWsuHs/LKGXFR9gXaz5twSRZYyEbqX8vDFRhdjpzJ1xyIlQ4Jpri8nT0OJUJbAxuObFsgKQS7tAcZWMiKatYZpKTA078LsUGLqCmQKSI0tPBukJ1SSsMoKYghV1ypq4DqCumZgISX1u+GZlE4ImcVCaBjA+RK2wJJwucKyUVkYSA5B11WoW0opGe2t+mErIltN1M/B9IRWN6vXd1S0BsIc3DR6vz/AtwpD4mmp4zfmrQD6+12+Ry+NLkfOyhTx2H2qUfewxj8HMblMNAScpesA4+hTHnT5IWZCLJZzfnXKq/rPK5zV/fYLGA0iGz9QAAAABJRU5ErkJggg==" alt="Вконтакте">
+                </a>
+            </div>
         </div>
     </div>
 </body>
