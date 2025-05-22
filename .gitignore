@@ -7,4 +7,6 @@ config/
 pyrightconfig.json
 poetry.lock
 .ruff_cache
+.pytest_cache
+.last_prod*
 media/

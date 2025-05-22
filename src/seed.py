@@ -1,154 +1,140 @@
-from collections.abc import Callable
+import asyncio
+import random
+import os
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any
-import random
-import asyncio
-from gateways.db import SqlAlchemyClient
-from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
+from typing import Any, Callable, TypeVar, Type
+
 from faker import Faker
+
+from core.ioc import Resolve
+from gateways.db.sqlalchemy_gateway.main import SqlAlchemyClient
+from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
 from news.models import News
-from products.models import Category, Platform, Product, DeliveryMethod
+from orders.models import InAppOrder, InAppOrderItem, OrderStatus
+from products.models import (
+    Product,
+    ProductCategory,
+    ProductDeliveryMethod,
+    ProductPlatform,
+    RegionalPrice,
+)
 from users.hashing import BcryptHasher
 from users.models import User
-from orders.models import InAppOrder, InAppOrderItem, OrderStatus
-from core.exception_mappers import PostgresExceptionsMapper
-import os
 
-fake = Faker()
-default_dsn = "postgresql+psycopg://postgres:postgres@localhost:5432/gameshop"
-dsn = os.environ.get("DB_DSN") or default_dsn
-db = SqlAlchemyClient(dsn, PostgresExceptionsMapper)
+T = TypeVar("T", bound=SqlAlchemyBaseModel)
 
 
-def _call_optional(func: Callable[..., Any]):
-    return func() if fake.boolean() else None
+class SeedGenerator:
+    def __init__(self):
+        if not os.environ.get("MODE"):
+            os.environ["MODE"] = "local"
+        self.fake = Faker()
+        self.db = Resolve(SqlAlchemyClient)
 
+    def _call_optional(self, func: Callable[..., Any]):
+        return func() if self.fake.boolean() else None
 
-#
-# def _get_repo(model: type[SqlAlchemyBaseModel]) -> SqlAlchemyRepository:
-#     session = db.session_factory()
-#     repo = SqlAlchemyRepository[model](session)
-#     return repo
+    async def _create_entities(
+        self, model: Type[T], data_generator: Callable[[], dict], n: int
+    ) -> list[T]:
+        entities = [model(**data_generator()) for _ in range(n)]
+        async with self.db.session_factory() as session:
+            session.add_all(entities)
+            await session.commit()
+        return entities
 
+    async def _create_products(
+        self,
+        n: int,
+    ):
+        def data_generator():
+            data = {
+                "name": self.fake.name(),
+                "description": self.fake.sentence(),
+                "platform": random.choice(list(ProductPlatform)),
+                "category": random.choice(list(ProductCategory)),
+                "delivery_method": random.choice(list(ProductDeliveryMethod)),
+                "image_url": self.fake.image_url(),
+                "prices": [
+                    RegionalPrice(
+                        base_price=random.randint(100, 100000),
+                        region_code=self.fake.country_code(),
+                    )
+                    for _ in range(random.randint(1, 5))
+                ],
+                "discount": random.randint(0, 100),
+                "deal_until": self._call_optional(
+                    lambda: (
+                        self.fake.date_time_between(
+                            datetime.now(), datetime.now() + timedelta(days=30)
+                        ).isoformat()
+                    )
+                ),
+            }
+            if (
+                data["platform"] is ProductPlatform.STEAM
+                and data["category"] is ProductCategory.GAMES
+            ):
+                data["sub_id"] = random.randint(100, 1000)
+            return data
 
-async def _create_entities[T: SqlAlchemyBaseModel](
-    model: type[T], data_generator: Callable[[], dict], n: int
-) -> list[T]:
-    entities = [model(**data_generator()) for _ in range(n)]
-    async with db.session_factory() as session:
-        session.add_all(entities)
-        await session.commit()
-    return entities
+        return await self._create_entities(Product, data_generator, n)
 
+    async def _create_orders(self, n: int, users: list[User], products: list[Product]):
+        def data_generator():
+            return {
+                "customer_name": self.fake.user_name(),
+                "customer_email": self.fake.email(),
+                "customer_tg_username": self.fake.user_name(),
+                "customer_phone": self.fake.phone_number(),
+                "status": random.choice(list(OrderStatus)),
+                "user": self._call_optional(lambda: random.choice(users)),
+                "items": [
+                    InAppOrderItem(
+                        product=random.choice(products),
+                        price=Decimal(random.randint(100, 1000)),
+                        quantity=random.randint(1, 10),
+                    )
+                ],
+            }
 
-async def _create_model_with_name_and_url[T: SqlAlchemyBaseModel](
-    n: int, model: type[T]
-) -> list[T]:
-    def data_generator():
-        return {"name": fake.name(), "url": fake.url()}
+        return await self._create_entities(InAppOrder, data_generator, n)
 
-    return await _create_entities(model, data_generator, n)
+    async def _create_news(self, n: int):
+        def data_generator():
+            return {
+                "title": self.fake.sentence(),
+                "description": self.fake.sentence(),
+                "photo_url": self._call_optional(self.fake.image_url),
+            }
 
+        return await self._create_entities(News, data_generator, n)
 
-async def create_categories(n: int):
-    return await _create_model_with_name_and_url(n, Category)
+    async def _create_users(self, n: int):
+        def data_generator():
+            return {
+                "username": self.fake.user_name(),
+                "email": self.fake.email(),
+                "password_hash": BcryptHasher().hash(self.fake.password(8)),
+                "photo_url": self._call_optional(self.fake.image_url),
+                "is_active": self.fake.boolean(),
+            }
 
+        return await self._create_entities(User, data_generator, n)
 
-async def create_platforms(n: int):
-    return await _create_model_with_name_and_url(n, Platform)
-
-
-async def create_delivery_methods(n: int):
-    return await _create_model_with_name_and_url(n, DeliveryMethod)
-
-
-async def create_products(
-    n: int,
-    platforms: list[Platform],
-    categories: list[Category],
-    delivery_methods: list[DeliveryMethod],
-):
-    def data_generator():
-        return {
-            "name": fake.name(),
-            "description": fake.sentence(),
-            "platform": random.choice(platforms),
-            "category": random.choice(categories),
-            "delivery_method": random.choice(delivery_methods),
-            "image_url": fake.image_url(),
-            "regular_price": Decimal(random.randint(100, 1000)),
-            "discount": random.randint(0, 100),
-            "discount_valid_to": _call_optional(
-                lambda: (
-                    fake.date_time_between(
-                        datetime.now(), timedelta(days=30)
-                    ).isoformat()
-                )
-            ),
-        }
-
-    return await _create_entities(Product, data_generator, n)
-
-
-async def create_users(n: int):
-    def data_generator():
-        return {
-            "username": fake.user_name(),
-            "email": fake.email(),
-            "password_hash": BcryptHasher().hash(fake.password(8)),
-            "photo_url": _call_optional(fake.image_url),
-            "is_active": fake.boolean(),
-        }
-
-    return await _create_entities(User, data_generator, n)
-
-
-async def create_orders(n: int, users: list[User], products: list[Product]):
-    def data_generator():
-        return {
-            "customer_name": fake.user_name(),
-            "customer_email": fake.email(),
-            "customer_tg_username": fake.user_name(),
-            "customer_phone": fake.phone_number(),
-            "status": random.choice(list(OrderStatus)),
-            "user": _call_optional(lambda: random.choice(users)),
-            "items": [
-                InAppOrderItem(
-                    product=random.choice(products),
-                    price=Decimal(random.randint(100, 1000)),
-                    quantity=random.randint(1, 10),
-                )
-            ],
-        }
-
-    return await _create_entities(InAppOrder, data_generator, n)
-
-
-async def create_news(n: int):
-    def data_generator():
-        return {
-            "title": fake.sentence(),
-            "description": fake.sentence(),
-            "photo_url": _call_optional(fake.image_url),
-        }
-
-    return await _create_entities(News, data_generator, n)
-
-
-async def main():
-    print("Creating platforms, categories and delivery_methods...")
-    platforms, categories, delivery_methods = await asyncio.gather(
-        create_platforms(10), create_categories(10), create_delivery_methods(10)
-    )
-    print("Creating users and products...")
-    users, products = await asyncio.gather(
-        create_users(20), create_products(30, platforms, categories, delivery_methods)
-    )
-    print("Creating news and orders...")
-    await asyncio.gather(create_orders(10, users, products), create_news(20))
-    print("All entities have been succesfully created!")
+    async def execute(self):
+        print("Creating users and products...")
+        users, products = await asyncio.gather(
+            self._create_users(20),
+            self._create_products(30),
+        )
+        print("Creating news and orders...")
+        await asyncio.gather(
+            self._create_orders(10, users, products), self._create_news(20)
+        )
+        print("All entities have been successfully created!")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(SeedGenerator().execute())
