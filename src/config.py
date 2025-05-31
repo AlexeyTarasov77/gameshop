@@ -12,8 +12,10 @@ from pydantic import (
     BeforeValidator,
     EmailStr,
     Field,
+    HttpUrl,
     PostgresDsn,
     RedisDsn,
+    model_validator,
 )
 from pydantic_settings import (
     BaseSettings,
@@ -98,9 +100,14 @@ class _TelegramAPIClient(BaseModel):
     support_chat_id: int | None = None
 
 
+class _SentryCfg(BaseModel):
+    dsn: HttpUrl
+
+
 class _ClientsConfig(BaseModel):
     steam_api: _SteamAPIClient
     tg_api: _TelegramAPIClient
+    sentry: _SentryCfg | None = None
 
 
 class Config(BaseSettings):
@@ -137,6 +144,12 @@ class Config(BaseSettings):
     @property
     def debug(self):
         return self.mode != ConfigMode.PROD
+
+    @model_validator(mode="after")
+    def verify_sentry(self):
+        if not self.debug and not self.clients.sentry:
+            raise ValueError("Sentry configuration is required for prod environment")
+        return self
 
 
 def init_config(

@@ -1,4 +1,5 @@
 import asyncio
+import sentry_sdk
 from fastapi.encoders import jsonable_encoder
 from functools import partial
 from logging import Logger
@@ -93,10 +94,8 @@ def app_factory() -> FastAPI:
         ]
     else:
         allow_origins = [
-            "https://gamebazaar.ru",
-            "http://gamebazaar.ru",
-            "https://www.gamebazaar.ru",
-            "http://www.gamebazaar.ru",
+            prefix + cfg.server.host
+            for prefix in ["https://", "http://", "https://www.", "http://www."]
         ]
 
     app.add_middleware(
@@ -112,6 +111,17 @@ def app_factory() -> FastAPI:
 async def main() -> None:
     cfg = Resolve(Config)
     logger = Resolve(Logger)
+    if not cfg.debug:
+        sentry_cfg = cfg.clients.sentry
+        assert sentry_cfg
+        logger.info("Initializing sentry")
+        sentry_sdk.init(
+            dsn=str(sentry_cfg.dsn),
+            environment=cfg.mode,
+            # Add data like request headers and IP for users,
+            # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+            send_default_pii=True,
+        )
     logger.info(f"Running server in {cfg.mode} mode")
     uvicorn_conf = uvicorn.Config(
         app="main:app_factory",
