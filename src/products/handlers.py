@@ -148,9 +148,7 @@ async def get_exchange_rates(
     return await products_service.get_exchange_rates()
 
 
-type SalesPlatformDep = t.Annotated[
-    t.Literal[ProductPlatform.XBOX, ProductPlatform.PSN] | None, Body()
-]
+type SalesPlatformDep = t.Annotated[ProductPlatform | None, Body()]
 
 
 @router.post("/sales/update", dependencies=[Depends(require_admin)], status_code=202)
