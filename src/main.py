@@ -12,7 +12,7 @@ from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve, cleanup_list
 from config import Config
 import uvicorn
-from core.router import router
+from core.api.router import router
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware

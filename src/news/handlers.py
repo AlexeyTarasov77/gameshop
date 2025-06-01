@@ -3,9 +3,9 @@ import typing as t
 from fastapi import APIRouter, Depends, Form, status
 
 from core.ioc import Inject
-from core.schemas import EntityIDParam, require_dto_not_empty
-from core.pagination import PaginatedResponse
-from core.dependencies import PaginationDep, restrict_content_type
+from core.api.schemas import EntityIDParam, require_dto_not_empty
+from core.api.pagination import PaginatedResponse
+from core.api.dependencies import PaginationDep, restrict_content_type
 from news.domain.services import NewsService
 from news.schemas import CreateNewsDTO, ShowNews, UpdateNewsDTO
 from users.dependencies import require_admin

@@ -1,5 +1,5 @@
 import typing as t
-from core.pagination import PaginationParams, PaginationResT
+from core.api.pagination import PaginationParams, PaginationResT
 from core.utils import UnspecifiedType
 from news import schemas
 from news.models import News

@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import HTTPException, Header, Request, status, Depends
 from config import Config
 from core.ioc import Resolve
-from core.pagination import PaginationParams
+from core.api.pagination import PaginationParams
 
 
 def restrict_content_type(required_ct: str):

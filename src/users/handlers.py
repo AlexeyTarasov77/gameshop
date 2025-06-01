@@ -3,8 +3,8 @@ import typing as t
 from fastapi.responses import JSONResponse
 from pydantic import EmailStr
 
-from core.dependencies import SessionKeyDep, restrict_content_type
-from core.schemas import require_dto_not_empty
+from core.api.dependencies import SessionKeyDep, restrict_content_type
+from core.api.schemas import require_dto_not_empty
 from users.dependencies import (
     UsersServiceDep,
     get_user_id_or_raise,

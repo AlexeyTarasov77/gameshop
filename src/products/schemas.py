@@ -3,10 +3,10 @@ from pydantic_extra_types.country import CountryAlpha2
 from decimal import Decimal
 from typing import Any, Annotated
 
-from core import schemas
+from core.api import schemas
 import pydantic
 
-from core.pagination import PaginationParams
+from core.api.pagination import PaginationParams
 from core.utils.enums import LabeledEnum
 from gateways.currency_converter import PriceUnitDTO
 from products import models

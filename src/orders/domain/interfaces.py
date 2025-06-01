@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from typing import Protocol
 from uuid import UUID
-from core.pagination import PaginationParams, PaginationResT
+from core.api.pagination import PaginationParams, PaginationResT
 from orders.schemas import (
     CreateInAppOrderDTO,
     CreateSteamGiftOrderDTO,

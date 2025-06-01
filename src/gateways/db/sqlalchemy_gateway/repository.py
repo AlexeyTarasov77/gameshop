@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from typing import Sequence
 
-from core.pagination import PaginationParams, PaginationResT
+from core.api.pagination import PaginationParams, PaginationResT
 from gateways.db.exceptions import DatabaseError, NotFoundError
 from .models import SqlAlchemyBaseModel
 from sqlalchemy import CursorResult, Row, delete, insert, select, update, func

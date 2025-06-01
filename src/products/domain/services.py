@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from logging import Logger
 from typing import cast
-from core.pagination import PaginationResT
+from core.api.pagination import PaginationResT
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityAlreadyExistsError,
@@ -18,7 +18,12 @@ from gateways.db.exceptions import (
     NotFoundError,
     OperationRestrictedByRefError,
 )
-from products.domain.interfaces import CurrencyConverterI, ParsedUrlsMapping
+from gateways.db import RedisClient
+from products.domain.interfaces import (
+    CommandExecutorI,
+    CurrencyConverterI,
+    ParsedUrlsMapping,
+)
 
 from orders.domain.interfaces import SteamAPIClientI
 from products.models import (
@@ -161,10 +166,14 @@ class ProductsService(BaseService):
         logger: Logger,
         currency_converter: CurrencyConverterI,
         steam_api: SteamAPIClientI,
+        cmd_executor: CommandExecutorI,
+        redis_client: RedisClient,
     ) -> None:
         super().__init__(uow, logger)
         self._currency_converter = currency_converter
         self._steam_api = steam_api
+        self._cmd_executor = cmd_executor
+        self._redis_client = redis_client
 
     async def save_parsed_products(
         self, products: Sequence[BaseParsedGameDTO]
@@ -339,7 +348,7 @@ class ProductsService(BaseService):
             dto.from_ + "/" + dto.to,
             dto.new_rate,
         )
-        # update existing prices with new rate (only that which was converted from updated rate)
+        # update existing prices with new rate (only that which were converted from original rate)
         async with self._uow() as uow:
             await uow.products_prices_repo.update_all_with_rate(
                 dto.from_, dto.new_rate, old_rate
@@ -347,3 +356,13 @@ class ProductsService(BaseService):
 
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()
+
+    async def update_sales(self, platform: ProductPlatform):
+        state_key = "sales_update_started"
+        if await self._redis_client.get(state_key):
+            raise
+        await self._redis_client.set(state_key, True)
+        cmd = f"poetry run python scripts/sales/parse_and_save.py -p {platform}"
+        self._logger.info("Launching sales update on user demand")
+        await self._cmd_executor.subprocess_exec(*cmd.split(" "))
+        self._logger.info("Sales update completed")

@@ -40,6 +40,7 @@ class HTTPExceptionsMapper:
     _EXCEPTION_MAPPING: Mapping[type[Exception], int] = {
         service_exc.EntityNotFoundError: status.HTTP_404_NOT_FOUND,
         service_exc.EntityAlreadyExistsError: status.HTTP_409_CONFLICT,
+        service_exc.OperationAlreadyInProgressError: status.HTTP_409_CONFLICT,
         service_exc.EntityRelationshipNotFoundError: status.HTTP_400_BAD_REQUEST,
         service_exc.ClientError: status.HTTP_400_BAD_REQUEST,
         service_exc.EntityOperationRestrictedByRefError: status.HTTP_403_FORBIDDEN,

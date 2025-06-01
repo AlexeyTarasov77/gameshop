@@ -1,8 +1,9 @@
+from asyncio.subprocess import Process
 from collections.abc import Sequence
 from decimal import Decimal
 import typing as t
 
-from core.pagination import PaginationResT
+from core.api.pagination import PaginationResT
 from gateways.currency_converter.schemas import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
@@ -88,3 +89,7 @@ class PricesRepositoryI(t.Protocol):
         self, product_id: int, region: str
     ) -> RegionalPrice | None: ...
     async def update_for_product(self, product_id: int, new_price: Decimal) -> None: ...
+
+
+class CommandExecutorI(t.Protocol):
+    async def subprocess_exec(self, *args): ...

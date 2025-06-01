@@ -1,5 +1,5 @@
 from pydantic import Field
-from core.schemas import Base64Int, BaseDTO, ProductRegion
+from core.api.schemas import Base64Int, BaseDTO, ProductRegion
 from products.models import EMPTY_REGION
 
 

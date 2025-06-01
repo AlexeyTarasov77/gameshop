@@ -16,7 +16,7 @@ from core.services.exceptions import (
     EntityNotFoundError,
     EntityOperationRestrictedByRefError,
 )
-from core.pagination import PaginationParams
+from core.api.pagination import PaginationParams
 from gateways.db.exceptions import (
     AlreadyExistsError,
     NotFoundError,
@@ -30,7 +30,7 @@ from core.uow import AbstractUnitOfWork
 def patch_dto_validate():
     model_validate_res = "test res"
     with patch(
-        "core.schemas.BaseDTO.model_validate", return_value=model_validate_res
+        "core.api.schemas.BaseDTO.model_validate", return_value=model_validate_res
     ) as model_validate_mock:
         yield model_validate_mock
 

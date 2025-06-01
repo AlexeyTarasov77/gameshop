@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from core.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
+from core.api.schemas import Base64Int, BaseDTO, ImgUrl, UploadImage
 from pydantic import AfterValidator, EmailStr, model_validator
 
 

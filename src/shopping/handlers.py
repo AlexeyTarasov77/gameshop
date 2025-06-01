@@ -4,10 +4,10 @@ import typing as t
 from products.schemas import ProductInCartDTO, ShowProductExtended
 from shopping.domain.interfaces import CartManagerFactoryI, WishlistManagerFactoryI
 from shopping.schemas import ItemInCartDTO
-from core.dependencies import SessionKeyDep
+from core.api.dependencies import SessionKeyDep
 from core.ioc import Inject, Resolve
 from shopping.domain.services import ShoppingService
-from core.schemas import Base64Int, EntityIDParam
+from core.api.schemas import Base64Int, EntityIDParam
 from users.dependencies import get_optional_user_id
 
 cart_router = APIRouter(prefix="/cart", tags=["cart"])

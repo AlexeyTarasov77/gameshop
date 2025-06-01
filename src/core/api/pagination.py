@@ -2,10 +2,10 @@ import typing as t
 import math
 from collections.abc import Sequence
 from pydantic import Field, computed_field, model_validator
-from core.schemas import BaseDTO, BaseModel
+from core.api.schemas import BaseDTO
 
 
-class PaginationParams(BaseModel):
+class PaginationParams(BaseDTO):
     page_size: int = Field(default=10, gt=0, lt=100)
     page_num: int = Field(default=1, gt=0)
 

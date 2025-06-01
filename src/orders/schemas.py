@@ -21,7 +21,7 @@ from products.schemas import (
 )
 from shopping.schemas import ItemInCartDTO
 from users.schemas import ShowUser
-from core.schemas import Base64Int, BaseDTO, OrderByOption, RoundedDecimal
+from core.api.schemas import Base64Int, BaseDTO, OrderByOption, RoundedDecimal
 from orders.models import InAppOrder, OrderCategory, OrderStatus
 
 

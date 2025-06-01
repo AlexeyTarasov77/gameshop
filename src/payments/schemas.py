@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from core.schemas import BaseDTO
+from core.api.schemas import BaseDTO
 from payments.models import AvailablePaymentSystems
 
 

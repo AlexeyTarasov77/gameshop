@@ -3,7 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from pytz import UTC
 
-from core.schemas import EMPTY_REGION
+from core.api.schemas import EMPTY_REGION
 from core.utils.enums import IntWithLabel
 from gateways.db.sqlalchemy_gateway import (
     int_pk_type,

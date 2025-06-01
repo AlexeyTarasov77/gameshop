@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from decimal import Decimal
 import sqlalchemy as sa
 from sqlalchemy.orm import selectinload
-from core.pagination import PaginationResT
-from core.schemas import OrderByOption
+from core.api.pagination import PaginationResT
+from core.api.schemas import OrderByOption
 from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 

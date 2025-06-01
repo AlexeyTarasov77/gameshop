@@ -9,8 +9,8 @@ from sqlalchemy.orm import (
     selectinload,
     with_polymorphic,
 )
-from core.pagination import PaginationParams, PaginationResT
-from core.schemas import OrderByOption
+from core.api.pagination import PaginationParams, PaginationResT
+from core.api.schemas import OrderByOption
 from gateways.db.exceptions import NotFoundError
 from gateways.db import RedisClient
 from gateways.db.sqlalchemy_gateway import PaginationRepository, SqlAlchemyRepository

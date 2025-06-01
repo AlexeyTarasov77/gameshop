@@ -24,14 +24,14 @@ class ClientError(ServiceError):
     _msg = "client error"
 
 
-class TokenError(ServiceError): ...
+class _TokenError(ServiceError): ...
 
 
-class ExpiredTokenError(TokenError):
+class ExpiredTokenError(_TokenError):
     _msg = "Token expired! Please refresh your token."
 
 
-class InvalidTokenError(TokenError):
+class InvalidTokenError(_TokenError):
     _msg = "Invalid token. Please obtain a new token and try again."
 
 
@@ -53,6 +53,10 @@ class ActionForbiddenError(ServiceError):
 
 class ExternalGatewayError(ServiceError):
     _msg = "Gateway error. Please try again later"
+
+
+class OperationAlreadyInProgressError(ServiceError):
+    _msg = "Operation already in progress"
 
 
 class CommonServiceError(ServiceError):

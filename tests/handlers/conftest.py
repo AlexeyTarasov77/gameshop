@@ -10,7 +10,7 @@ sys.path.insert(1, str((Path().parent / "src").absolute()))
 
 
 from core.ioc import Resolve
-from core.router import router as core_router
+from core.api.router import router as core_router
 from faker import Faker
 from fastapi.testclient import TestClient
 from gateways.db.main import SqlAlchemyClient

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse
 from config import Config
 from core.ioc import Resolve
+from core.api.sse import message_stream
 from core.utils import FILES_UPLOAD_DIR
 from products.handlers import router as product_router
 from users.handlers import router as users_router
@@ -25,10 +26,11 @@ api_router.include_router(payments_router)
 router = APIRouter()
 router.include_router(api_router)
 
+router.add_api_route("/stream", message_stream)
+
 
 @router.get("/ping", include_in_schema=False)
 async def ping() -> dict[str, str | list[str]]:
-    raise Exception("Failure")
     return {"status": "available", "version": Resolve(Config).api_version}
 
 

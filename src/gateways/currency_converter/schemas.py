@@ -1,7 +1,7 @@
 from decimal import Decimal
 from pydantic import Field, RootModel
 from pydantic_extra_types.currency_code import Currency
-from core.schemas import BaseDTO, ExchangeRate
+from core.api.schemas import BaseDTO, ExchangeRate
 
 ExchangeRatesMappingDTO = RootModel[dict[ExchangeRate, float]]
 

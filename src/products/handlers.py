@@ -1,17 +1,18 @@
 import typing as t
 
-from core.caching import cache
+from core.api.caching import cache
 from core.ioc import Inject
-from core.schemas import EntityIDParam, require_dto_not_empty
-from core.pagination import PaginatedResponse
-from core.dependencies import restrict_content_type
-from fastapi import APIRouter, Form, Depends, Query, status
+from core.api.schemas import EntityIDParam, require_dto_not_empty
+from core.api.pagination import PaginatedResponse
+from core.api.dependencies import restrict_content_type
+from fastapi import APIRouter, Body, Form, Depends, Query, status
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
 )
 from products import schemas
 from products.domain.services import ProductsService
+from products.models import ProductPlatform
 from users.dependencies import require_admin
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -139,3 +140,11 @@ async def get_exchange_rates(
     products_service: ProductsServiceDep,
 ) -> ExchangeRatesMappingDTO:
     return await products_service.get_exchange_rates()
+
+
+@router.post("/sales/update", dependencies=[Depends(require_admin)], status_code=202)
+async def update_sales(
+    platform: t.Annotated[t.Literal[ProductPlatform.XBOX, ProductPlatform.PSN], Body()],
+    products_service: ProductsServiceDep,
+):
+    await products_service.update_sales(platform)

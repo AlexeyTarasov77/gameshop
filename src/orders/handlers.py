@@ -1,11 +1,11 @@
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from core.pagination import PaginatedResponse
-from core.dependencies import PaginationDep
+from core.api.pagination import PaginatedResponse
+from core.api.dependencies import PaginationDep
 from core.ioc import Inject
 import typing as t
 
-from core.schemas import require_dto_not_empty
+from core.api.schemas import require_dto_not_empty
 from orders.domain.services import OrdersService
 from orders.schemas import (
     CreateInAppOrderDTO,

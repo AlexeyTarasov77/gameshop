@@ -1,5 +1,5 @@
 from typing import cast
-from core.pagination import PaginationParams
+from core.api.pagination import PaginationParams
 from core.services.base import BaseService
 from core.services.exceptions import EntityNotFoundError
 from core.utils import UnspecifiedType

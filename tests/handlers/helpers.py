@@ -6,7 +6,7 @@ from sqlalchemy.inspection import inspect
 from core.ioc import Resolve
 from handlers.conftest import db
 from gateways.db.sqlalchemy_gateway import SqlAlchemyBaseModel
-from core.pagination import PaginatedResponse
+from core.api.pagination import PaginatedResponse
 from sqlalchemy import delete, insert, select
 
 
