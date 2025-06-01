@@ -6,6 +6,7 @@ from functools import lru_cache
 from httpx import AsyncClient
 import punq
 from fastapi import Depends
+from core.cmd_executor import CommandExecutor
 from core.tasks import BackgroundJobs
 from mailing.domain.services import MailingService
 from orders.repositories import TopUpFeeManager
@@ -16,7 +17,7 @@ from payments.domain.interfaces import (
 )
 from payments.domain.services import PaymentsService
 from payments.payment_gateways import PaymentSystemFactoryImpl
-from products.domain.interfaces import CurrencyConverterI
+from products.domain.interfaces import CommandExecutorI, CurrencyConverterI
 from gateways.steam import GamesForFarmAPIClient, NSGiftsAPIClient
 from gateways.currency_converter import CurrencyConverter
 from shopping.domain.interfaces import (
@@ -156,6 +157,7 @@ def _init_container() -> punq.Container:
     )
     container.register(CartManagerFactoryI, CartManagerFactory)
     container.register(WishlistManagerFactoryI, WishlistManagerFactory)
+    container.register(CommandExecutorI, CommandExecutor)
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(ShoppingService, scope=punq.Scope.singleton)
