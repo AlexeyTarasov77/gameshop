@@ -1,1 +1,1 @@
-from .handlers import message_stream as message_stream, message_queue as message_queue
+from .handlers import message_stream as message_stream, send_message as send_message

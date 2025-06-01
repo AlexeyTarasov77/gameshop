@@ -140,3 +140,14 @@ ProductRegion = Annotated[
 class OrderByOption(StrEnum):
     ASC = "asc"
     DESC = "desc"
+
+
+class MessageSeverity(StrEnum):
+    SUCCESS = "success"
+    WARNING = "warning"
+    ERROR = "error"
+
+
+class MessageDTO(BaseDTO):
+    text: str
+    severity: MessageSeverity

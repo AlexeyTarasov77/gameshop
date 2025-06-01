@@ -36,6 +36,7 @@ pydantic-extra-types = "^2.10.2"
 pycountry = "^24.6.1"
 gamesparser = "^0.3.2"
 sentry-sdk = {extras = ["fastapi"], version = "^2.29.1"}
+sse-starlette = "^2.3.6"
 
 
 [tool.poetry.group.dev.dependencies]

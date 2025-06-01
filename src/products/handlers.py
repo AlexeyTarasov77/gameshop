@@ -1,11 +1,17 @@
 import typing as t
 
 from core.api.caching import cache
+from core.api.sse import send_message
 from core.ioc import Inject
-from core.api.schemas import EntityIDParam, require_dto_not_empty
+from core.api.schemas import (
+    EntityIDParam,
+    MessageDTO,
+    MessageSeverity,
+    require_dto_not_empty,
+)
 from core.api.pagination import PaginatedResponse
 from core.api.dependencies import restrict_content_type
-from fastapi import APIRouter, Body, Form, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Body, Form, Depends, Query, status
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
@@ -146,5 +152,23 @@ async def get_exchange_rates(
 async def update_sales(
     platform: t.Annotated[t.Literal[ProductPlatform.XBOX, ProductPlatform.PSN], Body()],
     products_service: ProductsServiceDep,
+    background_tasks: BackgroundTasks,
 ):
-    await products_service.update_sales(platform)
+    async def task():
+        try:
+            await products_service.update_sales(platform)
+        except Exception:
+            await send_message(
+                MessageDTO(
+                    text=f"Failed to update sales for platform: {platform}. Please try again",
+                    severity=MessageSeverity.ERROR,
+                )
+            )
+        await send_message(
+            MessageDTO(
+                text=f"Sales for platform {platform} were succesfully updated",
+                severity=MessageSeverity.SUCCESS,
+            )
+        )
+
+    background_tasks.add_task(task)
