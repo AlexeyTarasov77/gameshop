@@ -180,3 +180,7 @@ class ShowProductExtended(ShowProduct):
 
 class ProductInCartDTO(ShowProductExtended):
     quantity: int = pydantic.Field(gt=0)
+
+
+class SalesUpdateDateDTO(schemas.BaseDTO):
+    last_update_at: datetime | None

@@ -148,27 +148,41 @@ async def get_exchange_rates(
     return await products_service.get_exchange_rates()
 
 
+type SalesPlatformDep = t.Annotated[
+    t.Literal[ProductPlatform.XBOX, ProductPlatform.PSN] | None, Body()
+]
+
+
 @router.post("/sales/update", dependencies=[Depends(require_admin)], status_code=202)
 async def update_sales(
-    platform: t.Annotated[t.Literal[ProductPlatform.XBOX, ProductPlatform.PSN], Body()],
     products_service: ProductsServiceDep,
     background_tasks: BackgroundTasks,
-):
+    platform: SalesPlatformDep = None,
+) -> None:
     async def task():
+        platform_name = str(platform) if platform else "All platform"
         try:
             await products_service.update_sales(platform)
         except Exception:
             await send_message(
                 MessageDTO(
-                    text=f"Failed to update sales for platform: {platform}. Please try again",
+                    text=f"Failed to update sales for platform: {platform_name}. Please try again",
                     severity=MessageSeverity.ERROR,
                 )
             )
         await send_message(
             MessageDTO(
-                text=f"Sales for platform {platform} were succesfully updated",
+                text=f"Sales for platform {platform_name} were succesfully updated",
                 severity=MessageSeverity.SUCCESS,
             )
         )
 
     background_tasks.add_task(task)
+
+
+@router.get("/sales/last-update-date", dependencies=[Depends(require_admin)])
+async def get_sales_update_date(
+    products_service: ProductsServiceDep,
+    platform: SalesPlatformDep = None,
+) -> schemas.SalesUpdateDateDTO:
+    return await products_service.get_sales_update_date(platform)

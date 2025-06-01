@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from decimal import Decimal
 from logging import Logger
 from typing import cast
@@ -42,6 +43,7 @@ from products.schemas import (
     DeliveryMethodsListDTO,
     ListProductsParamsDTO,
     PlatformsListDTO,
+    SalesUpdateDateDTO,
     XboxGameParsedDTO,
     ShowProduct,
     ShowProductExtended,
@@ -174,6 +176,9 @@ class ProductsService(BaseService):
         self._steam_api = steam_api
         self._cmd_executor = cmd_executor
         self._redis_client = redis_client
+        self._sales_last_update_date_key = (
+            lambda platform: f"sales_last_updated:{platform}"
+        )
 
     async def save_parsed_products(
         self, products: Sequence[BaseParsedGameDTO]
@@ -357,12 +362,23 @@ class ProductsService(BaseService):
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()
 
-    async def update_sales(self, platform: ProductPlatform):
-        state_key = "sales_update_started"
+    async def update_sales(self, platform: ProductPlatform | None = None):
+        state_key = f"sales_update_started:{platform}"
         if await self._redis_client.get(state_key):
             raise
         await self._redis_client.set(state_key, True)
-        cmd = f"poetry run python scripts/sales/parse_and_save.py -p {platform}"
+        cmd = "poetry run python scripts/sales/parse_and_save.py"
+        if platform is not None:
+            cmd += f"-p {platform}"
         self._logger.info("Launching sales update on user demand")
         await self._cmd_executor.subprocess_exec(*cmd.split(" "))
+        await self._redis_client.set(
+            self._sales_last_update_date_key(platform), str(datetime.now(UTC))
+        )
         self._logger.info("Sales update completed")
+
+    async def get_sales_update_date(
+        self, platform: ProductPlatform | None = None
+    ) -> SalesUpdateDateDTO:
+        res = await self._redis_client.get(self._sales_last_update_date_key(platform))
+        return SalesUpdateDateDTO(last_update_at=res)
