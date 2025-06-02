@@ -179,6 +179,9 @@ class ProductsService(BaseService):
         self._sales_last_update_date_key = (
             lambda platform: f"sales_last_updated:{platform}"
         )
+        self._sales_update_state_key = (
+            lambda platform: f"sales_update_started:{platform}"
+        )
 
     async def save_parsed_products(
         self, products: Sequence[BaseParsedGameDTO]
@@ -362,20 +365,31 @@ class ProductsService(BaseService):
     async def get_exchange_rates(self) -> ExchangeRatesMappingDTO:
         return await self._currency_converter.get_exchange_rates()
 
+    async def check_sales_update_in_progress(
+        self, platform: ProductPlatform | None = None
+    ) -> bool:
+        if await self._redis_client.get(self._sales_update_state_key(platform)):
+            return True
+        return False
+
     async def update_sales(self, platform: ProductPlatform | None = None):
-        state_key = f"sales_update_started:{platform}"
-        if await self._redis_client.get(state_key):
-            raise
-        await self._redis_client.set(state_key, True)
-        cmd = "poetry run python scripts/sales/parse_and_save.py"
-        if platform is not None:
-            cmd += f"-p {platform}"
-        self._logger.info("Launching sales update on user demand")
-        await self._cmd_executor.subprocess_exec(*cmd.split(" "))
-        await self._redis_client.set(
-            self._sales_last_update_date_key(platform), str(datetime.now(UTC))
-        )
-        self._logger.info("Sales update completed")
+        assert not await self.check_sales_update_in_progress(
+            platform
+        ), "Ensure that sales update is not started yet before calling this function"
+        try:
+            await self._redis_client.set(self._sales_update_state_key(platform), 1)
+            cmd = "poetry run python scripts/sales/parse_and_save.py"
+            if platform is not None:
+                cmd += f" -p {str(platform.value)}"
+            self._logger.info("Launching sales update on user demand")
+            await self._cmd_executor.subprocess_exec(cmd)
+            await self._redis_client.set(
+                self._sales_last_update_date_key(platform), str(datetime.now(UTC))
+            )
+            await self._redis_client.delete(self._sales_update_state_key(platform))
+            self._logger.info("Sales update completed")
+        finally:
+            await self._redis_client.delete(self._sales_update_state_key(platform))
 
     async def get_sales_update_date(
         self, platform: ProductPlatform | None = None

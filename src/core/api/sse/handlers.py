@@ -1,5 +1,5 @@
 import asyncio
-from sse_starlette import EventSourceResponse
+from sse_starlette import EventSourceResponse, ServerSentEvent
 from core.api.schemas import MessageDTO
 
 
@@ -17,7 +17,7 @@ async def message_queue_consumer():
             raise TypeError(
                 "Invalid message in queue: %s. Expected MessageDTO instance" % msg
             )
-        yield msg.model_dump(mode="json")
+        yield ServerSentEvent(data=msg.model_dump(mode="json"))
 
 
 async def message_stream():

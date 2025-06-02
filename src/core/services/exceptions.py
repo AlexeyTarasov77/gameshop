@@ -55,10 +55,6 @@ class ExternalGatewayError(ServiceError):
     _msg = "Gateway error. Please try again later"
 
 
-class OperationAlreadyInProgressError(ServiceError):
-    _msg = "Operation already in progress"
-
-
 class CommonServiceError(ServiceError):
     def _generate_msg(self) -> str:
         return self._msg

@@ -1,3 +1,4 @@
+from logging import Logger
 import typing as t
 
 from core.api.caching import cache
@@ -11,7 +12,17 @@ from core.api.schemas import (
 )
 from core.api.pagination import PaginatedResponse
 from core.api.dependencies import restrict_content_type
-from fastapi import APIRouter, BackgroundTasks, Body, Form, Depends, Query, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Form,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
+from core.services.exceptions import ExternalGatewayError, ServiceError
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,
@@ -154,20 +165,30 @@ type SalesPlatformDep = t.Annotated[ProductPlatform | None, Body()]
 @router.post("/sales/update", dependencies=[Depends(require_admin)], status_code=202)
 async def update_sales(
     products_service: ProductsServiceDep,
+    logger: t.Annotated[Logger, Inject(Logger)],
     background_tasks: BackgroundTasks,
     platform: SalesPlatformDep = None,
 ) -> None:
-    async def task():
+    if await products_service.check_sales_update_in_progress(platform):
+        raise HTTPException(
+            409, "Sales update for selected platform has been already started"
+        )
+
+    async def bg_task():
         platform_name = str(platform) if platform else "All platform"
         try:
             await products_service.update_sales(platform)
-        except Exception:
+        except Exception as e:
+            logger.exception(
+                "Unexpected exception during sales update in background", e
+            )
             await send_message(
                 MessageDTO(
                     text=f"Failed to update sales for platform: {platform_name}. Please try again",
                     severity=MessageSeverity.ERROR,
                 )
             )
+            return
         await send_message(
             MessageDTO(
                 text=f"Sales for platform {platform_name} were succesfully updated",
@@ -175,7 +196,7 @@ async def update_sales(
             )
         )
 
-    background_tasks.add_task(task)
+    background_tasks.add_task(bg_task)
 
 
 @router.get("/sales/last-update-date", dependencies=[Depends(require_admin)])

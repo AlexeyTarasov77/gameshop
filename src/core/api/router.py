@@ -22,11 +22,10 @@ api_router.include_router(orders_router)
 api_router.include_router(cart_router)
 api_router.include_router(wishlist_router)
 api_router.include_router(payments_router)
+api_router.add_api_route("/stream", message_stream)
 
 router = APIRouter()
 router.include_router(api_router)
-
-router.add_api_route("/stream", message_stream)
 
 
 @router.get("/ping", include_in_schema=False)
