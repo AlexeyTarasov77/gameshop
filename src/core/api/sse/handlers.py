@@ -17,7 +17,7 @@ async def message_queue_consumer():
             raise TypeError(
                 "Invalid message in queue: %s. Expected MessageDTO instance" % msg
             )
-        yield ServerSentEvent(data=msg.model_dump(mode="json"))
+        yield ServerSentEvent(data=msg.model_dump_json())
 
 
 async def message_stream():
