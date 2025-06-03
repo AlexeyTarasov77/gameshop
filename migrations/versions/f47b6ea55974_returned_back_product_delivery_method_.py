@@ -36,9 +36,6 @@ def upgrade() -> None:
         ),
     )
     op.alter_column(
-        "regional_price", "converted_from_curr", new_column_name="original_curr"
-    )
-    op.alter_column(
         "token",
         "expiry",
         existing_type=postgresql.TIMESTAMP(),
