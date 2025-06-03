@@ -37,6 +37,8 @@ pycountry = "^24.6.1"
 gamesparser = "^0.3.2"
 sentry-sdk = {extras = ["fastapi"], version = "^2.29.1"}
 sse-starlette = "^2.3.6"
+prometheus-client = "^0.22.0"
+prometheus-fastapi-instrumentator = "^7.1.0"
 
 
 [tool.poetry.group.dev.dependencies]

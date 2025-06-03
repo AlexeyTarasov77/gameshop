@@ -1,21 +1,13 @@
 from gateways.db.exceptions import AbstractDatabaseExceptionMapper
-from gateways.db.exceptions import DBConnectionError
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 
 class SqlAlchemyClient:
     async def ping(self) -> None:
-        try:
-            async with self._engine.begin() as conn:
-                await conn.execute(text("SELECT 1"))
-        except OperationalError as e:
-            raise DBConnectionError(
-                """Connection failed: unable to connect to: '%s' ,
-                Make sure your storage is available under specified dsn"""
-                % self._dsn
-            ) from e
+        # if db is not available - exception will be raised
+        async with self._engine.begin() as conn:
+            await conn.execute(text("SELECT 1"))
 
     def __init__(
         self,

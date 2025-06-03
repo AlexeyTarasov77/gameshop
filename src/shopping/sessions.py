@@ -53,32 +53,3 @@ class RedisSessionManager:
 
     async def retrieve_from_session(self, *paths) -> list | None:
         return await self._db.json().get(self.storage_key, *paths)
-
-
-def session_middleware(
-    session_creator: SessionCreatorI,
-    max_age: int | timedelta,
-    session_key_name: str = "session_id",
-) -> DispatchFunction:
-    async def create_session(
-        req: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        nonlocal max_age
-        session_key: str | None = req.cookies.get(session_key_name)
-        if session_key is None:
-            session_key = await session_creator.create({"cart": {}, "wishlist": []})
-        req.scope[session_key_name] = session_key
-        resp = await call_next(req)
-        if isinstance(max_age, timedelta):
-            max_age = int(max_age.total_seconds())
-        resp.set_cookie(
-            session_key_name,
-            session_key,
-            max_age,
-            httponly=True,
-            samesite="none",
-            secure=True,
-        )
-        return resp
-
-    return create_session

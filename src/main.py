@@ -1,13 +1,16 @@
 import asyncio
+from prometheus_client import make_asgi_app
 import sentry_sdk
 from fastapi.encoders import jsonable_encoder
 from functools import partial
 from logging import Logger
 
 from fastapi.openapi.models import HTTPBearer
+from starlette.middleware.base import BaseHTTPMiddleware
+from core.api.middlewares import PrometheusMiddleware, create_session_middleware
 from core.tasks import BackgroundJobs
 from gateways.db import RedisClient, SqlAlchemyClient
-from shopping.sessions import SessionCreatorI, session_middleware
+from shopping.sessions import SessionCreatorI
 from core.exception_mappers import HTTPExceptionsMapper
 from core.ioc import Resolve, cleanup_list
 from config import Config
@@ -80,8 +83,19 @@ def app_factory() -> FastAPI:
     app = FastAPI(version=cfg.api_version, lifespan=lifespan)
     app.include_router(router)
     Resolve(HTTPExceptionsMapper, app=app).setup_handlers()
+    app.mount("/metrics", make_asgi_app())
+    # Instrumentator().instrument(app).expose(app)
+    # app.middleware("http")(PrometheusMiddleware())
+    app.add_middleware(PrometheusMiddleware)
+    app.add_middleware(
+        BaseHTTPMiddleware,
+        dispatch=create_session_middleware(
+            max_age=cfg.server.sessions.ttl,
+            session_creator=Resolve(SessionCreatorI),
+        ),
+    )
     app.middleware("http")(
-        session_middleware(
+        create_session_middleware(
             max_age=cfg.server.sessions.ttl,
             session_creator=Resolve(SessionCreatorI),
         )

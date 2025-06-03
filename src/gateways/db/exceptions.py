@@ -8,9 +8,6 @@ class DatabaseError(Exception):
         self.msg = msg
 
 
-class DBConnectionError(DatabaseError): ...
-
-
 class NotFoundError(DatabaseError): ...
 
 
