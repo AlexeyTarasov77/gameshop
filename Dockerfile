@@ -22,7 +22,7 @@ RUN adduser --disabled-password gameshop
 
 RUN chown -R gameshop ./
 
-RUN chmod 700 entrypoint.sh
+RUN chmod 700 ./scripts/entrypoint.sh
 
 USER gameshop
 
