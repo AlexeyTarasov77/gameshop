@@ -5,8 +5,21 @@ volumes:
   prometheus_data:
   grafana_data:
 
+x-common-logging: &logging_conf
+  logging:
+    driver: loki
+    options:
+      loki-url: "http://localhost:3100/loki/api/v1/push"
+      loki-retries: 2
+      loki-max-backoff: 800ms
+      loki-timeout: 1s 
+      keep-file: "true"
+      mode: "non-blocking"
+      max-buffer-size: 10m
+
 services:
   web:
+    <<: *logging_conf
     container_name: gameshop_web
     ports:
       - "127.0.0.1:8000:8000"
@@ -16,6 +29,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      loki:
+        condition: service_started
     volumes:
       - ./src:/app/src
       - ./media:/app/media
@@ -23,11 +38,6 @@ services:
       - ./config:/app/config
     environment:
       - MODE=${MODE:?error}
-    healthcheck:
-      test: ["CMD-SHELL", "curl", "http://0.0.0.0:8000/ping"]
-      interval: 2s
-      timeout: 3s
-      retries: 5
   parse_sales:
     container_name: gameshop_parse_sales
     build: 
@@ -39,6 +49,7 @@ services:
       - MODE=${MODE:?error}
     profiles: [optional]
   postgres:
+    <<: *logging_conf
     container_name: gameshop_db
     image: postgres:17.1-alpine
     volumes:
@@ -62,16 +73,6 @@ services:
       timeout: 3s
       retries: 5
 
-  # alloy:
-  #   container_name: gameshop_alloy
-  #   image: grafana/alloy:latest
-  #   volumes:
-  #     - ${ALLOY_CONFIG_PATH}:/etc/alloy/config.alloy
-  #   ports:
-  #     - "127.0.0.1:12345:12345"
-  #   env:
-  #     ALLOY_CONFIG_PATH: ./cfg.alloy
-
   grafana:
     container_name: gameshop_grafana
     image: grafana/grafana
@@ -91,7 +92,8 @@ services:
     image: grafana/loki:latest
     volumes:
       - loki_data:/loki
-      # - ./devops/loki-cfg.yaml:/etc/loki/local-config.yaml
+    ports:
+      - 127.0.0.1:3100:3100
 
   prometheus:
     image: prom/prometheus:latest

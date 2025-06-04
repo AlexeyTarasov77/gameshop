@@ -1,8 +1,6 @@
 from datetime import timedelta
 from typing import Protocol
-from fastapi import Request, Response
 from secrets import token_urlsafe
-from starlette.middleware.base import DispatchFunction, RequestResponseEndpoint
 from redis.commands.json._util import JsonType
 from gateways.db.exceptions import NotFoundError
 from gateways.db import RedisClient
