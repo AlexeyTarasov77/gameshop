@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from decimal import Decimal
-from logging import Logger
+from core.logging import AbstractLogger
 import uuid
 from httpx import AsyncClient
 from core.utils import JWTAuth
@@ -13,7 +13,10 @@ from gateways.currency_converter import ExchangeRatesMappingDTO
 
 class GamesForFarmAPIClient:
     def __init__(
-        self, client: AsyncClient, products_service: ProductsService, logger: Logger
+        self,
+        client: AsyncClient,
+        products_service: ProductsService,
+        logger: AbstractLogger,
     ) -> None:
         self._url = "https://gamesforfarm.com/api?key=GamesInStock_Gamesforfarm"
         self._client = client
@@ -51,7 +54,7 @@ class NSGiftsAPIClient:
     def __init__(
         self,
         client: AsyncClient,
-        logger: Logger,
+        logger: AbstractLogger,
         steam_api_auth_email: str,
         steam_api_auth_password: str,
     ):
@@ -130,7 +133,9 @@ class NSGiftsAPIClient:
     async def create_gift_order(
         self, dto: CreateSteamGiftOrderDTO, sub_id: int
     ) -> uuid.UUID:
-        self._logger.info("Creating steam gift order. sub_id: %d, dto: %s", sub_id, dto)
+        self._logger.info(
+            "Creating steam gift order", sub_id=sub_id, dto=dto.model_dump()
+        )
         with log_request(self._get_logging_prefix("create_gift_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/steam_gift/create_order",
@@ -147,7 +152,7 @@ class NSGiftsAPIClient:
         return uuid.UUID(data["custom_id"])
 
     async def pay_gift_order(self, order_id: uuid.UUID):
-        self._logger.info("Paying gift order. order_id: %s", order_id)
+        self._logger.info("Paying gift order", order_id=order_id)
         with log_request(self._get_logging_prefix("pay_gift_order"), self._logger):
             resp = await self._client.post(
                 self._base_url + "/steam_gift/pay_order",

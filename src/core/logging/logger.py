@@ -16,7 +16,7 @@ class AbstractLogger(ABC):
     def exception(self, msg: str, **attrs): ...
 
 
-class AppLogger(ABC):
+class AppLogger(AbstractLogger):
     def __init__(self, debug: bool, error_log_path: str):
         logger = logging.Logger("GAMESHOP")
         logger.propagate = False
@@ -30,7 +30,6 @@ class AppLogger(ABC):
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
         stream_handler = logging.StreamHandler()
-        formatter = JsonFormatter()  # remove later
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
         self._base_log = logger
@@ -67,3 +66,16 @@ class AppLogger(ABC):
 
     def exception(self, msg: str, **attrs):
         return self._base_log.exception(msg, extra=attrs, stacklevel=2)
+
+
+class StubLogger(AbstractLogger):
+    """Logger stub for use in tests to avoid printing logging messages"""
+
+    def debug(self, msg: str, **attrs): ...
+    def info(self, msg: str, **attrs): ...
+    def warning(self, msg: str, **attrs): ...
+    def error(self, msg: str, **attrs): ...
+    def exception(self, msg: str, **attrs): ...
+
+
+stub_logger = StubLogger()

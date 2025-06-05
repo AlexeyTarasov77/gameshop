@@ -2,21 +2,15 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
-from json import JSONDecoder, JSONEncoder
-from logging import Logger
+from json import JSONDecoder
+from core.logging import AbstractLogger
 
 from redis.commands.search.field import Field
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.asyncio import Redis, ResponseError
 from redis.commands.json import JSON
 
-
-class CustomJSONEncoder(JSONEncoder):
-    def default(self, o):
-        try:
-            return str(o)
-        except Exception:
-            return super().default(o)
+from core.utils import CustomJSONEncoder
 
 
 @dataclass
@@ -54,8 +48,8 @@ class RedisClient(Redis):
     async def _create_index(self, idx: IndexSchema):
         from core.ioc import Resolve
 
-        logger = Resolve(Logger)
-        logger.info("Creating index: %s", idx.metadata.name)
+        logger = Resolve(AbstractLogger)
+        logger.info("Creating index", name=idx.metadata.name)
         try:
             await self.ft(idx.metadata.name).create_index(
                 idx._schema,

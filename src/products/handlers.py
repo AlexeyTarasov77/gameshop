@@ -1,4 +1,4 @@
-from logging import Logger
+from core.logging import AbstractLogger
 import typing as t
 
 from core.api.caching import cache
@@ -164,7 +164,7 @@ type SalesPlatformDep = t.Annotated[ProductPlatform | None, Body()]
 @router.post("/sales/update", dependencies=[Depends(require_admin)], status_code=202)
 async def update_sales(
     products_service: ProductsServiceDep,
-    logger: t.Annotated[Logger, Inject(Logger)],
+    logger: t.Annotated[AbstractLogger, Inject(AbstractLogger)],
     background_tasks: BackgroundTasks,
     platform: SalesPlatformDep = None,
 ) -> None:
@@ -177,10 +177,8 @@ async def update_sales(
         platform_name = str(platform) if platform else "All platform"
         try:
             await products_service.update_sales(platform)
-        except Exception as e:
-            logger.exception(
-                "Unexpected exception during sales update in background", e
-            )
+        except Exception:
+            logger.exception("Unexpected exception during sales update in background")
             await send_message(
                 MessageDTO(
                     text=f"Failed to update sales for platform: {platform_name}. Please try again",

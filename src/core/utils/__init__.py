@@ -9,11 +9,12 @@ from .httpx_utils import (
     log_response as log_response,
     log_request as log_request,
 )
-from .helpers import (
+from .base import (
     run_coroutine_sync as run_coroutine_sync,
     normalize_s as normalize_s,
     measure_time_async as measure_time_async,
     chunkify as chunkify,
+    CustomJSONEncoder as CustomJSONEncoder,
 )
 from .files import (
     save_upload_file as save_upload_file,

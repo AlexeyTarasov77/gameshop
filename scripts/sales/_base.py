@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from logging import Logger
+from core.logging import AbstractLogger
 import sys
 import os
 import math
@@ -39,20 +39,20 @@ async def save_unprocessed_ids(key: str, ids: Sequence[int]):
     which could be retrieved for further processing
     """
     redis_client = Resolve(RedisClient)
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
     await redis_client.delete(key)
     if not ids:
         logger.info("No unprocessed ids to save")
         return
     await redis_client.lpush(key, *ids)
-    logger.info("Succesfully saved %s lastly inserted ids under key: %s", len(ids), key)
+    logger.info("Succesfully saved lastly inserted ids", count=len(ids), key=key)
 
 
 async def update_sales_details(
     ids: Sequence[int], platform: ProductPlatform, parser: SalesParser
 ):
     service = Resolve(ProductsService)
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
     urls_mapping = await service.get_urls_mapping(ids)
     # overwrite ids with those from urls mapping to ensure they are in corresponding order
     ids = list(urls_mapping.keys())
@@ -65,8 +65,8 @@ async def update_sales_details(
         urls_mapping_chunk = dict(chunk)
         await parser.update_for_platform(platform, urls_mapping_chunk)
         logger.info(
-            "Chunk %d out of %d chunks updated. Platform: %s", i, total_chunks, platform
+            "Chunk updated", chunk_num=i, total_chunks=total_chunks, platform=platform
         )
         await save_unprocessed_ids(key, ids[UPDATE_CHUNK_SIZE * i :])
         total_updated += len(urls_mapping_chunk)
-    logger.info("Chunked update completed. Totaly updated: %d", total_updated)
+    logger.info("Chunked update completed", total_updated=total_updated)

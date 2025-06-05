@@ -1,5 +1,4 @@
 from pathlib import Path
-from logging import Logger
 import typing as t
 from functools import lru_cache
 
@@ -7,6 +6,7 @@ from httpx import AsyncClient
 import punq
 from fastapi import Depends
 from core.cmd_executor import CommandExecutor
+from core.logging import AppLogger, AbstractLogger
 from core.tasks import BackgroundJobs
 from mailing.domain.services import MailingService
 from orders.repositories import TopUpFeeManager
@@ -31,7 +31,6 @@ from shopping.repositories import (
     SessionCopier,
     WishlistManagerFactory,
 )
-from core.logger import setup_logger
 from core.exception_mappers import (
     HTTPExceptionsMapper,
     TelegramClientI as ExceptionMapperTelegramClientI,
@@ -81,7 +80,7 @@ def register_for_cleanup(obj: SupportsAsyncClose):
 def _init_container() -> punq.Container:
     container = punq.Container()
     cfg = init_config()
-    logger = setup_logger(
+    logger = AppLogger(
         cfg.debug, (Path().parent.parent / "logs" / "errors.log").as_posix()
     )
     FRONTEND_DOMAIN = "http://localhost:3000" if cfg.debug else "https://gamebazaar.ru"
@@ -90,7 +89,7 @@ def _init_container() -> punq.Container:
     httpx_client = AsyncClient()
     register_for_cleanup(redis_client)  # type: ignore
     register_for_cleanup(httpx_client)
-    container.register(Logger, instance=logger)
+    container.register(AbstractLogger, instance=logger)
     container.register(AsyncClient, instance=httpx_client)
     container.register(AbstractDatabaseExceptionMapper, PostgresExceptionsMapper)
     container.register(RedisSessionManager, RedisSessionManager)

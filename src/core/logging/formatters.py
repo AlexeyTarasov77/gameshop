@@ -1,5 +1,8 @@
+from collections.abc import Mapping
 import logging
 import json
+
+from core.utils import CustomJSONEncoder
 
 
 class Color:
@@ -34,12 +37,14 @@ class ColorizedFormatter(logging.Formatter):
 
     def __init__(self) -> None:
         super().__init__(
-            "%(asctime)s %(name)s (%(filename)s:%(lineno)d) %(levelname)s - %(message)s"
+            "%(asctime)s %(name)s (%(filename)s:%(lineno)d) %(levelname)s - %(message)s %(attrs)s"
         )
 
     def format(self, record: logging.LogRecord) -> str:
         fmt = self.COLORS_MAPPING[record.levelno].colorize(str(self._fmt))
         formatter = logging.Formatter(fmt)
+        attrs: Mapping = getattr(record, "attrs")
+        record.attrs = ", ".join(f"{key}={value}" for key, value in attrs.items())
         return formatter.format(record)
 
 
@@ -52,4 +57,4 @@ class JsonFormatter(logging.Formatter):
             "timestamp": self.formatTime(record),
             "body": record.msg,
         }
-        return json.dumps(res)
+        return json.dumps(res, cls=CustomJSONEncoder)

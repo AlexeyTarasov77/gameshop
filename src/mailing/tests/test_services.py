@@ -1,6 +1,6 @@
 from contextlib import nullcontext as does_not_raise
 from email.message import EmailMessage
-import logging
+from core.logging import stub_logger
 from unittest.mock import create_autospec
 
 import pytest
@@ -14,7 +14,7 @@ fake = Faker()
 @pytest.fixture
 def service() -> MailingService:
     mailer = MailingService(
-        logging.getLogger(), fake.domain_name(), 2525, fake.user_name(), fake.password()
+        stub_logger, fake.domain_name(), 2525, fake.user_name(), fake.password()
     )
     mock_smtp = create_autospec(mailer._smtp, instance=True)
     mock_smtp.__aenter__ = type(mailer._smtp).__aenter__

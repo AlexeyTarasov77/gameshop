@@ -1,10 +1,10 @@
 import asyncio
-from logging import Logger
+from core.logging import AbstractLogger
 from core.uow import AbstractUnitOfWork
 
 
 class BackgroundJobs:
-    def __init__(self, uow: AbstractUnitOfWork, logger: Logger):
+    def __init__(self, uow: AbstractUnitOfWork, logger: AbstractLogger):
         self._uow = uow
         self._logger = logger
 
@@ -18,7 +18,7 @@ class BackgroundJobs:
                 updated_count = await uow.products_repo.update_where_expired_discount(
                     deal_until=None, discount=0
                 )
-                self._logger.info("%d products removed from sale", updated_count)
+                self._logger.info("Products removed from sale", count=updated_count)
             if exit_after_update:
                 return
             await asyncio.sleep(timeout_sec)

@@ -1,8 +1,8 @@
 import asyncio
 from collections.abc import Callable
 from decimal import Decimal
-from logging import Logger
 from uuid import UUID
+from core.logging import AbstractLogger
 from core.services.base import BaseService
 from core.services.exceptions import ActionForbiddenError, ExternalGatewayError
 from core.uow import AbstractUnitOfWork
@@ -30,7 +30,7 @@ class PaymentsService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        logger: Logger,
+        logger: AbstractLogger,
         payment_system_factory: PaymentSystemFactoryI,
         mailing_service: MailingService,
         email_templates: EmailTemplatesI,
@@ -87,10 +87,10 @@ class PaymentsService(BaseService):
         payment_system = self._payment_system_factory.choose_by_name(ps_name)
         if not payment_system.is_success(status):
             self._logger.warning(
-                "Payment for order %s failed with status: %s. bill_id: %s",
-                order_id,
-                status,
-                bill_id,
+                "Payment for order failed",
+                order_id=order_id,
+                status=status,
+                bill_id=bill_id,
             )
             return
         process_order_dto = ProcessOrderPaymentDTO(
@@ -149,7 +149,7 @@ class PaymentsService(BaseService):
             )
         except NotFoundError:
             self._logger.error(
-                "Trying to pay for not active or not found order. Order id: %s",
-                order_id,
+                "Trying to pay for not active or not found order",
+                order_id=order_id,
             )
             raise ActionForbiddenError("Order not found")

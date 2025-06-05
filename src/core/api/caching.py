@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Callable
 from functools import wraps
 from hashlib import md5
-from logging import Logger
+from core.logging import AbstractLogger
 from fastapi import HTTPException, Request, Response, status
 from fastapi.dependencies.utils import get_typed_signature
 from pydantic import BaseModel
@@ -75,7 +75,7 @@ def cache(ttl: int = 300):
             etag = req.headers.get("If-None-Match")
             params = repr(args) + repr(kwargs)
             cache_key = f"{ns}:{md5(params.encode()).hexdigest()}"
-            logger = Resolve(Logger)
+            logger = Resolve(AbstractLogger)
             cache = Resolve(RedisClient)
             cached_resp = None
             try:
@@ -83,7 +83,7 @@ def cache(ttl: int = 300):
                     cache.get(cache_key), cache.ttl(cache_key)
                 )
             except Exception as e:
-                logger.error("Failed to retrieve response from cache. Error: %s", e)
+                logger.error("Failed to retrieve response from cache", err_msg=e)
             else:
                 if cached_resp and req.headers.get("Cache-Control") != "no-cache":
                     logger.debug("Retrieved response from cache")

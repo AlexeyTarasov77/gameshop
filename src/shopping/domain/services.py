@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from logging import Logger
+from core.logging import AbstractLogger
 from typing import Literal
 from products.schemas import ProductInCartDTO, ShowProductExtended
 from shopping.domain.interfaces import (
@@ -19,7 +19,7 @@ class ShoppingService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        logger: Logger,
+        logger: AbstractLogger,
         cart_manager: CartManagerI,
         wishlist_manager: WishlistManagerI,
     ):

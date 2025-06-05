@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
-from logging import Logger
+from core.logging import AbstractLogger
 from typing import cast
 from core.api.pagination import PaginationResT
 from core.services.base import BaseService
@@ -165,7 +165,7 @@ class ProductsService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        logger: Logger,
+        logger: AbstractLogger,
         currency_converter: CurrencyConverterI,
         steam_api: SteamAPIClientI,
         cmd_executor: CommandExecutorI,
@@ -201,8 +201,8 @@ class ProductsService(BaseService):
                         # if src currency != usd - convert it because all computations are done in dollars
                         if price_dto.currency_code.lower() != "usd":
                             self._logger.warning(
-                                "Converting price from %s to usd. May cause miscalculation",
-                                price_dto.currency_code,
+                                "Converting price to usd. May cause miscalculation",
+                                from_currency=price_dto.currency_code,
                             )
                             price = await self._currency_converter.convert_price(
                                 price_dto, "usd"
@@ -352,9 +352,9 @@ class ProductsService(BaseService):
         if old_rate is None:
             return
         self._logger.info(
-            "Updating prices according to new rate for %s. Rate: %.2f",
-            dto.from_ + "/" + dto.to,
-            dto.new_rate,
+            "Updating prices according to new rate",
+            for_currency=dto.from_ + "/" + dto.to,
+            rate=dto.new_rate,
         )
         # update existing prices with new rate (only that which were converted from original rate)
         async with self._uow() as uow:

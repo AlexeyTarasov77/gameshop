@@ -3,7 +3,7 @@ from prometheus_client import make_asgi_app
 import sentry_sdk
 from fastapi.encoders import jsonable_encoder
 from functools import partial
-from logging import Logger
+from core.logging import AbstractLogger
 
 from fastapi.openapi.models import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -48,7 +48,7 @@ def custom_openapi(app: FastAPI, version: str):
 
 
 async def ping_gateways():
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
     db = Resolve(SqlAlchemyClient)
     redis_client = Resolve(RedisClient)
     logger.info("Pinging database...")
@@ -67,7 +67,7 @@ async def close_connections():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
     bg_jobs = Resolve(BackgroundJobs)
     await ping_gateways()
     bg_jobs.start_all()
@@ -84,8 +84,6 @@ def app_factory() -> FastAPI:
     app.include_router(router)
     Resolve(HTTPExceptionsMapper, app=app).setup_handlers()
     app.mount("/metrics", make_asgi_app())
-    # Instrumentator().instrument(app).expose(app)
-    # app.middleware("http")(PrometheusMiddleware())
     app.add_middleware(PrometheusMiddleware)
     app.add_middleware(
         BaseHTTPMiddleware,
@@ -124,7 +122,7 @@ def app_factory() -> FastAPI:
 
 async def main() -> None:
     cfg = Resolve(Config)
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
     if not cfg.debug:
         sentry_cfg = cfg.clients.sentry
         assert sentry_cfg

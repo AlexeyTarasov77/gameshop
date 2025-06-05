@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from datetime import datetime, timedelta
-from logging import Logger
+from core.logging import AbstractLogger
 import time
 import asyncio
 from typing import Literal, NamedTuple
@@ -43,7 +43,7 @@ class XboxRowForUpdate(NamedTuple):
 class SalesParser:
     def __init__(
         self,
-        logger: Logger,
+        logger: AbstractLogger,
         client: AsyncClient,
         products_service: ProductsService,
         uow: AbstractUnitOfWork,
@@ -80,7 +80,7 @@ class SalesParser:
     @measure_time_async
     async def parse_and_save_xbox(self, parse_limit: int | None = None):
         xbox_sales = await self._xbox_parser.parse([XboxParseRegions.US], parse_limit)
-        self._logger.info("Xbox %d sales parsed. Saving...", len(xbox_sales))
+        self._logger.info("Xbox sales parsed. Saving...", count=len(xbox_sales))
         mapped_to_dto = [self._parsed_xbox_to_dto(product) for product in xbox_sales]
         res = await self._service.save_parsed_products(mapped_to_dto)
         return res
@@ -90,7 +90,7 @@ class SalesParser:
         psn_sales = await self._psn_parser.parse(
             [el.value for el in PsnParseRegions], parse_limit
         )
-        self._logger.info("Psn %d sales parsed. Saving...", len(psn_sales))
+        self._logger.info("Psn sales parsed. Saving...", count=len(psn_sales))
         mapped_to_dto = [self._parsed_psn_to_dto(product) for product in psn_sales]
         res = await self._service.save_parsed_products(mapped_to_dto)
         return res
@@ -105,9 +105,9 @@ class SalesParser:
         timeout: int | None = None,
     ):
         self._logger.info(
-            "Start updating %s details for %d products",
-            str(for_platform.value),
-            len(products_urls),
+            "Start updating sales details",
+            for_platform=str(for_platform.value),
+            count=len(products_urls),
         )
         if not len(products_urls):
             self._logger.info("Nothing to update. Exiting...")
@@ -117,34 +117,33 @@ class SalesParser:
         for id, url in products_urls.items():
             try:
                 data = await parse_func(url)
-            except Exception as e:
+            except Exception:
                 self._logger.exception(
-                    "Error during parsing details for id: %d, url: %s. Error: %s",
-                    id,
-                    url,
-                    e,
+                    "Error during parsing details for id: %d, url: %s",
+                    id=id,
+                    url=url,
                 )
                 continue
             if data is None:
                 self._logger.warning(
-                    "Failed to parse details for id: %d. Left unchaged",
-                    id,
+                    "Failed to parse details. Left unchaged",
+                    id=id,
                 )
                 continue
             rows.append(row_extracter(id, data))
             if timeout:
                 await asyncio.sleep(timeout)
         self._logger.info(
-            "%s Parsed %d rows for update. Updating...",
-            str(for_platform.value),
-            len(rows),
+            "Parsed sales for update. Updating...",
+            for_platform=str(for_platform.value),
+            count=len(rows),
         )
         async with self._uow() as uow:
             await uow.products_repo.update_from_rows(rows)
         self._logger.info(
-            "%s update completed. Which took: %.2f seconds",
-            str(for_platform.value),
-            time.perf_counter() - t1,
+            "Sales update completed. Which took: %.2f seconds"
+            % (time.perf_counter() - t1),
+            for_platform=str(for_platform.value),
         )
 
     async def _update_psn_details(self, products_urls: ParsedUrlsMapping):

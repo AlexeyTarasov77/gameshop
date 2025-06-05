@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from logging import Logger, getLogger
+from core.logging import AbstractLogger
 import httpx
 from typing import Any
 
@@ -11,14 +11,12 @@ class JWTAuth(httpx.Auth):
         self,
         auth_url: str,
         credentials: dict[str, Any],
-        logger: Logger | None = None,
         resp_token_key: str = "access_token",
     ):
         self._token: str | None = None
         self._auth_url = auth_url
         self._credentials = credentials
         self._resp_token_key = resp_token_key
-        self._logger = logger or getLogger(__name__)
 
     def auth_flow(self, request: httpx.Request):
         self._set_auth_header(request)
@@ -42,7 +40,7 @@ class JWTAuth(httpx.Auth):
 
 
 @contextmanager
-def log_request(prefix: str, logger: Logger):
+def log_request(prefix: str, logger: AbstractLogger):
     from core.services.exceptions import ExternalGatewayError
 
     try:
@@ -50,17 +48,15 @@ def log_request(prefix: str, logger: Logger):
         yield
     except httpx.HTTPError as e:
         if isinstance(e, httpx.RequestError):
-            logger.error(
-                "HTTP request failed: %s. Error: %s", e.request, e, exc_info=True
-            )
+            logger.error("HTTP request failed", req=e.request, err_msg=str(e))
         else:
-            logger.error("HTTP error: %s", e, exc_info=True)
+            logger.error("HTTP error", err_msg=str(e))
         raise ExternalGatewayError(str(e))
 
 
-def log_response(resp: httpx.Response, logger: Logger):
+def log_response(resp: httpx.Response, logger: AbstractLogger):
     logger.info(
-        "Response succesfully received. Status: %s, text: %s",
-        resp.status_code,
-        resp.text,
+        "Response succesfully received",
+        status=resp.status_code,
+        text=resp.text,
     )

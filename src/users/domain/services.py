@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta
-from logging import Logger
+from core.logging import AbstractLogger
 from typing import cast
 
 from jwt.exceptions import InvalidTokenError as InvalidJwtTokenError
@@ -39,7 +39,7 @@ class UsersService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        logger: Logger,
+        logger: AbstractLogger,
         email_templates: EmailTemplatesI,
         token_hasher: TokenHasherI,
         password_hasher: PasswordHasherI,
@@ -87,9 +87,7 @@ class UsersService(BaseService):
         return plain_token
 
     async def signup(self, dto: CreateUserDTO) -> ShowUser:
-        self._logger.info(
-            "Signing up user with email: %s, username: %s", dto.email, dto.username
-        )
+        self._logger.info("Start user signup", email=dto.email)
         password_hash = self._password_hasher.hash(dto.password)
         try:
             async with self._uow() as uow:
@@ -103,7 +101,7 @@ class UsersService(BaseService):
                     uow.tokens_repo,
                 )
         except AlreadyExistsError:
-            self._logger.info("User with email=%s already exists", dto.email)
+            self._logger.info("User already exists", email=dto.email)
             # if user already exists but not activated yet - resend activation token
             try:
                 await self.resend_activation_token(dto.email)
@@ -125,39 +123,37 @@ class UsersService(BaseService):
             )
         )
         self._logger.info(
-            "User %s has succesfully signed up. Activation token sent to %s",
-            user.id,
-            user.email,
+            "Succefully signed up user and sent confirmation token.",
+            user_id=user.id,
+            token_destination=user.email,
         )
         return ShowUser.model_validate(user)
 
     async def signin(self, dto: UserSignInDTO, session_key: str) -> str:
-        self._logger.info("Signing in user with email: %s", dto.email)
+        self._logger.info("Signing in user", email=dto.email)
         try:
             async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(dto.email)
         except NotFoundError as e:
-            self._logger.warning(
-                "User with provided email not found. Email: %s", dto.email
-            )
+            self._logger.warning("User with provided email not found", email=dto.email)
             raise exc.InvalidCredentialsError() from e
         if not user.is_active:
             self._logger.warning(
-                "Attempt to sign in from not activated user %s", user.id
+                "Attempt to sign in from not activated user", user_id=user.id
             )
             raise exc.UserIsNotActivatedError("Activate account to sign in")
         if not self._password_hasher.compare(dto.password, user.password_hash):
-            self._logger.info("Passwords does not match for user %s", user.id)
+            self._logger.info("Passwords does not match", user_id=user.id)
             raise exc.InvalidCredentialsError()
         token = self._jwt_token_provider.new_token(
             {"uid": user.id}, self._auth_token_ttl
         )
         await self._session_copier.copy_for_user(session_key, user.id)
-        self._logger.info("User %s succesfully signed in", user.id)
+        self._logger.info("User succesfully signed in", user_id=user.id)
         return token
 
     async def send_password_reset_token(self, user_email: str):
-        self._logger.info("Password reset request for user %s", user_email)
+        self._logger.info("Processing password reset request", user_email=user_email)
         try:
             async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(user_email)
@@ -166,7 +162,7 @@ class UsersService(BaseService):
                 )
                 await uow.tokens_repo.save(token_obj)
         except NotFoundError:
-            self._logger.info("User not found. Email: %s", user_email)
+            self._logger.info("User not found by email", email=user_email)
             raise exc.EntityNotFoundError(self.entity_name, email=user_email)
         email_body = await self._email_templates.password_reset(
             user.username, self._password_reset_link_builder(plain_token)
@@ -198,7 +194,7 @@ class UsersService(BaseService):
         except NotFoundError:
             self._logger.info("Supplied token for password reset not found")
             raise exc.InvalidTokenError()
-        self._logger.info("Password succesfully updated for user: %s", token.user_id)
+        self._logger.info("Password succesfully updated", user_id=token.user_id)
 
     def verify_token_and_get_payload(self, token: str) -> Mapping:
         try:
@@ -239,7 +235,9 @@ class UsersService(BaseService):
             )
         verification_email_sent = False
         if dto.email is not None:
-            self._logger.info("Updating user's email for user: %s", user_id)
+            self._logger.info(
+                "Updating user's email which requires confirmation", user_id=user_id
+            )
             token = self._jwt_token_provider.new_token(
                 {"email": dto.email, "uid": user_id},
                 self._email_verification_token_ttl,
@@ -261,18 +259,14 @@ class UsersService(BaseService):
         payload = self.verify_token_and_get_payload(token)
         new_email = payload.get("email")
         user_id_from_token = payload.get("uid")
-        if not (user_id_from_token and new_email):
-            self._logger.info(
-                "update_email_confirm: malformed token. uid: %s, email: %s",
-                user_id_from_token,
-                new_email,
-            )
+        if not user_id_from_token or not new_email:
+            self._logger.info("Malformed jwt token for email confirmation", token=token)
             raise exc.InvalidTokenError()
         if curr_user_id != user_id_from_token:
             self._logger.warning(
-                "User with id: %s tries to update email of another user: %s",
-                curr_user_id,
-                user_id_from_token,
+                "User tries to update email of another user",
+                curr_user_id=curr_user_id,
+                orig_user_id=user_id_from_token,
             )
             raise exc.ActionForbiddenError()
         async with self._uow() as uow:
@@ -299,7 +293,7 @@ class UsersService(BaseService):
         return ShowUser.model_validate(user)
 
     async def resend_activation_token(self, email: str) -> None:
-        self._logger.info("Resend activation token request for %s", email)
+        self._logger.info("Processing resend activation token request", email=email)
         try:
             async with self._uow() as uow:
                 user = await uow.users_repo.get_by_email(email)
@@ -313,7 +307,7 @@ class UsersService(BaseService):
                 )
                 await uow.tokens_repo.save(token_obj)
         except NotFoundError:
-            self._logger.info("User with email: %s not found", email)
+            self._logger.info("User not found by email", email=email)
             raise exc.EntityNotFoundError(self.entity_name, email=email)
         email_body = await self._email_templates.new_activation_token(
             user.username, plain_token, self._activation_link_builder(plain_token)
@@ -325,10 +319,12 @@ class UsersService(BaseService):
                 user.email,
             )
         )
-        self._logger.info("New activation token was succesfully send to %s", user.email)
+        self._logger.info(
+            "New activation token was succesfully sent", token_destination=user.email
+        )
 
     async def get_user_with_role(self, user_id: int) -> ShowUserWithRole:
-        self._logger.info("Fetching user with role. id: %s", user_id)
+        self._logger.info("Fetching user with role", id=user_id)
         try:
             async with self._uow() as uow:
                 user, is_admin = await uow.users_repo.get_by_id_and_check_is_admin(

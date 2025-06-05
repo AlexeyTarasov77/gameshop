@@ -1,11 +1,11 @@
 import abc
 from collections.abc import Callable
 import typing as t
-from logging import Logger
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.logging import AbstractLogger
 from core.services.exceptions import ServiceError
 from gateways.db.exceptions import DatabaseError, AbstractDatabaseExceptionMapper
 from news.domain.interfaces import NewsRepositoryI
@@ -70,7 +70,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         self,
         exception_mapper: AbstractDatabaseExceptionMapper,
         session_factory: Callable[[], AsyncSession],
-        logger: Logger,
+        logger: AbstractLogger,
     ) -> None:
         self._logger = logger
         self.exception_mapper = exception_mapper
@@ -115,16 +115,16 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork[AsyncSession]):
         try:
             if exc_type is not None:
                 self._logger.debug(
-                    "SqlAlchemyUnitOfWork.__aexit__: exc: %s",
-                    exc_value,
-                    exc_info=True,
+                    "Error during database transaction", err_msg=str(exc_value)
                 )
                 await super().__aexit__(exc_type, exc_value, _)
                 self._handle_exc(exc_value)
 
             await self.commit()
         except SQLAlchemyError as e:
-            self._logger.error("Exception during commiting/rollbacking trx", exc_info=e)
+            self._logger.error(
+                "Exception during commiting/rollbacking trx", err_msg=str(e)
+            )
             self._handle_exc(e)
         finally:
             await self._session.close()

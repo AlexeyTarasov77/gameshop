@@ -1,10 +1,19 @@
 import asyncio
 from collections.abc import Callable, Generator, Sequence
 from functools import wraps
-from logging import Logger
+from core.logging import AbstractLogger
 import time
 from typing import Coroutine, Any
+from json import JSONEncoder
 from concurrent.futures import ThreadPoolExecutor
+
+
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, o):
+        try:
+            return str(o)
+        except Exception:
+            return super().default(o)
 
 
 def run_coroutine_sync[T](coroutine: Coroutine[Any, Any, T]) -> T:
@@ -28,17 +37,16 @@ def normalize_s(s: str) -> str:
 def measure_time_async[T](func: Callable[..., Coroutine[Any, Any, T]]):
     from core.ioc import Resolve
 
-    logger = Resolve(Logger)
+    logger = Resolve(AbstractLogger)
 
     @wraps(func)
     async def wrapper(*args, **kwargs) -> T:
         t1 = time.perf_counter()
-        logger.info("%s execution started", func)
         res = await func(*args, **kwargs)
         logger.info(
-            "%s completed execution, which took: %.2f seconds",
-            func,
-            time.perf_counter() - t1,
+            "Completed measured function execution",
+            func=func,
+            execution_time=time.perf_counter() - t1,
         )
         return res
 

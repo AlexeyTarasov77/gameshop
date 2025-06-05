@@ -1,8 +1,8 @@
 from collections.abc import Mapping
-import logging
 import abc
 import typing as t
 from fastapi.responses import JSONResponse
+from core.logging import AbstractLogger
 from core.services import exceptions as service_exc
 
 
@@ -16,6 +16,9 @@ class TelegramClientI(t.Protocol):
 class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
     EXCEPTION_MAPPING: Mapping[type[K], type[V]]
 
+    def __init__(self, logger: AbstractLogger):
+        self._logger = logger
+
     @abc.abstractmethod
     def get_default_exc(self) -> type[V]: ...
 
@@ -23,7 +26,7 @@ class AbstractExceptionMapper[K: Exception, V: Exception](abc.ABC):
         exc_class = type(exc)
         mapped_exc_cls = self.EXCEPTION_MAPPING.get(t.cast(type[K], exc_class))
         if not mapped_exc_cls:
-            logging.warning("Not mapped exception: %s", exc, exc_info=True)
+            self._logger.warning("Not mapped exception!", exc=exc)
             return self.get_default_exc()
         return mapped_exc_cls
 
@@ -56,7 +59,7 @@ class HTTPExceptionsMapper:
     def __init__(
         self,
         app: FastAPI,
-        logger: logging.Logger,
+        logger: AbstractLogger,
         tg_client: TelegramClientI,
         support_tg_chat_id: int | None,
         hostname: str,
@@ -71,7 +74,7 @@ class HTTPExceptionsMapper:
         status_code: int | None = self._EXCEPTION_MAPPING.get(type(exc), None)
         if status_code is None:
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-            self._logger.error("Unknown exception in handler: %s", exc, exc_info=True)
+            self._logger.exception("Unknown exception in handler!")
             if self._support_tg_chat_id:
                 await self._tg_client.send_msg(
                     self._support_tg_chat_id,

@@ -1,10 +1,10 @@
 from decimal import Decimal
-from logging import Logger
 from uuid import UUID
 
 from pydantic_extra_types.country import CountryAlpha2
 from core.api.pagination import PaginationParams, PaginationResT
 from core.api.schemas import EMPTY_REGION
+from core.logging import AbstractLogger
 from core.services.base import BaseService
 from core.services.exceptions import (
     EntityNotFoundError,
@@ -33,7 +33,7 @@ class OrdersService(BaseService):
     def __init__(
         self,
         uow: AbstractUnitOfWork,
-        logger: Logger,
+        logger: AbstractLogger,
         payment_system_factory: PaymentSystemFactoryI,
         top_up_fee_manager: TopUpFeeManagerI,
         steam_api: SteamAPIClientI,
@@ -59,7 +59,7 @@ class OrdersService(BaseService):
         category: OrderCategory,
     ) -> PaymentBillDTO:
         payment_system = self._payment_system_factory.choose_by_name(ps_name)
-        self._logger.info("Creating payment bill for %s payment system", ps_name)
+        self._logger.info("Creating payment bill", payment_system=ps_name)
         return await payment_system.create_bill(
             order.id, round(order.total), order.client_email, category
         )
@@ -69,7 +69,7 @@ class OrdersService(BaseService):
         dto: schemas.CreateInAppOrderDTO,
         user_id: int | None,
     ) -> schemas.OrderPaymentDTO[schemas.InAppOrderDTO]:
-        self._logger.info("Creating order for user: %s with data: %s", user_id, dto)
+        self._logger.info("Creating order", user_id=user_id, dto=dto.model_dump())
         async with self._uow() as uow:
             cart_products = await uow.products_repo.list_by_ids(
                 [int(item.product_id) for item in dto.cart], only_in_stock=True
@@ -117,10 +117,10 @@ class OrdersService(BaseService):
                 dto.selected_ps, order, OrderCategory.IN_APP
             )
         self._logger.info(
-            "Succesfully placed an order for user: %s. Order id: %s, bill id: %s",
-            order.client_email,
-            order.id,
-            payment_dto.bill_id,
+            "Succesfully placed an order",
+            user_email=order.client_email,
+            order_id=order.id,
+            bill_id=payment_dto.bill_id,
         )
         return schemas.OrderPaymentDTO(
             order=schemas.InAppOrderDTO.model_validate(order),
@@ -130,22 +130,22 @@ class OrdersService(BaseService):
     async def update_order(
         self, dto: schemas.UpdateOrderDTO, order_id: UUID
     ) -> schemas.ShowBaseOrderDTO:
-        self._logger.info("Updating order: %s. Data: %s", order_id, dto)
+        self._logger.info("Updating order", id=order_id, dto=dto.model_dump())
         try:
             async with self._uow() as uow:
                 order = await uow.orders_repo.update_by_id(dto, order_id)
         except NotFoundError:
-            self._logger.warning("Order %s not found", order_id)
+            self._logger.warning("Order not found", id=order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return schemas.ShowBaseOrderDTO.model_validate(order)
 
     async def delete_order(self, order_id: UUID) -> None:
-        self._logger.info("Deleting order: %s", order_id)
+        self._logger.info("Deleting order", id=order_id)
         try:
             async with self._uow() as uow:
                 await uow.orders_repo.delete_by_id(order_id)
         except NotFoundError:
-            self._logger.warning("Order %s not found", order_id)
+            self._logger.warning("Order not found", id=order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
 
     async def list_orders_for_user(
@@ -155,9 +155,8 @@ class OrdersService(BaseService):
     ) -> PaginationResT[schemas.ShowBaseOrderDTO]:
         assert dto.user_id, "User id must be present"
         self._logger.info(
-            "Listing orders for user: %s. Pagination params: %s",
-            dto.user_id,
-            pagination_params,
+            "Listing orders for user",
+            user_id=dto.user_id,
         )
         async with self._uow() as uow:
             orders, total_records = await uow.orders_repo.list_orders(
@@ -170,9 +169,6 @@ class OrdersService(BaseService):
     async def list_all_orders(
         self, pagination_params: PaginationParams, dto: schemas.ListOrdersParamsDTO
     ) -> PaginationResT[schemas.ShowBaseOrderDTO]:
-        self._logger.info(
-            "Listing all orders. Pagination params: %s", pagination_params
-        )
         async with self._uow() as uow:
             orders, total_records = await uow.orders_repo.list_orders(
                 pagination_params, dto
@@ -182,12 +178,12 @@ class OrdersService(BaseService):
         ], total_records
 
     async def get_order(self, order_id: UUID) -> schemas.OrderDetailSchemaT:
-        self._logger.info("Fetching order by id: %s", order_id)
+        self._logger.info("Fetching order by id", id=order_id)
         try:
             async with self._uow() as uow:
                 order = await uow.orders_repo.get_by_id(order_id)
         except NotFoundError:
-            self._logger.warning("Order %s not found", order_id)
+            self._logger.warning("Order not found", id=order_id)
             raise EntityNotFoundError(self.entity_name, id=order_id)
         return self._order_to_dto(order)
 
@@ -201,7 +197,8 @@ class OrdersService(BaseService):
         percent_fee = await self._top_up_fee_manager.get_current_fee()
         if percent_fee is None:
             self._logger.warning(
-                "Steam top up fee is unset. Using default: %s", self._top_up_default_fee
+                "Steam top up fee is unset. Using default",
+                default=self._top_up_default_fee,
             )
             percent_fee = self._top_up_default_fee
         async with self._uow() as uow:
@@ -212,10 +209,10 @@ class OrdersService(BaseService):
                 dto.selected_ps, order, OrderCategory.STEAM_TOP_UP
             )
         self._logger.info(
-            "Succesfully created steam top up order. Top-Up id: %s, bill id: %s, client_email: %s",
-            order.id,
-            payment_dto.bill_id,
-            order.client_email,
+            "Succesfully created steam top up order",
+            order_id=order.id,
+            bill_id=payment_dto.bill_id,
+            user_email=order.client_email,
         )
         return schemas.OrderPaymentDTO(
             order=schemas.SteamTopUpOrderDTO.model_validate(order),
@@ -248,8 +245,8 @@ class OrdersService(BaseService):
                         order_total = price.total_price
                 if order_total is None:
                     self._logger.error(
-                        "Unable to find price for product. Product id: %d",
-                        product.id,
+                        "Unable to find price for product",
+                        product_id=product.id,
                     )
                     raise UnavailableProductError(
                         "That product is currently unavailable. Try to use another delivery method or try again later"
@@ -270,10 +267,10 @@ class OrdersService(BaseService):
         except NotFoundError:
             raise EntityNotFoundError("Product", id=dto.product_id)
         self._logger.info(
-            "Succesfully created steam gift order. Order id: %s, bill id: %s, client_email: %s",
-            order.id,
-            payment_dto.bill_id,
-            order.client_email,
+            "Succesfully created steam gift order",
+            order_id=order.id,
+            bill_id=payment_dto.bill_id,
+            user_email=order.client_email,
         )
         return schemas.OrderPaymentDTO(
             order=schemas.SteamGiftOrderDTO.model_validate(order),

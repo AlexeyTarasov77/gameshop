@@ -2,7 +2,7 @@ import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.message import EmailMessage
-from logging import Logger
+from core.logging import AbstractLogger
 
 import aiosmtplib
 
@@ -12,7 +12,7 @@ from mailing.domain.interfaces import EmailBody
 class MailingService:
     def __init__(
         self,
-        logger: Logger,
+        logger: AbstractLogger,
         host: str,
         port: int,
         username: str,
@@ -47,13 +47,18 @@ class MailingService:
         message["From"] = from_email
         message["To"] = to
         message["Subject"] = subject
-        email_details = f"(to={to}, subject={subject})"
-        err_prefix = f"Failed to send email {email_details}"
+        email_info = {"to": to, "subject": subject}
         async with self._smtp as smtp:
             try:
                 await asyncio.wait_for(smtp.send_message(message), timeout)
-                self._logger.info("Email was succesfully sent %s", email_details)
+                self._logger.info("Email was succesfully sent", **email_info)
             except asyncio.TimeoutError:
-                self._logger.warning(f"{err_prefix}. Timeout finished")
+                self._logger.warning(
+                    "Failed to send email due to exceeded timeout",
+                    **email_info,
+                    timeout=timeout,
+                )
             except Exception as e:
-                self._logger.exception(f"{err_prefix}. Error: {e}")
+                self._logger.exception(
+                    "Exception during sending email", **email_info, err_msg=str(e)
+                )

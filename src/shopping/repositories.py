@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Mapping, Sequence
-from logging import Logger
+from core.logging import AbstractLogger
 
 from gateways.db import RedisClient
 from shopping.domain.interfaces import (
@@ -39,15 +39,15 @@ class WishlistManagerFactory(AbstractManagerFactory[WishlistManagerI]):
 
 
 class SessionCopier:
-    def __init__(self, db: RedisClient, logger: Logger):
+    def __init__(self, db: RedisClient, logger: AbstractLogger):
         self._db = db
         self._logger = logger
 
     async def copy_for_user(self, session_key: str, user_id: int):
         self._logger.info(
-            "Copying session data for user: %s from session key: %s",
-            user_id,
-            session_key,
+            "Copying session data",
+            for_user_id=user_id,
+            from_session_key=session_key,
         )
         cart_session_manager = CartSessionManager(self._db, session_key)
         wishlist_session_manager = WishlistSessionManager(self._db, session_key)
@@ -55,11 +55,6 @@ class SessionCopier:
             cart_session_manager.list_items(), wishlist_session_manager.list_ids()
         )
         if cart_data or wishlist_data:
-            self._logger.info(
-                "Has data to copy. cart_data: %s, wishlist_data: %s",
-                cart_data,
-                wishlist_data,
-            )
             user_cart_manager = UserCartManager(self._db, user_id)
             user_wishlist_manager = UserWishlistManager(self._db, user_id)
             await asyncio.gather(
