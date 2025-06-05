@@ -1,4 +1,5 @@
 import logging
+import json
 
 
 class Color:
@@ -42,20 +43,13 @@ class ColorizedFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def setup_logger(debug: bool, error_log_path: str) -> logging.Logger:
-    logger = logging.getLogger("GAMESHOP")
-    logger.propagate = False
-    logger.setLevel(logging.DEBUG if debug else logging.INFO)
-    simple_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    colorized_formatter = ColorizedFormatter()
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(colorized_formatter)
-    logger.addHandler(stream_handler)
-    if not debug:
-        file_handler = logging.FileHandler(error_log_path, "a")
-        file_handler.setLevel(logging.WARNING)
-        file_handler.setFormatter(simple_formatter)
-        logger.addHandler(file_handler)
-    return logger
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        res = {
+            "severity": record.levelname,
+            "resource": f"{record.pathname}:{record.lineno}",
+            "attributes": getattr(record, "attrs"),
+            "timestamp": self.formatTime(record),
+            "body": record.msg,
+        }
+        return json.dumps(res)
