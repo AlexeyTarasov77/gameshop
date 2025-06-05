@@ -22,7 +22,6 @@ from fastapi import (
     Query,
     status,
 )
-from core.services.exceptions import ExternalGatewayError, ServiceError
 from gateways.currency_converter import (
     ExchangeRatesMappingDTO,
     SetExchangeRateDTO,

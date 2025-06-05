@@ -34,7 +34,7 @@ class ProductsRepository(PaginationRepository[Product]):
     async def filter_paginated_list(
         self,
         params: ListProductsParamsDTO,
-    ) -> PaginationResT[model]:
+    ) -> PaginationResT[Product]:
         stmt = (
             sa.select(self.model)
             .order_by(sa.desc(Product.created_at))
