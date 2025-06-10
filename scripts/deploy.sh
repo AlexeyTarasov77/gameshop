@@ -16,7 +16,7 @@ if [[ "$MODE" == "prod" ]]; then
   dest_dir="/home/www/projects/gameshop"
 elif [[ "$MODE" == "prod-tests" ]]; then
     remote_host=subpack.fun
-    dest_dir="/var/www/gamebazaar.ru/backend/gameshop"
+    dest_dir="/var/www/subpack.fun/backend/gameshop"
 else
   echo "Unsupported parameter: $1"
   exit 1
