@@ -4,7 +4,7 @@ from decimal import Decimal
 from logging import Logger
 from uuid import UUID
 from core.services.base import BaseService
-from core.services.exceptions import ActionForbiddenError, ExternalGatewayError
+from core.services.exceptions import ActionForbiddenError, ServiceError
 from core.uow import AbstractUnitOfWork
 from gateways.db.exceptions import NotFoundError
 from mailing.domain.services import MailingService
@@ -97,43 +97,40 @@ class PaymentsService(BaseService):
             paid_with=ps_name, order_id=order_id, bill_id=bill_id
         )
         additional_msg = ""
-        try:
-            async with self._uow() as uow:
-                try:
-                    match payment_for:
-                        case OrderCategory.IN_APP:
-                            order = await self._process_in_app_order(
-                                process_order_dto, uow
-                            )
-                            customer_tg = (
-                                await uow.in_app_orders_repo.get_customer_tg_by_id(
-                                    order.id
-                                )
-                            )
-                            if customer_tg[0] != "@":
-                                customer_tg = "@" + customer_tg
-                            additional_msg = f"Телеграм заказчика: {customer_tg}"
-                        case OrderCategory.STEAM_TOP_UP:
-                            order = await self._process_steam_top_up_order(
-                                process_order_dto, uow
-                            )
-                        case OrderCategory.STEAM_GIFT:
-                            order = await self._process_steam_gift_order(
-                                process_order_dto, uow
-                            )
-                except ExternalGatewayError:
-                    await uow.orders_repo.update_by_id(
-                        UpdateOrderDTO(status=OrderStatus.FAILED), order_id
-                    )
-                    raise
+        async with self._uow() as uow:
+            try:
+                match payment_for:
+                    case OrderCategory.IN_APP:
+                        order = await self._process_in_app_order(process_order_dto, uow)
+                        customer_tg = (
+                            await uow.in_app_orders_repo.get_customer_tg_by_id(order.id)
+                        )
+                        if len(customer_tg) and customer_tg[0] != "@":
+                            customer_tg = "@" + customer_tg
+                        additional_msg = f"Телеграм заказчика: {customer_tg}"
+                    case OrderCategory.STEAM_TOP_UP:
+                        order = await self._process_steam_top_up_order(
+                            process_order_dto, uow
+                        )
+                    case OrderCategory.STEAM_GIFT:
+                        order = await self._process_steam_gift_order(
+                            process_order_dto, uow
+                        )
+            except NotFoundError:
+                self._logger.error(
+                    "Trying to pay for not active or not found order. Order id: %s",
+                    order_id,
+                )
+                raise ActionForbiddenError("Order not found")
+            # Exception should be catched inside transaction to reuse transaction for db operation
+            except Exception as exc:
+                await uow.orders_repo.update_by_id(
+                    UpdateOrderDTO(status=OrderStatus.FAILED), order_id
+                )
+                # self._logger.error("Order payment failed", order_id=order_id, err_msg=str(exc))
+                raise ServiceError("Order payment failed") from exc
 
-            admin_notification_msg = (
-                f"Заказ #{order.id} успешно оплачен!\n"
-                f"Сумма: {order_total} ₽\n"
-                f"Email заказчика: {order.customer_email} 📧\n"
-                f"Дата заказа: {order.order_date} 📆\n"
-                f"Тип заказа: {str(order.category.value)}\n" + additional_msg
-            )
+            order.total = order_total
             email_body = await self._email_templates.order_checkout(
                 self._order_details_link_builder(order_id), order_id
             )
@@ -144,12 +141,12 @@ class PaymentsService(BaseService):
                     to=order.client_email,
                 )
             )
+            admin_notification_msg = (
+                await self._email_templates.order_paid_admin_notification(
+                    order, additional_msg
+                )
+            )
             await self._tg_client.send_msg(
-                self._admin_tg_chat_id, admin_notification_msg
+                self._admin_tg_chat_id,
+                admin_notification_msg,
             )
-        except NotFoundError:
-            self._logger.error(
-                "Trying to pay for not active or not found order. Order id: %s",
-                order_id,
-            )
-            raise ActionForbiddenError("Order not found")

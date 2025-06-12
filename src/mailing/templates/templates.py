@@ -1,6 +1,7 @@
 from uuid import UUID
 from mailing.domain.interfaces import MailingTemplate
 from mailing.templates.template_parser import parse
+from orders.models import BaseOrder
 
 
 class EmailTemplates:
@@ -71,3 +72,14 @@ class EmailTemplates:
         )
         html = await parse("password_reset.html", username=username, link=link)
         return MailingTemplate(html, text)
+
+    async def order_paid_admin_notification(
+        self, order: BaseOrder, extra: str = ""
+    ) -> str:
+        return (
+            f"Заказ #{order.id} успешно оплачен!\n"
+            f"Сумма: {order.total} ₽\n"
+            f"Email заказчика: {order.customer_email} 📧\n"
+            f"Дата заказа: {order.order_date} 📆\n"
+            f"Тип заказа: {str(order.category.value)}\n" + extra
+        )

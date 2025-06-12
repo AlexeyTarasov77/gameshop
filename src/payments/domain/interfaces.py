@@ -3,7 +3,7 @@ from typing import Protocol
 from uuid import UUID
 
 from mailing.domain.interfaces import MailingTemplate
-from orders.models import OrderCategory
+from orders.models import BaseOrder, OrderCategory
 from payments.models import AvailablePaymentSystems
 from payments.schemas import PaymentBillDTO
 
@@ -28,6 +28,10 @@ class EmailTemplatesI(Protocol):
     async def order_checkout(
         self, order_details_link: str, order_id: UUID
     ) -> MailingTemplate | str: ...
+
+    async def order_paid_admin_notification(
+        self, order: BaseOrder, extra: str | None = None
+    ) -> str: ...
 
 
 class PaymentSystemFactoryI(Protocol):

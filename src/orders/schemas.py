@@ -112,7 +112,8 @@ class InAppOrderCustomerDTO(BaseDTO):
         validation_alias=AliasChoices("customer_phone", "phone"), default=None
     )
     tg_username: CustomerTg = Field(
-        validation_alias=AliasChoices("customer_tg_username", "tg_username")
+        validation_alias=AliasChoices("customer_tg_username", "tg_username"),
+        min_length=1,
     )
 
     name: CustomerName | None = Field(
