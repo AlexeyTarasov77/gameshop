@@ -88,6 +88,10 @@ class ProductsRepository(PaginationRepository[Product]):
             filtered_products
         )
 
+    async def get_all_in_stock(self) -> list[Product]:
+        res = await super().list(in_stock=True)
+        return list(res)
+
     async def create_with_price(
         self,
         dto: CreateProductDTO,

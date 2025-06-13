@@ -36,6 +36,14 @@ router = APIRouter(prefix="/products", tags=["products"])
 ProductsServiceDep = t.Annotated[ProductsService, Inject(ProductsService)]
 
 
+@router.get("/all")
+async def list_all_products(
+    products_service: ProductsServiceDep,
+) -> list[schemas.ShowProduct]:
+    """Convenience endpoint to grab all available products without pagination and other filters"""
+    return await products_service.list_all_products()
+
+
 @router.get("/")
 @cache()
 async def list_products(

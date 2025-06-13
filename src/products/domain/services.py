@@ -279,6 +279,11 @@ class ProductsService(BaseService):
             ) from e
         return ShowProduct.model_validate(product)
 
+    async def list_all_products(self):
+        async with self._uow() as uow:
+            products = await uow.products_repo.get_all_in_stock()
+        return [ShowProduct.model_validate(product) for product in products]
+
     async def list_products(
         self,
         dto: ListProductsParamsDTO,
