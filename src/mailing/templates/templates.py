@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import UUID
 from mailing.domain.interfaces import MailingTemplate
 from mailing.templates.template_parser import parse
@@ -74,11 +75,12 @@ class EmailTemplates:
         return MailingTemplate(html, text)
 
     async def order_paid_admin_notification(
-        self, order: BaseOrder, extra: str = ""
+        self, order: BaseOrder, order_total: Decimal, extra: str = ""
     ) -> str:
+        total = order_total.quantize(Decimal(".01"))
         return (
             f"Заказ #{order.id} успешно оплачен!\n"
-            f"Сумма: {order.total} ₽\n"
+            f"Сумма: {total} ₽\n"
             f"Email заказчика: {order.customer_email} 📧\n"
             f"Дата заказа: {order.order_date} 📆\n"
             f"Тип заказа: {str(order.category.value)}\n" + extra

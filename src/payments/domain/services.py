@@ -130,7 +130,6 @@ class PaymentsService(BaseService):
                 # self._logger.error("Order payment failed", order_id=order_id, err_msg=str(exc))
                 raise ServiceError("Order payment failed") from exc
 
-            order.total = order_total
             email_body = await self._email_templates.order_checkout(
                 self._order_details_link_builder(order_id), order_id
             )
@@ -143,7 +142,7 @@ class PaymentsService(BaseService):
             )
             admin_notification_msg = (
                 await self._email_templates.order_paid_admin_notification(
-                    order, additional_msg
+                    order, order_total, additional_msg
                 )
             )
             await self._tg_client.send_msg(

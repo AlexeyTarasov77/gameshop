@@ -30,7 +30,7 @@ class EmailTemplatesI(Protocol):
     ) -> MailingTemplate | str: ...
 
     async def order_paid_admin_notification(
-        self, order: BaseOrder, extra: str | None = None
+        self, order: BaseOrder, order_total: Decimal, extra: str | None = None
     ) -> str: ...
 
 
