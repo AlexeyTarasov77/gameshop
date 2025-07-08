@@ -64,7 +64,7 @@ async def main():
                 await update_last_parsed_sales(ProductPlatform.PSN, parser)
             case _:
                 raise ValueError("Unsupported platform: %s" % args.platform)
-        await bg_jobs.remove_products_from_sale(exit_after_update=True)
+        await bg_jobs.reset_expired_discount(exit_after_update=True)
     finally:
         await close_connections()
 

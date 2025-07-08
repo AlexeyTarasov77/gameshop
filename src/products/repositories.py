@@ -231,6 +231,16 @@ class ProductsRepository(PaginationRepository[Product]):
         res = await self._session.execute(stmt)
         return res.rowcount
 
+    async def delete_parsed_without_discount(self) -> int:
+        stmt = sa.delete(self.model).where(
+            sa.and_(
+                self.model.orig_url.isnot(None),  # parsed only
+                self.model.discount == 0,
+            ),
+        )
+        res = await self._session.execute(stmt)
+        return res.rowcount
+
 
 class PricesRepository(SqlAlchemyRepository[RegionalPrice]):
     model = RegionalPrice
