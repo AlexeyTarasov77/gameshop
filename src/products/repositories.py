@@ -4,13 +4,14 @@ from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
 import sqlalchemy as sa
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 from core.api.pagination import PaginationResT
 from core.api.schemas import OrderByOption
 from core.utils import normalize_s
 from gateways.db.sqlalchemy_gateway import PaginationRepository
 
 from gateways.db.sqlalchemy_gateway.repository import SqlAlchemyRepository
+from orders.models import InAppOrderItem
 from products.models import (
     Product,
     ProductPlatform,
@@ -232,10 +233,29 @@ class ProductsRepository(PaginationRepository[Product]):
         return res.rowcount
 
     async def delete_parsed_without_discount(self) -> int:
+        p = aliased(self.model)
+        not_purchased_products_ids = (
+            (
+                await self._session.execute(
+                    sa.select(p.id).where(
+                        sa.not_(
+                            sa.exists(
+                                sa.select(InAppOrderItem.id).where(
+                                    InAppOrderItem.product_id == p.id
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
         stmt = sa.delete(self.model).where(
             sa.and_(
                 self.model.orig_url.isnot(None),  # parsed only
                 self.model.discount == 0,
+                self.model.id.in_(not_purchased_products_ids),
             ),
         )
         res = await self._session.execute(stmt)
