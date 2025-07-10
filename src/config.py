@@ -69,7 +69,7 @@ class _Server(BaseModel):
 
     @property
     def addr(self):
-        return f"http{"s" if self.ssl_enabled else ""}://{self.host}:{self.port}"
+        return f"http{'s' if self.ssl_enabled else ''}://{self.host}:{self.port}"
 
 
 class _SMTP(BaseModel):
@@ -104,10 +104,15 @@ class _SentryCfg(BaseModel):
     dsn: HttpUrl
 
 
+class _GeminiConfig(BaseModel):
+    api_key: str
+
+
 class _ClientsConfig(BaseModel):
     steam_api: _SteamAPIClient
     tg_api: _TelegramAPIClient
     sentry: _SentryCfg | None = None
+    Gemini: _GeminiConfig
 
 
 class Config(BaseSettings):
