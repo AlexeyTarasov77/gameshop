@@ -1,5 +1,5 @@
 from logging import Logger
-from langchain_core.tools import BaseTool, tool
+from langchain_core.tools import BaseTool, StructuredTool
 
 from core.uow import AbstractUnitOfWork
 from products.schemas import ListProductsParamsDTO
@@ -10,7 +10,6 @@ class ChatBotToolsContainer:
         self._uow = uow
         self._logger = logger
 
-    @tool
     async def _find_games(self, params: ListProductsParamsDTO):
         """
         Use this tool to find and search for games. Call this when users ask about games, want to browse games,
@@ -31,4 +30,4 @@ class ChatBotToolsContainer:
             return await uow.products_repo.filter_paginated_list(params)
 
     def get_tools(self) -> list[BaseTool]:
-        return [self._find_games]
+        return [StructuredTool.from_function(coroutine=self._find_games)]

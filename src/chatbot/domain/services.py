@@ -1,5 +1,7 @@
 from logging import Logger
+from uuid import uuid4
 from chatbot.domain.interfaces import LLMProviderI
+from chatbot.schemas import ChatbotMessage
 from core.services.base import BaseService
 from core.uow import AbstractUnitOfWork
 
@@ -11,5 +13,6 @@ class ChatbotService(BaseService):
         super().__init__(uow, logger)
         self._llm_provider = llm_provider
 
-    async def reply(self, message: str, user_id: int) -> str:
-        return await self._llm_provider.reply_to_user(message, user_id)
+    async def reply(self, message: str, user_id: int) -> ChatbotMessage:
+        content = await self._llm_provider.reply_to_user(message, user_id)
+        return ChatbotMessage(id=str(uuid4()), content=content, outgoing=False)

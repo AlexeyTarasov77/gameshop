@@ -1,4 +1,5 @@
 from langchain_core.messages import HumanMessage
+from pprint import pprint
 from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.checkpoint.memory import InMemorySaver
@@ -23,6 +24,7 @@ class LLMAgent:
         )
 
     def _create_agent_message(self, message: str, user_id: int):
+        #  TODO: consider adding user_id to agent memort and get access to it from tools instead of passing it to llm directy
         return {
             "messages": [
                 HumanMessage(
@@ -39,5 +41,6 @@ class LLMAgent:
         res = await self._agent.ainvoke(
             self._create_agent_message(message, user_id), config
         )
-        print("LLM RESPONSE", res)
+        print("AGENT INVOKATION")
+        pprint(res)
         return res["messages"][-1].content
