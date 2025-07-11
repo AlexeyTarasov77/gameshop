@@ -8,4 +8,3 @@ class BaseService:
     def __init__(self, uow: AbstractUnitOfWork, logger: Logger) -> None:
         self._uow = uow
         self._logger = logger
-        assert self.entity_name

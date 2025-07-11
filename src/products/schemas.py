@@ -152,14 +152,38 @@ class PsnGameParsedDTO(BaseParsedGameDTO): ...
 
 
 class ListProductsParamsDTO(PaginationParams):
-    query: str | None = None
-    discounted: bool | None = None
-    in_stock: bool | None = None
-    categories: list[models.ProductCategory] | None = None
-    platforms: list[models.ProductPlatform] | None = None
-    delivery_methods: list[models.ProductDeliveryMethod] | None = None
-    regions: list[CountryAlpha2] | None = None
-    price_ordering: schemas.OrderByOption | None = None
+    query: str | None = pydantic.Field(
+        None,
+        description="Search query string to filter products by name, description, or other text fields",
+    )
+    discounted: bool | None = pydantic.Field(
+        None,
+        description="Filter products by discount status. True for discounted products, False for regular price products",
+    )
+    in_stock: bool | None = pydantic.Field(
+        None,
+        description="Filter products by stock availability. True for in-stock products, False for out-of-stock products",
+    )
+    categories: list[models.ProductCategory] | None = pydantic.Field(
+        None,
+        description="List of product categories to filter by. Products matching any of the specified categories will be included",
+    )
+    platforms: list[models.ProductPlatform] | None = pydantic.Field(
+        None,
+        description="List of platforms/gaming systems to filter by. Products available on any of the specified platforms will be included",
+    )
+    delivery_methods: list[models.ProductDeliveryMethod] | None = pydantic.Field(
+        None,
+        description="List of delivery methods to filter by. Products supporting any of the specified delivery methods will be included",
+    )
+    regions: list[CountryAlpha2] | None = pydantic.Field(
+        None,
+        description="List of country codes (ISO 3166-1 alpha-2) to filter products by regional availability",
+    )
+    price_ordering: schemas.OrderByOption | None = pydantic.Field(
+        None,
+        description="Sort order for product prices. Determines whether results are ordered by price ascending or descending",
+    )
 
 
 class RegionalWithDiscountedPriceDTO(RegionalPriceDTO):

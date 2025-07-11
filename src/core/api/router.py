@@ -10,6 +10,7 @@ from news.handlers import router as news_router
 from orders.handlers import router as orders_router
 from shopping.handlers import cart_router, wishlist_router
 from payments.handlers import router as payments_router
+from chatbot.handlers import router as chatbot_router
 
 major_version = Resolve(Config).api_version[0]
 
@@ -22,6 +23,7 @@ api_router.include_router(orders_router)
 api_router.include_router(cart_router)
 api_router.include_router(wishlist_router)
 api_router.include_router(payments_router)
+api_router.include_router(chatbot_router)
 api_router.add_api_route("/stream", message_stream)
 
 router = APIRouter()

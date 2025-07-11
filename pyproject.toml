@@ -39,6 +39,7 @@ sentry-sdk = {extras = ["fastapi"], version = "^2.29.1"}
 sse-starlette = "^2.3.6"
 langchain = "^0.3.26"
 langchain-google-genai = "^2.1.7"
+langgraph = "^0.5.2"
 
 
 [tool.poetry.group.dev.dependencies]

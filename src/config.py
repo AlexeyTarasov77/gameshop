@@ -112,7 +112,7 @@ class _ClientsConfig(BaseModel):
     steam_api: _SteamAPIClient
     tg_api: _TelegramAPIClient
     sentry: _SentryCfg | None = None
-    Gemini: _GeminiConfig
+    gemini: _GeminiConfig
 
 
 class Config(BaseSettings):

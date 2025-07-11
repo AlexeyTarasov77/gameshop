@@ -6,6 +6,10 @@ from functools import lru_cache
 from httpx import AsyncClient
 import punq
 from fastapi import Depends
+from chatbot.domain.interfaces import LLMProviderI
+from chatbot.domain.services import ChatbotService
+from chatbot.llm import LLMAgent
+from chatbot.tools import ChatBotToolsContainer
 from core.cmd_executor import CommandExecutor
 from core.tasks import BackgroundJobs
 from mailing.domain.services import MailingService
@@ -161,6 +165,14 @@ def _init_container() -> punq.Container:
     container.register(SessionCopierI, SessionCopier)
     container.register(CurrencyConverterI, CurrencyConverter)
     container.register(ShoppingService, scope=punq.Scope.singleton)
+    container.register(
+        LLMProviderI,
+        LLMAgent,
+        scope=punq.Scope.singleton,
+        google_api_key=cfg.clients.gemini.api_key,
+    )
+    container.register(ChatBotToolsContainer, scope=punq.Scope.singleton)
+    container.register(ChatbotService, scope=punq.Scope.singleton)
     container.register(
         PaymentsService,
         PaymentsService,
