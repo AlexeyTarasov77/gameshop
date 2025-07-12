@@ -1,6 +1,11 @@
 from enum import StrEnum, Enum
 from typing import Any, Self
 
+from pydantic_core import core_schema as cs
+
+from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic.json_schema import JsonSchemaValue
+
 
 class CIEnum(StrEnum):
     """Adds support for caseinsensitive member lookup.
@@ -48,3 +53,21 @@ class LabeledEnum(Enum):
         except ValueError:
             # value is not str or failed to convert to integer
             return None
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type: Any, _: GetCoreSchemaHandler):
+        assert source_type is cls
+
+        def get_enum(value: Any, validate_next: cs.ValidatorFunctionWrapHandler):
+            if isinstance(value, cls):
+                return value
+            else:
+                name: str = validate_next(value)
+                return cls[name]
+
+        expected = [member.name for member in cls]
+        name_schema = cs.literal_schema(expected)
+
+        return cs.no_info_wrap_validator_function(
+            get_enum, name_schema, ref=cls.__name__
+        )
