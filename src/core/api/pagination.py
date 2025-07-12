@@ -6,8 +6,14 @@ from core.api.schemas import BaseDTO
 
 
 class PaginationParams(BaseDTO):
-    page_size: int = Field(default=10, gt=0, lt=100)
-    page_num: int = Field(default=1, gt=0)
+    page_size: int = Field(
+        default=10, gt=0, lt=100, description="Number of top results to return."
+    )
+    page_num: int = Field(
+        default=1,
+        gt=0,
+        description="Number of page to return data from, defaults to first page",
+    )
 
     def calc_offset(self):
         return self.page_size * (self.page_num - 1)

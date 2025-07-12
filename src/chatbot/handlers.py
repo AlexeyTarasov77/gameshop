@@ -14,7 +14,7 @@ ChatbotServiceDep = t.Annotated[ChatbotService, Inject(ChatbotService)]
 @router.post("/ask")
 async def ask_chatbot(
     service: ChatbotServiceDep,
-    message: t.Annotated[str, Body(embed=True)],
+    message: t.Annotated[str, Body(embed=True, min_length=1)],
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
 ) -> AskChatbotResponse:
     reply = await service.reply(message, user_id)
@@ -26,4 +26,4 @@ async def get_history(
     service: ChatbotServiceDep,
     user_id: t.Annotated[int, Depends(get_user_id_or_raise)],
 ) -> list[ChatbotMessage]:
-    return []
+    return await service.get_chat_history(user_id)

@@ -10,6 +10,7 @@ class ChatBotToolsContainer:
         self._uow = uow
         self._logger = logger
 
+    # TODO: add filtering by price range
     async def _find_games(self, params: ListProductsParamsDTO):
         """
         Use this tool to find and search for games. Call this when users ask about games, want to browse games,

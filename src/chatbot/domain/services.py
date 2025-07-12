@@ -16,3 +16,6 @@ class ChatbotService(BaseService):
     async def reply(self, message: str, user_id: int) -> ChatbotMessage:
         content = await self._llm_provider.reply_to_user(message, user_id)
         return ChatbotMessage(id=str(uuid4()), content=content, outgoing=False)
+
+    async def get_chat_history(self, user_id: int) -> list[ChatbotMessage]:
+        return await self._llm_provider.get_chat_history(user_id)
