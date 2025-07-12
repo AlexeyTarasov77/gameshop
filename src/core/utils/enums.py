@@ -58,16 +58,17 @@ class LabeledEnum(Enum):
     def __get_pydantic_core_schema__(cls, source_type: Any, _: GetCoreSchemaHandler):
         assert source_type is cls
 
-        def get_enum(value: Any, validate_next: cs.ValidatorFunctionWrapHandler):
+        def validator(value: Any, validate_next: cs.ValidatorFunctionWrapHandler):
             if isinstance(value, cls):
                 return value
             else:
-                name: str = validate_next(value)
-                return cls[name]
+                if isinstance(value, (int, str)):
+                    return cls(value)
+                return validate_next(value)
 
         expected = [member.name for member in cls]
         name_schema = cs.literal_schema(expected)
 
         return cs.no_info_wrap_validator_function(
-            get_enum, name_schema, ref=cls.__name__
+            validator, name_schema, ref=cls.__name__
         )
