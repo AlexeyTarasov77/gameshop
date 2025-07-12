@@ -10,6 +10,7 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     BeforeValidator,
+    Field,
     HttpUrl,
     PlainSerializer,
     AnyHttpUrl,
@@ -45,9 +46,9 @@ def require_dto_not_empty(dto: BaseDTO):
 def _check_and_save_image(file: UploadFile) -> str:
     assert file.filename or file.content_type
     if file.content_type:
-        assert (
-            file.content_type.split("/")[0] == "image"
-        ), "Provided file is not a valid image"
+        assert file.content_type.split("/")[0] == "image", (
+            "Provided file is not a valid image"
+        )
     else:
         _, extenstions = filename_split(str(file.filename))
         last_ext = extenstions[-1]
@@ -128,6 +129,12 @@ Base64IntOptionalIDParam = Annotated[
 ]
 
 type EmptyRegionT = Literal[""]
+
+
+class Range[T: int | float | Decimal](BaseDTO):
+    min_value: T | None = Field(ge=0)
+    max_value: T | None
+
 
 EMPTY_REGION: Final[EmptyRegionT] = ""
 

@@ -4,7 +4,7 @@ from sqlalchemy.sql.expression import cast
 from collections.abc import Sequence
 from decimal import Decimal
 import sqlalchemy as sa
-from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm import aliased, joinedload, selectinload
 from core.api.pagination import PaginationResT
 from core.api.schemas import OrderByOption
 from core.utils import normalize_s
@@ -36,21 +36,28 @@ class ProductsRepository(PaginationRepository[Product]):
         self,
         params: ListProductsParamsDTO,
     ) -> PaginationResT[Product]:
+        prices_join_args = []
+        if params.regions:
+            prices_join_args.append(
+                sa.func.lower(cast(RegionalPrice.region_code, sa.String)).in_(
+                    [region.lower() for region in params.regions]
+                )
+            )
+        total_price = RegionalPrice.base_price - (
+            Product.discount / 100 * RegionalPrice.base_price
+        )
+        if params.min_price is not None:
+            prices_join_args.append(total_price >= params.min_price)
+        if params.max_price is not None:
+            prices_join_args.append(total_price <= params.max_price)
         stmt = (
             sa.select(self.model)
             .order_by(sa.desc(Product.created_at))
-            .options(
-                selectinload(
-                    Product.prices
-                    if not params.regions
-                    else Product.prices.and_(
-                        sa.func.lower(cast(RegionalPrice.region_code, sa.String)).in_(
-                            [region.lower() for region in params.regions]
-                        )
-                    )
-                )
-            )
+            .options(selectinload(Product.prices))
         )
+        if prices_join_args:
+            prices_join_args.append(Product.id == RegionalPrice.product_id)
+            stmt = stmt.join(RegionalPrice, sa.and_(*prices_join_args))
         if params.price_ordering:
             option = {OrderByOption.ASC: sa.asc, OrderByOption.DESC: sa.desc}[
                 params.price_ordering
@@ -78,11 +85,16 @@ class ProductsRepository(PaginationRepository[Product]):
         if params.delivery_methods:
             stmt = stmt.where(Product.delivery_method.in_(params.delivery_methods))
         res = await self._session.execute(stmt)
-        products = res.scalars().all()
+        products = res.unique().scalars().all()
         filtered_products = []
-        for product in products:
-            if product.prices:
-                filtered_products.append(product)
+        # for product in products:
+        #     if not product.prices:
+        #         continue
+        #     # if params.price_range and len(params.price_range) >= 2:
+        #     #     if params.price_range[0] is not:
+        #     #         prices_select_clause = prices_select_clause.and_(Reg)
+        #     filtered_products.append(product)
+        filtered_products = products
 
         offset = params.calc_offset()
         return filtered_products[offset : offset + params.page_size], len(

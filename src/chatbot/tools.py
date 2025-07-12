@@ -23,6 +23,17 @@ class ChatBotToolsContainer:
         Use price_ordering to sort results by price (ascending/descending).
 
         This tool handles pagination automatically and returns a list of matching games.
+
+        Args:
+            params (ListProductsParamsDTO): Data transfer object containing filtering
+                and pagination parameters for game search. This includes options such as:
+                - Filtering criteria (price_range, platform, category, delivery_method, etc.)
+                - Pagination settings (page_number, page_size)
+                - Sorting preferences (price_ordering (asc|desc))
+                - Search terms or keywords
+
+        Returns:
+            The filtered and paginated list of games matching the specified criteria.
         """
         self._logger.info(
             "Invoked find_games llm tool. Params: %s", params.model_dump()

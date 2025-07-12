@@ -56,7 +56,7 @@ class DeliveryMethodsListDTO(schemas.BaseDTO):
 
 
 class BaseProductDTO(schemas.BaseDTO):
-    name: str = pydantic.Field(min_length=3)
+    name: str
     description: str
     discount: ProductDiscount
 
@@ -183,6 +183,14 @@ class ListProductsParamsDTO(PaginationParams):
     price_ordering: schemas.OrderByOption | None = pydantic.Field(
         None,
         description="Sort order for product prices. Determines whether results are ordered by price ascending or descending",
+    )
+    min_price: Decimal | None = pydantic.Field(
+        None,
+        description="Filter products by minimum price. Only products with price >= than provided value would be selected",
+    )
+    max_price: Decimal | None = pydantic.Field(
+        None,
+        description="Filter products by maximum price. Only products with price <= than provided value would be selected",
     )
 
 
